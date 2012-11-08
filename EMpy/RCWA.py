@@ -1,4 +1,4 @@
-"""rigorous Coupled Wave Analysis.
+"""Rigorous Coupled Wave Analysis.
 
 The algorithm, described in Glytsis, "Three-dimensional (vector)
 rigorous coupled-wave analysis of anisotropic grating diffraction",
@@ -10,6 +10,7 @@ binary gratings.
 Two versions of the algorithm are present: an isotropic one, stable
 for every diffraction order and layer thickness, and an anisotropic
 one, only stable for low diffraction orders and thin layers.
+
 """
 
 __author__ = "Lorenzo Bolla"
@@ -86,6 +87,24 @@ class RCWA:
     NOTE
     See Glytsis, "Three-dimensional (vector) rigorous coupled-wave
     analysis of anisotropic grating diffraction", JOSA A, 7(8), 1990
+
+    The following variables, used throughout the code, have the following
+    meaning:
+
+    alpha:  float
+            angle between wave vector k1 and xy plane, in radians
+
+    delta:  float
+            angle between the y axis and the projection of k1 onto the xy
+            plane, in radians
+
+    psi:    angle between the D vector of the plane wave and the xy plane,
+            in radians, TM: 0, TE: numpy.pi / 2
+
+    phi:    angle between the grating vector K and y axis (in the xy plane),
+            in radians, the grating is modulated in the direction of the
+            grating vector.
+
     """
 
     def __init__(self, multilayer, alpha, delta, psi, phi, n):
