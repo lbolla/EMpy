@@ -174,7 +174,7 @@ class SVFDModeSolver(ModeSolver):
 
         A = self.build_matrix()
 
-        [eigvals, eigvecs] = eigen(A, 
+        [eigvals, eigvecs] = eigen.eigs(A, 
                 k=neigs, 
                 which='LR', 
                 tol=tol, 
@@ -757,7 +757,7 @@ class VFDModeSolver(ModeSolver):
         
         A = self.build_matrix()
         
-        [eigvals, eigvecs] = eigen(A,
+        [eigvals, eigvecs] = eigen.eigs(A,
                 k=neigs, 
                 which='LR', 
                 tol=tol, 

@@ -36,7 +36,7 @@ setup(
 		platforms = ['Windows', 'Linux', 'Solaris', 'Mac OS-X', 'Unix'],
 		packages = find_packages(),
 		package_data = {'EMpy' : ['tests/*.py', 'doc/*.txt', '*.txt']},
-		# install_requires = ['numpy>=1.1.0', 'scipy>=0.7.0', 'bvp>=0.2.2'],
+		# install_requires = ['numpy>=1.1.0', 'scipy>=0.9.0', 'bvp>=0.2.2'],
 		requires = dependencies, # requires doesn't seem to work!!! emulate it with dependencies.py
 		provides = ['EMpy'],
 		classifiers = [
