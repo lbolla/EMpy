@@ -89,7 +89,8 @@
 d = numpy.array([numpy.inf,387.5e-9/1.38,numpy.inf])
 iso_layers = EMpy.utils.Multilayer()
 <span class="keyword">for</span> i <span class="keyword">in</span> <span class="py-builtins">xrange</span>(n.size):
-    iso_layers.append(EMpy.utils.Layer(EMpy.materials.IsotropicMaterial(<span class="string">'mat'</span>).setRixFromConst(n[i]),d[i]))
+    n0 = EMpy.materials.RefractiveIndex(n[i])
+    iso_layers.append(EMpy.utils.Layer(EMpy.materials.IsotropicMaterial(<span class="string">'mat'</span>, n0=n0).setRixFromConst(n[i]),d[i]))
 
 <span class="comment"># define incident wave plane
 </span>theta_inc = EMpy.utils.deg2rad(10.)
@@ -107,6 +108,8 @@ pylab.xlabel(<span class="string">'wavelength /m'</span>)
 pylab.ylabel(<span class="string">'Power /dB'</span>)
 pylab.grid()
 pylab.xlim(wls.min(), wls.max())
+pylab.savefig(__file__ + '.png')
+pylab.show()
 </pre>
                 </div>
 
