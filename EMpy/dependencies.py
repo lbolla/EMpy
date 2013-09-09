@@ -2,7 +2,7 @@ __author__ = 'Lorenzo Bolla'
 
 # packages required by EMpy
 # stop if not present
-dependencies = ['numpy', 'scipy']
+dependencies = ['numpy', 'scipy', 'matplotlib']
 
 # packages required only by some functions of EMpy (not fundamental)
 # warn if not present
