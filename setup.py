@@ -31,7 +31,7 @@ setup(
     platforms=['Windows', 'Linux', 'Solaris', 'Mac OS-X', 'Unix'],
     packages=find_packages(),
     package_data={'EMpy': ['tests/*.py', 'doc/*.txt', '*.txt']},
-    install_requires=dependencies,
+    # install_requires=dependencies,
     requires=dependencies,
     provides=['EMpy'],
     classifiers=[
