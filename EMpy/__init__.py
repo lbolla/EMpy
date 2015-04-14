@@ -15,7 +15,6 @@ __all__ = ['constants', 'devices', 'materials', 'modesolvers', 'propagators', 'R
 __author__ = 'Lorenzo Bolla'
 
 import constants, devices, materials, modesolvers, propagators, RCWA, scattering, transfer_matrix, utils
-from version import version as __version__
 
 from numpy.testing import Tester
 test = Tester().test
