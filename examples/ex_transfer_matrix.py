@@ -1,3 +1,8 @@
+"""Transfer matrix example.
+
+Solve for both an isotropic and anisotropic multilayer.
+"""
+
 import scipy
 import pylab
 

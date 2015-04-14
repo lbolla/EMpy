@@ -1,3 +1,5 @@
+"""All-pass ring resonator example."""
+
 import EMpy
 import numpy
 import pylab

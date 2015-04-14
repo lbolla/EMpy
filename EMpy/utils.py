@@ -640,7 +640,7 @@ class CrossSection(list):
         tmp = numpy.concatenate([s.ys() for s in self])
         # get rid of numerical errors
         tmp = numpy.round(tmp * 1e10) * 1e-10
-        return numpy.unique1d(tmp)
+        return numpy.unique(tmp)
 
     def width(self):
         return self.widths().sum()
