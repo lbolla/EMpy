@@ -1,4 +1,3 @@
-include MANIFEST.in
-include LICENSE.txt
-include README.txt
+include README.md
+include requirements.txt
 recursive-include examples *.py *.dat

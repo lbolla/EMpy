@@ -11,7 +11,7 @@ DOCSTRING = __doc__.split('\n')
 
 setup(
     name='EMpy',
-    version='0.1.4',
+    version='1.0b1',
     author='Lorenzo Bolla',
     author_email='lbolla@gmail.com',
     description=DOCSTRING[0],
@@ -21,8 +21,7 @@ setup(
     license='BSD',
     platforms=['Windows', 'Linux', 'Mac OS-X'],
     packages=find_packages(),
-    package_data={'EMpy': ['tests/*.py', 'doc/*.txt', '*.txt']},
-    install_requires=[
+    requires=[
         'numpy',
         'scipy',
         'matplotlib',
