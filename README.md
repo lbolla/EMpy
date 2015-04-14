@@ -1,4 +1,4 @@
-* EMpy
+# EMpy
 
 `EMpy (Electromagnetic Python)` is a suite of algorithms widely knonw and used in electromagnetic problems and optics:
 the transfer matrix algorithm, the rigorous coupled wave analysis algorithm and more.
@@ -6,6 +6,6 @@ the transfer matrix algorithm, the rigorous coupled wave analysis algorithm and 
 Run the examples in `examples/*` to have an idea how EMpy works.
 Visit https://github.com/lbolla/EMpy for more information.
 
-** Installation
+## Installation
 
 From inside a virtualenv, run `bootstrap.sh`.
