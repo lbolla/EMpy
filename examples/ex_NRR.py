@@ -1,3 +1,5 @@
+"""N-Ring resonators example."""
+
 import EMpy
 import numpy
 import pylab
@@ -26,3 +28,4 @@ pylab.xlabel('wavelength /m')
 pylab.ylabel('power /dB')
 pylab.legend(('THRU', 'DROP'))
 pylab.show()
+

@@ -37,8 +37,9 @@ pylab.title('isotropic')
 
 pylab.figure()
 pylab.plot(wls, solution_aniso.R[0, 0, :], wls, solution_aniso.R[1, 0, :],
-       wls, solution_aniso.R[0, 1, :], wls, solution_aniso.R[1, 1, :],
-       wls, solution_aniso.T[0, 0, :], wls, solution_aniso.T[1, 0, :],
-       wls, solution_aniso.T[0, 1, :], wls, solution_aniso.T[1, 1, :])
+           wls, solution_aniso.R[0, 1, :], wls, solution_aniso.R[1, 1, :],
+           wls, solution_aniso.T[0, 0, :], wls, solution_aniso.T[1, 0, :],
+           wls, solution_aniso.T[0, 1, :], wls, solution_aniso.T[1, 1, :])
 pylab.title('anisotropic')
 pylab.show()
+

@@ -1,3 +1,5 @@
+"""Single ring resonator example."""
+
 import EMpy
 import numpy
 import pylab
@@ -18,3 +20,4 @@ pylab.xlabel('wavelength /m')
 pylab.ylabel('power')
 pylab.legend(('THRU', 'DROP'))
 pylab.show()
+
