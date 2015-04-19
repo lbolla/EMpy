@@ -20,7 +20,5 @@ Run tests with:
     
 # TODO
 
-- unittests
-- Travis CI
 - six
 - py3
