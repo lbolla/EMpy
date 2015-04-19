@@ -5,7 +5,9 @@ python:
   # - "3.4"
 
 notifications:
-  email: false
+  # email: false
+  email:
+    - lbolla@gmail.com
 
 # TravisCI does not handle numpy/scipy well: https://gist.github.com/dan-blanchard/7045057
 

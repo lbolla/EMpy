@@ -34,7 +34,9 @@ class RefractiveIndex(object):
 
     """
 
-    def __init__(self, n0_const=None, n0_poly=None, n0_smcoeffs=None, n0_known={}):
+    def __init__(self, n0_const=None, n0_poly=None, n0_smcoeffs=None, n0_known=None):
+        if n0_known is None:
+            n0_known = {}
         if n0_const is not None:
             self.__data = n0_const
             self.get_rix = self.__from_const
@@ -51,21 +53,21 @@ class RefractiveIndex(object):
     def __from_const(self, wls):
         wls = numpy.atleast_1d(wls)
         if wls.size == 1:
-            if self.n0_known.has_key(wls.item()):
+            if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
         return self.__data * numpy.ones_like(wls)
 
     def __from_poly(self, wls):
         wls = numpy.atleast_1d(wls)
         if wls.size == 1:
-            if self.n0_known.has_key(wls.item()):
+            if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
         return numpy.polyval(self.__data, wls) * numpy.ones_like(wls)
 
     def __from_sellmeier(self, wls):
         wls = numpy.atleast_1d(wls)
         if wls.size == 1:
-            if self.n0_known.has_key(wls.item()):
+            if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
         B1, B2, B3, C1, C2, C3 = self.__data
         return numpy.sqrt(1. +
@@ -130,7 +132,8 @@ class IsotropicMaterial(Material):
         tmp = numpy.eye(3)
         return tmp[:, :, numpy.newaxis] * self.epsilon(wls, T)
 
-    def isIsotropic(self):
+    @staticmethod
+    def isIsotropic():
         """Return True, because the material is isotropic."""
         return True
 
@@ -140,7 +143,9 @@ class IsotropicMaterial(Material):
 
 
 class EpsilonTensor(object):
-    def __init__(self, epsilon_tensor_const=eps0 * numpy.eye(3), epsilon_tensor_known={}):
+    def __init__(self, epsilon_tensor_const=eps0 * numpy.eye(3), epsilon_tensor_known=None):
+        if epsilon_tensor_known is None:
+            epsilon_tensor_known = {}
         self.epsilon_tensor_const = epsilon_tensor_const
         self.epsilon_tensor_known = epsilon_tensor_known
 
@@ -148,7 +153,7 @@ class EpsilonTensor(object):
         """Return the epsilon tensor as a [3 x 3 x wls.size] matrix."""
         wls = numpy.atleast_1d(wls)
         if wls.size == 1:
-            if self.epsilon_tensor_known.has_key(wls.item()):
+            if wls.item() in self.epsilon_tensor_known:
                 return self.epsilon_tensor_known[wls.item()][:, :, numpy.newaxis]
         return self.epsilon_tensor_const[:, :, numpy.newaxis] * numpy.ones_like(wls)
 
@@ -166,7 +171,8 @@ class AnisotropicMaterial(Material):
         Material.__init__(self, name)
         self.epsilonTensor = epsilon_tensor
 
-    def isIsotropic(self):
+    @staticmethod
+    def isIsotropic():
         """Return False, because the material is anisotropic."""
         return False
 
@@ -206,9 +212,9 @@ class LiquidCrystal(Material):
     @ivar name: Liquid Crystal name.
     @ivar nO: Ordinary refractive index.
     @ivar nE: Extraordinary refractive index.
-    @ivar K11: Elastric tensor, first component.
-    @ivar K22: Elastric tensor, second component.
-    @ivar K33: Elastric tensor, third component.
+    @ivar K11: Elastic tensor, first component.
+    @ivar K22: Elastic tensor, second component.
+    @ivar K33: Elastic tensor, third component.
     @ivar q0: Chirality.
 
     """
@@ -251,5 +257,4 @@ def get_10400_000_100(conc000):
     return LiquidCrystal('10400_000_100_' + str(conc000) + '_' + str(100 - conc000),
                          nO_, nE_, nO_electrical_, nE_electrical_,
                          K11, K22, K33, q0)
-
 
