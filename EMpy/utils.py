@@ -68,8 +68,6 @@ class Layer(object):
 class BinaryGrating(object):
     """A Binary Grating is defined by two materials (iso or aniso), a duty cycle, a pitch and a thickness."""
 
-    # OKKIO: maybe subclass Layer?
-
     def __init__(self, mat1, mat2, dc, pitch, thickness):
         """Set the materials, the duty cycle and the thickness."""
         self.mat1 = mat1
@@ -136,8 +134,6 @@ class SymmetricDoubleGrating(object):
     Inside the pitch there are two rect of width dc1*pitch of mat1 and dc2*pitch of mat2, with a spacer of fixed width
     made of mat3 between them.
     """
-
-    # OKKIO: maybe subclass Layer?
 
     def __init__(self, mat1, mat2, mat3, dc1, dc2, pitch, thickness):
         """Set the materials, the duty cycle and the thickness."""
