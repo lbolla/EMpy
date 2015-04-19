@@ -12,6 +12,9 @@ Examples
 
 """
 from __future__ import print_function
+from builtins import zip
+from builtins import range
+from builtins import object
 from functools import reduce
 
 __author__ = 'Luca Gamberale & Lorenzo Bolla'
@@ -24,7 +27,7 @@ import EMpy.utils
 from EMpy.modesolvers.interface import *
 import pylab
 
-class Message:
+class Message(object):
     def __init__(self, msg, verbosity=0):
         self.msg = msg
         self.verbosity = verbosity
@@ -33,11 +36,11 @@ class Message:
         if self.verbosity <= verbosity:
             print((self.verbosity - 1) * '\t' + self.msg)
             
-class Struct:
+class Struct(object):
     """Empty class to fill with whatever I want. Maybe a dictionary would do?"""    
     pass
 
-class Boundary:
+class Boundary(object):
     """Boundary conditions.
     
     Electric and Magnetic boundary conditions are translated to Symmetric 
@@ -70,8 +73,7 @@ class Boundary:
         """
         
         if not reduce(lambda x, y: x & y, 
-                      map(lambda x: (x == 'Electric Wall') | (x == 'Magnetic Wall'), 
-                          [self.xleft, self.yleft, self.xright, self.yright])):
+                      [(x == 'Electric Wall') | (x == 'Magnetic Wall') for x in [self.xleft, self.yleft, self.xright, self.yright]]):
             raise ValueError('Unknown boundary.')
         
     def translate(self):
@@ -121,7 +123,7 @@ class Boundary:
     def __str__(self):
         return 'xleft = %s, xright = %s, yleft = %s, yright = %s' % (self.xleft, self.xright, self.yleft, self.yright)
 
-class Slice:
+class Slice(object):
     """One dimensional arrangement of layers and 1d modes.
     
     A slice is made of a stack of layers, i.e. refractive indeces with a thickness,
@@ -206,7 +208,7 @@ class FMMMode1dy(FMMMode1d):
         y = numpy.atleast_1d(y_)
         ny = len(y)
         f = numpy.zeros(ny, dtype=complex)
-        for iU in xrange(len(self.U) - 1):
+        for iU in range(len(self.U) - 1):
             k = self.k[iU]
             sl = self.sl[iU]
             al = self.al[iU]
@@ -316,7 +318,7 @@ class FMMMode2d(Mode):
             x1 = slice.x2 - x[idx]
             dx = slice.x2 - slice.x1
             
-            for n in xrange(nmodi):
+            for n in range(nmodi):
 
                 fi = slice.modih[n].eval(y)
                 fidot = dot(slice.modih[n]).eval(y)
@@ -461,7 +463,7 @@ class FMMMode2d(Mode):
 
         for mx, slice in enumerate(self.slicesx):
 
-            for n1 in xrange(nmodi):
+            for n1 in range(nmodi):
                 
                 phi_n1 = slice.modih[n1]
                 phidot_n1 = dot(phi_n1)
@@ -492,7 +494,7 @@ class FMMMode2d(Mode):
                 ue_n1.U = numpy.atleast_1d(ue_n1.U[mx:mx+2])
                 uedot_n1 = dot(ue_n1)
                 
-                for n2 in xrange(nmodi):
+                for n2 in range(nmodi):
 
                     phi_n2 = mode.slicesx[mx].modih[n2]
                     phidot_n2 = dot(phi_n2)
@@ -565,7 +567,7 @@ class FMMMode2d(Mode):
             kfe_n2s = []
             kfh_n2s = []
             
-            for n1 in xrange(nmodi):
+            for n1 in range(nmodi):
                 
                 phi_n1 = slice.modih[n1]
                 phi_n1s.append(phi_n1)
@@ -637,7 +639,7 @@ class FMMMode2d(Mode):
                 ue_n2s.append(ue_n2)
                 uedot_n2.append(dot(ue_n2))
 
-            for n1 in xrange(nmodi):
+            for n1 in range(nmodi):
                 
                 uh_n1 = uh_n1s[n1]
                 ue_n1 = ue_n1s[n1]
@@ -648,7 +650,7 @@ class FMMMode2d(Mode):
                 psisueps_n1 = psisueps_n1s[n1]
                 kfe_n1 = kfe_n1s[n1]
                 
-                for n2 in xrange(nmodi):            
+                for n2 in range(nmodi):            
 
                     uh_n2 = uh_n2s[n2]
                     uhdot_n2 = uhdot_n2s[n2]
@@ -741,7 +743,7 @@ class FMMMode2d(Mode):
         # fields
         pylab.figure()
         titles = ['Ex', 'Ey', 'Ez', 'cBx', 'cBy', 'cBz']
-        for i in xrange(6):
+        for i in range(6):
             subplot_id = 231 + i
             pylab.subplot(subplot_id)
             pylab.contour(x, y, numpy.abs(f[i]))
@@ -917,7 +919,7 @@ def analyticalsolution(nmodi, TETM, FMMpars):
     sl *= N
     sr *= N
 
-    for n in xrange(0, nmodi):
+    for n in range(0, nmodi):
         al[n,:] *= N * kn[n]
         ar[n,:] *= N * kn[n]
 
@@ -931,7 +933,7 @@ def analyticalsolution(nmodi, TETM, FMMpars):
         ar[0,:] /= sqrt2
 
     modi = []
-    for mk in xrange(0, nmodi):
+    for mk in range(0, nmodi):
         modo = FMMMode1dy()
         modo.sl = sl[mk,:].astype(complex)
         modo.sr = sr[mk,:].astype(complex)
@@ -997,14 +999,14 @@ def FMMshootingTM(kz_, FMMpars):
 
     modo = FMMMode1dy()
     
-    for m in xrange(0, len(kz)):
+    for m in range(0, len(kz)):
 
         k = k_[m,:]
         sinkdsuk = sinkdsuk_[m,:][0]
         coskd = coskd_[m,:][0]
         sinkdk = sinkdk_[m,:][0]
 
-        for idx in xrange(0, n1):
+        for idx in range(0, n1):
             
             sr[idx] = sl[idx] * coskd[idx] + al[idx] * sinkdsuk[idx]
             ar[idx] = al[idx] * coskd[idx] - sl[idx] * sinkdk[idx]
@@ -1015,7 +1017,7 @@ def FMMshootingTM(kz_, FMMpars):
                 al[idx+1] = ar[idx] / eps[idx] * eps[idx + 1];
             #*******************
             
-        for idx1 in xrange(Nregions - 1, n2 - 2, -1):
+        for idx1 in range(Nregions - 1, n2 - 2, -1):
             
             sl[idx1] = sr[idx1] * coskd[idx1] - ar[idx1] * sinkdsuk[idx1]
             al[idx1] = ar[idx1] * coskd[idx1] + sr[idx1] * sinkdk[idx1]
@@ -1100,14 +1102,14 @@ def FMMshooting(kz_, FMMpars):
 
     modo = FMMMode1dy()
     
-    for m in xrange(0, len(kz)):
+    for m in range(0, len(kz)):
 
         k = k_[m,:]
         sinkdsuk = sinkdsuk_[m,:][0]
         coskd = coskd_[m,:][0]
         sinkdk = sinkdk_[m,:][0]
     
-        for idx in xrange(0, n1):
+        for idx in range(0, n1):
             
             sr[idx] = sl[idx] * coskd[idx] + al[idx] * sinkdsuk[idx]
             ar[idx] = al[idx] * coskd[idx] - sl[idx] * sinkdk[idx]
@@ -1118,7 +1120,7 @@ def FMMshooting(kz_, FMMpars):
                 al[idx + 1] = ar[idx];
             #*******************
             
-        for idx1 in xrange(Nregions - 1, n2 - 2, -1):
+        for idx1 in range(Nregions - 1, n2 - 2, -1):
             
             sl[idx1] = sr[idx1] * coskd[idx1] - ar[idx1] * sinkdsuk[idx1]
             al[idx1] = ar[idx1] * coskd[idx1] + sr[idx1] * sinkdk[idx1]
@@ -1204,7 +1206,7 @@ def remove_consecutives(x, y):
     ic = 0
     flag = 0
     l = []
-    for ib in xrange(len(b)):
+    for ib in range(len(b)):
         if flag == 0:
             c = [x[ib]]
             ic += 1
@@ -1254,7 +1256,7 @@ def findzerosnew(x, y, searchinterval):
             z1[0] = zeri[0] - delta/2
             z2[0] = zeri[0] + delta/2
 
-            for idx in xrange(1, len(zeri) - 1):
+            for idx in range(1, len(zeri) - 1):
                 delta = numpy.min([dz[idx - 1], dz[idx], searchinterval])
                 z1[idx] = zeri[idx] - delta/2
                 z2[idx] = zeri[idx] + delta/2
@@ -1321,7 +1323,7 @@ def scalarprod(modo1, modo2):
     Nlayers = len(modo1.sl)
     scprod = numpy.zeros_like(modo1.sl)
 
-    for idy in xrange(Nlayers):
+    for idy in range(Nlayers):
         
         if numpy.allclose(ky1[idy], ky2[idy]):
             if numpy.linalg.norm(ky1) < 1e-10:
@@ -1412,7 +1414,7 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
     modi = []
     # inizia il ciclo sugli intervalli
     Message('Refine zeros.', 2).show(verbosity)
-    for m in xrange(0, len(kz1)):
+    for m in range(0, len(kz1)):
 
         if mk == nmodi:
             break
@@ -1448,7 +1450,7 @@ def script1d(Ux, Uy, refindex, wl, boundary, nmodislices, verbosity=0):
     
     nx = refindex.shape[0]
     slices = []
-    for m in xrange(nx):
+    for m in range(nx):
         Message('Finding 1dmodes TE.', 1).show(verbosity)
         ymodih = FMM1d_y(Uy, refindex[m,:], wl, nmodislices, boundary.yh, 'TE', verbosity)
         Message('Finding 1dmodes TM.', 1).show(verbosity)
@@ -1487,11 +1489,11 @@ def genera_rotazione(slices):
     R.Rhe = numpy.zeros_like(R.Ree)
     R.Rhem = numpy.zeros_like(R.Ree)
 
-    for idx in xrange(len(slices) - 1):
+    for idx in range(len(slices) - 1):
         slice = slices[idx]
         slicep1 = slices[idx + 1]
 
-        for n in xrange(nmodi):
+        for n in range(nmodi):
             Fhn = slice.modih[n]
             Fp1hn = slicep1.modih[n]
             Fen = slice.modie[n]
@@ -1501,7 +1503,7 @@ def genera_rotazione(slices):
             khidx = slice.modih[n].keff
             khidxp1 = slicep1.modih[n].keff
 
-            for m in xrange(nmodi):
+            for m in range(nmodi):
                 Fem = slice.modie[m]
                 Fhm = slice.modih[m]
                 Fp1em = slicep1.modie[m]
@@ -1549,12 +1551,12 @@ def ortonormalita(slices):
 
     for idx, slice in enumerate(slices):
         
-        for n in xrange(nmodi):
+        for n in range(nmodi):
             Fhn = slice.modih[n]
             Fen = slice.modie[n]
             khidx = slice.modih[n].keff
 
-            for m in xrange(nmodi):
+            for m in range(nmodi):
                 Fem = slice.modie[m]
                 Fhm = slice.modih[m]
                 keidxp1 = slice.modie[m].keff
@@ -1570,12 +1572,12 @@ def ortonormalita(slices):
                 
     R = genera_rotazione(slices)
     Ident = numpy.eye(nmodi)
-    for idx in xrange(Nslices):
+    for idx in range(Nslices):
         neesueps[idx] = numpy.linalg.norm(M.eesueps[:,:,idx] - Ident)
         nhh[idx] = numpy.linalg.norm(M.hh[:,:,idx] - Ident)
         nRhe[idx] = numpy.linalg.norm(M.Rhe[:,:,idx])
         
-    for idx in xrange(Nslices-1):
+    for idx in range(Nslices-1):
         nRee[idx] = numpy.linalg.norm(numpy.dot(R.Ree[:,:,idx], R.Reem[:,:,idx]) - Ident)
         nRhh[idx] = numpy.linalg.norm(numpy.dot(R.Rhh[:,:,idx], R.Rhhm[:,:,idx]) - Ident)
         nAC[idx] = numpy.linalg.norm(numpy.dot(R.Rhe[:,:,idx], R.Reem[:,:,idx]) + 
@@ -1593,11 +1595,11 @@ def method_of_component(kz_, slices, Rot, uscelto=None, icomp=None):
 ##    tmp = 500 # OKKIO: perche' 500?
     tmp = 100 * len(slices[0].modie) * (len(slices) - 1) # OKKIO: dimension of Mvec * 50. enough?
     normu = numpy.zeros(tmp, dtype=complex)
-    for m in xrange(len(kz)):
+    for m in range(len(kz)):
         M = Mvec(kz[m], slices, Rot)
         urn = numpy.zeros((M.shape[0], tmp), dtype=complex)
         if (uscelto is None) and (icomp is None):
-            for k in xrange(tmp):
+            for k in range(tmp):
                 numpy.random.seed()
                 ur = numpy.random.rand(M.shape[0])
                 urn[:,k] = ur / numpy.linalg.norm(ur)
@@ -1627,7 +1629,7 @@ def creaTeThSeSh(kz, slices):
     Thright = numpy.zeros_like(Th)
     Teright = numpy.zeros_like(Th)
     
-    for idx in xrange(Nslices):
+    for idx in range(Nslices):
         ke = numpy.array([m.keff.item() for m in slices[idx].modie])
         kh = numpy.array([m.keff.item() for m in slices[idx].modih])
 
@@ -1692,7 +1694,7 @@ def Mvec(kz, slices, R):
     M = numpy.zeros((2 * dim1 * (Nslices-1), 2 * dim1 * (Nslices-1)), dtype=complex)
     Dim1 = numpy.arange(dim1)
     
-    for idx in xrange(3, Nslices):
+    for idx in range(3, Nslices):
         
         idxeJA = (2 * idx - 4) * dim1
         idxeJB = (2 * idx - 6) * dim1
@@ -1908,13 +1910,13 @@ def creacoeffx3(kz, solution, slices, R):
         srh[:,-1] = Sh[:,-1] / Th[:,-1] * slh[:,-1]
         alh[:,-1] = -Th[:,-1] * slh[:,-1] + Sh[:,-1] * srh[:,-1]
 
-        for idx in xrange(1, Nslices):
+        for idx in range(1, Nslices):
             sre[:,idx-1] = numpy.dot(Ree[:,:,idx-1], sle[:,idx])
             srh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], slh[:,idx])
             
         slh[:,0] = Sh[:,0] / Th[:,0] * srh[:,0]
 
-        for idx in xrange(Nslices - 1, 0, -1):
+        for idx in range(Nslices - 1, 0, -1):
             are[:,idx-1] = numpy.dot(Reem[:,:,idx-1].T, ale[:,idx]) + kz * numpy.dot(Rhem[:,:,idx-1].T, slh[:,idx])
             arh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], alh[:,idx]) - kz * numpy.dot(Rhe[:,:,idx-1], sle[:,idx])
             ale[:,idx-1] = -Te[:,idx-1] * sle[:,idx-1] + Se[:,idx-1] * sre[:,idx-1]
@@ -1932,13 +1934,13 @@ def creacoeffx3(kz, solution, slices, R):
         arh[:,-1] = -Sh[:,-1] * slh[:,-1]
         alh[:,-1] = -Th[:,-1] * slh[:,-1]
 
-        for idx in xrange(1, Nslices):
+        for idx in range(1, Nslices):
             sre[:,idx-1] = numpy.dot(Ree[:,:,idx-1], sle[:,idx])
             srh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], slh[:,idx])
 
         slh[:,0] = Sh[:,0] / Th[:,0] * srh[:,0]
 
-        for idx in xrange(Nslices - 1, 0, -1):
+        for idx in range(Nslices - 1, 0, -1):
             are[:,idx-1] = numpy.dot(Reem[:,:,idx-1].T, ale[:,idx]) + kz * numpy.dot(Rhem[:,:,idx-1].T, slh[:,idx])
             arh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], alh[:,idx])- kz * numpy.dot(Rhe[:,:,idx-1], sle[:,idx])
             ale[:,idx-1] = -Te[:,idx-1] * sle[:,idx-1] + Se[:,idx-1] * sre[:,idx-1]
@@ -1956,13 +1958,13 @@ def creacoeffx3(kz, solution, slices, R):
         ale[:,-1] = -Te[:,-1] * sle[:,-1]
         alh[:,-1] = -Th[:,-1] * slh[:,-1] + Sh[:,-1] * srh[:,-1]
 
-        for idx in xrange(1, Nslices):
+        for idx in range(1, Nslices):
             sre[:,idx-1] = numpy.dot(Ree[:,:,idx-1], sle[:,idx])
             srh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], slh[:,idx])
 
         sle[:,0] = Se[:,0] / Te[:,0] * sre[:,0]
 
-        for idx in xrange(Nslices - 1, 0, -1):
+        for idx in range(Nslices - 1, 0, -1):
             are[:,idx-1] = numpy.dot(Reem[:,:,idx-1].T, ale[:,idx]) + kz * numpy.dot(Rhem[:,:,idx-1].T, slh[:,idx])
             arh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], alh[:,idx]) - kz * numpy.dot(Rhe[:,:,idx-1], sle[:,idx])
             ale[:,idx-1] = -Te[:,idx-1] * sle[:,idx-1] + Se[:,idx-1] * sre[:,idx-1]
@@ -1980,13 +1982,13 @@ def creacoeffx3(kz, solution, slices, R):
         alh[:,-1] = -Th[:,-1] * slh[:,-1]
         ale[:,-1] = -Te[:,-1] * sle[:,-1] + Se[:,-1] * sre[:,-1]
 
-        for idx in xrange(1, Nslices):
+        for idx in range(1, Nslices):
             sre[:,idx-1] = numpy.dot(Ree[:,:,idx-1], sle[:,idx])
             srh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], slh[:,idx])
         
         sle[:,0] = Se[:,0] / Te[:,0] * sre[:,0]
 
-        for idx in xrange(Nslices - 1, 0, -1):
+        for idx in range(Nslices - 1, 0, -1):
             are[:,idx-1] = numpy.dot(Reem[:,:,idx-1].T, ale[:,idx]) + kz * numpy.dot(Rhem[:,:,idx-1].T, slh[:,idx])
             arh[:,idx-1] = numpy.dot(Rhh[:,:,idx-1], alh[:,idx]) - kz * numpy.dot(Rhe[:,:,idx-1], sle[:,idx])
             ale[:,idx-1] = -Te[:,idx-1] * sle[:,idx-1] + Se[:,idx-1] * sre[:,idx-1]
@@ -2000,7 +2002,7 @@ def creacoeffx3(kz, solution, slices, R):
     kh = numpy.zeros((nmodi, Nslices), dtype=complex)
     ke = numpy.zeros_like(kh)
     
-    for n in xrange(nmodi):
+    for n in range(nmodi):
         
         for q, slice in enumerate(slices):
             kh[n,q] = slice.modih[n].keff.item()
@@ -2072,7 +2074,7 @@ def FMM1d_x_component(slices, nmodi, verbosity=0):
     Message('Refining zeros.', 1).show(verbosity)
     mk = 0
     modi = []
-    for m in xrange(len(kz1)):
+    for m in range(len(kz1)):
 
         if mk == nmodi:
             break

@@ -5,6 +5,9 @@
 
 """
 from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
 
 import numpy
 import scipy
@@ -184,7 +187,7 @@ class SVFDModeSolver(ModeSolver):
         
         neff = self.wl * scipy.sqrt(eigvals) / (2 * numpy.pi)
         phi = []
-        for ieig in xrange(neigs):
+        for ieig in range(neigs):
             tmp = eigvecs[:, ieig].reshape(self.nx, self.ny)
             phi.append(tmp)
             
@@ -770,7 +773,7 @@ class VFDModeSolver(ModeSolver):
         Hys = []
         nx = self.nx
         ny = self.ny
-        for ieig in xrange(neigs):
+        for ieig in range(neigs):
             Hxs.append(eigvecs[:nx*ny, ieig].reshape(nx, ny))
             Hys.append(eigvecs[nx*ny:, ieig].reshape(nx, ny))
 

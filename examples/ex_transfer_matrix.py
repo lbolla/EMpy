@@ -2,6 +2,7 @@
 
 Solve for both an isotropic and anisotropic multilayer.
 """
+from builtins import range
 
 import scipy
 import pylab
@@ -14,7 +15,7 @@ d = scipy.array([scipy.inf, 1e-6, 2.3e-6, 0.1e-6, scipy.inf])
 iso_layers = EMpy.utils.Multilayer()
 aniso_layers = EMpy.utils.Multilayer()
 
-for i in xrange(n.size):
+for i in range(n.size):
     iso_layers.append(EMpy.utils.Layer(EMpy.materials.IsotropicMaterial(
         'mat',
         n0=EMpy.materials.RefractiveIndex(n[i])), d[i]))

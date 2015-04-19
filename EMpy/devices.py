@@ -22,6 +22,9 @@ By combining the transfer matrices and chain matrices of known devices, new ones
     p. 148, 1995 <http://ieeexplore.ieee.org/xpl/freeabs_all.jsp?tp=&arnumber=365200&isnumber=8367>}
 
 """
+from builtins import zip
+from builtins import range
+from builtins import object
 
 __author__ = 'Lorenzo Bolla'
 
@@ -1185,7 +1188,7 @@ class SWG(Device):
             pf_[1, 0, :] = SWG.pf488_25
             pf_[1, 1, :] = SWG.pf488_125
             pf_[1, 2, :] = SWG.pf488_225
-            pf = [scipy.interpolate.interp2d(w_.T, T_.T, pf_[:, :, i])(self.w, self.T)[0] for i in xrange(3)]
+            pf = [scipy.interpolate.interp2d(w_.T, T_.T, pf_[:, :, i])(self.w, self.T)[0] for i in range(3)]
 
         # transform the input in an ndarray
         wls = numpy.asarray(wls)

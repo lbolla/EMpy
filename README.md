@@ -17,8 +17,3 @@ From inside a virtualenv, install with:
 Run tests with:
 
     >>> python setup.py test
-    
-# TODO
-
-- six
-- py3

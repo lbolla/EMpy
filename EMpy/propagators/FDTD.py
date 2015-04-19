@@ -2,6 +2,9 @@
 
 """
 from __future__ import print_function
+from builtins import str
+from builtins import range
+from builtins import object
 
 import os
 import numpy
@@ -10,7 +13,7 @@ import pylab
 
 __author__ = "Lorenzo Bolla"
 
-class Input:
+class Input(object):
     """Data structure to handle input files."""
 
     def __init__(self, filename):
@@ -72,7 +75,7 @@ class Input:
         f.write(self.__str__())
         f.close()
 
-class Param:
+class Param(object):
     """Data structure to handle the param file.
     """
     
@@ -97,7 +100,7 @@ class Param:
                   self.nflux, self.ntime, self.step1, self.step2, \
                   '\n'.join(['%d\n%d\n%d\n%d\n%d\n%d' % (dm['direction'], dm['nfreq'], dm['flxlim'][0], dm['flxlim'][1], dm['flxlim'][2], dm['flxlim'][3]) for dm in self.dftmonitors]))
 
-class Sensor:
+class Sensor(object):
     """Data structure to handle the FFT sensor's data."""
 
     def plot(self, n):
@@ -126,7 +129,7 @@ class Sensor:
         """Return a representation of the sensor."""
         return 'E1\n%s\nH1\n%s\nE2\n%s\nH2\n%s\n' % (self.E1, self.H1, self.E2, self.H2)
 
-class TimeSensor:
+class TimeSensor(object):
     """Data structure to handle the time sensor's data."""
 
     def plot_Ex(self, logplot=False):
@@ -151,7 +154,7 @@ class TimeSensor:
             pylab.plot(self.t, data)
         pylab.show()
 
-class FDTD:
+class FDTD(object):
     """FDTD.
     Data structure to handle an FDTD simulation. It manages an input file, a param file and the sensors' output.
     It can run a simulation via a system call.
@@ -223,19 +226,19 @@ class FDTD:
         # dielslices
         ndielslices = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         inp.dielslices = []
-        for i in xrange(ndielslices):
+        for i in range(ndielslices):
             inp.dielslices.append(numpy.fromstring(strip_comment(f.readline()), sep = ' '))
 
         # fieldslices
         nfieldslices = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         inp.fieldslices = []
-        for i in xrange(nfieldslices):
+        for i in range(nfieldslices):
             inp.fieldslices.append(numpy.fromstring(strip_comment(f.readline()), sep = ' '))
 
         # dielobjs
         (ndielobjs, inp.bgrix, inp.bgsigma) = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         inp.dielobjs = []
-        for i in xrange(int(ndielobjs)):
+        for i in range(int(ndielobjs)):
             inp.dielobjs.append((strip_comment(f.readline()), strip_comment(f.readline())))
         inp.smoothing_method = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
 
@@ -243,21 +246,21 @@ class FDTD:
         nsources = numpy.fromstring(strip_comment(f.readline()), dtype = int, sep = ' ')
         inp.sources = []
 ##        (inp.time_dependence, inp.wls, inp.pwidth, inp.shift) = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
-        for i in xrange(nsources):
+        for i in range(nsources):
             inp.sources.append((strip_comment(f.readline()), strip_comment(f.readline()), strip_comment(f.readline()), strip_comment(f.readline())))
 
         # dft monitors
         (inp.lambdamin, inp.lambdamax, inp.dlambda) = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         ndftmonitors = numpy.fromstring(strip_comment(f.readline()), dtype = int, sep = ' ')
         inp.dftmonitors = []
-        for i in xrange(ndftmonitors):
+        for i in range(ndftmonitors):
             inp.dftmonitors.append((numpy.fromstring(strip_comment(f.readline()), sep = ' '), numpy.fromstring(strip_comment(f.readline()), sep = ' ')))
         
         # time monitors
         ntimemonitors = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         inp.timemonitors_time_interval = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         inp.timemonitors = []
-        for i in xrange(ntimemonitors):
+        for i in range(ntimemonitors):
             inp.timemonitors.append(numpy.fromstring(strip_comment(f.readline()), sep = ' '))
 
         f.close()
@@ -275,7 +278,7 @@ class FDTD:
         param.dx, param.dy, param.dz, param.dt = data[0:4]
         param.mx, param.my, param.mz, param.pmlx, param.pmly, param.pmlz, param.nflux, param.ntime, param.step1, param.step2 = data[4:14].astype(numpy.int32)
         param.dftmonitors = []
-        for iflux in xrange(int(param.nflux)):
+        for iflux in range(int(param.nflux)):
             direction, nfreq = data[14+iflux*6:16+iflux*6]
             flxlim = data[16+iflux*6:20+iflux*6]
             param.dftmonitors.append({'direction' : int(direction), 'nfreq' : int(nfreq), 'flxlim' : flxlim})
@@ -287,7 +290,7 @@ class FDTD:
         time_sensors = []
         if self.param is None:
             self.load_param(directory)        
-        for itime in xrange(self.param.ntime):
+        for itime in range(self.param.ntime):
             tmp = TimeSensor()
             tmp.Ex = load_fortran_unformatted(directory + 'Ex_time_%02d' % (itime+1))
             tmp.Ey = load_fortran_unformatted(directory + 'Ey_time_%02d' % (itime+1))
@@ -306,7 +309,7 @@ class FDTD:
         sensors = []
         if self.param is None:
             self.load_param(directory)        
-        for iflux in xrange(self.param.nflux):
+        for iflux in range(self.param.nflux):
             tmp = Sensor()
             dm = self.param.dftmonitors[iflux]
             tmp.E1 = load_fortran_unformatted(directory + 'E1_%02d' % (iflux+1))

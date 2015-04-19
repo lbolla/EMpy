@@ -1,11 +1,13 @@
+from builtins import range
+from builtins import object
 import numpy
 
-class ModeSolver:
+class ModeSolver(object):
     
     def solve(self, *argv):
         raise NotImplementedError()        
 
-class Mode:
+class Mode(object):
     
     def get_x(self, x=None, y=None):
         raise NotImplementedError()
@@ -56,8 +58,8 @@ def interface_matrix(solver1, solver2, x=None, y=None):
     O12 = numpy.zeros((neigs, neigs), dtype=complex)
     O21 = numpy.zeros((neigs, neigs), dtype=complex)
 
-    for i in xrange(neigs):
-        for j in xrange(neigs):
+    for i in range(neigs):
+        for j in range(neigs):
             
             O11[i, j] = overlap(solver1.modes[i], solver1.modes[j], x, y)
             O22[i, j] = overlap(solver2.modes[i], solver2.modes[j], x, y)

@@ -12,6 +12,8 @@ for every diffraction order and layer thickness, and an anisotropic
 one, only stable for low diffraction orders and thin layers.
 
 """
+from builtins import range
+from builtins import object
 
 __author__ = "Lorenzo Bolla"
 
@@ -58,7 +60,7 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
 
     kz = S.empty_like(kx)
 
-    for ii in xrange(0, kx.size):
+    for ii in range(0, kx.size):
 
         alpha = nE ** 2 - nO ** 2
         beta = kx[ii] / k * c[0] + ky[ii] / k * c[1]
@@ -80,7 +82,7 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
     return kz
 
 
-class RCWA:
+class RCWA(object):
     """Class to handle the RCWA solvers.
 
     NOTE
@@ -263,7 +265,7 @@ class IsotropicRCWA(RCWA):
             X.fill(0.0)
             MTp1.fill(0.0)
             MTp2.fill(0.0)
-            for nlayer in xrange(nlayers - 2, 0, -1):  # internal layers
+            for nlayer in range(nlayers - 2, 0, -1):  # internal layers
 
                 layer = multilayer[nlayer]
                 d = layer.thickness
@@ -368,7 +370,7 @@ class IsotropicRCWA(RCWA):
             x = linsolve(M, b)
             R, T = S.split(x, 2)
             Rs, Rp = S.split(R, 2)
-            for ii in xrange(1, nlayers - 1):
+            for ii in range(1, nlayers - 1):
                 T = S.dot(linsolve(MTp1[:, :, ii], X[:, :, ii]), T)
             Ts, Tp = S.split(T, 2)
 
@@ -572,7 +574,7 @@ class AnisotropicRCWA(RCWA):
             Mp.fill(0.0)
             M.fill(0.0)
 
-            for nlayer in xrange(nlayers - 2, 0, -1):  # internal layers
+            for nlayer in range(nlayers - 2, 0, -1):  # internal layers
 
                 layer = multilayer[nlayer]
                 thickness = layer.thickness
@@ -671,7 +673,7 @@ class AnisotropicRCWA(RCWA):
                 M[:, :, nlayer] = S.r_[Sxd, Syd, -1j * Uxd, -1j * Uyd]
 
             Mtot = S.eye(4 * nood, dtype=complex)
-            for nlayer in xrange(1, nlayers - 1):
+            for nlayer in range(1, nlayers - 1):
                 Mtot = S.dot(S.dot(Mtot, Mp[:, :, nlayer]), inv(M[:, :, nlayer]))
 
             BC_b = S.r_[b, S.zeros_like(b)]

@@ -1,6 +1,8 @@
 """Geometries.
 
 """
+from builtins import zip
+from builtins import object
 
 import numpy
 import EMpy.utils
@@ -36,7 +38,7 @@ def T2S(T):
     S[dim:, :dim] = t11 - numpy.dot(numpy.dot(t12, t22_1), t21)
     return S    
 
-class SWG:
+class SWG(object):
     
 ##    def __init__(self, cs, solver, length, inputLHS=None, inputRHS=None):
     def __init__(self, solver, length, inputLHS=None, inputRHS=None):
@@ -90,7 +92,7 @@ class SWG:
         pylab.hot()
         pylab.contourf(x, z0 + z, numpy.abs(f).T, 16)
         
-class SimpleJoint:
+class SimpleJoint(object):
     
 ##    def __init__(self, cs1, cs2, solver1, solver2, inputLHS=None, inputRHS=None):
     def __init__(self, solver1, solver2, inputLHS=None, inputRHS=None):
@@ -171,7 +173,7 @@ class SimpleJoint:
     def plot(self, sumx=1, nxy=100, nz=100, z0=0):
         pass
 
-class GenericDevice:
+class GenericDevice(object):
     
     def __init__(self, devlist, inputLHS=None, inputRHS=None):
         self.devlist = devlist

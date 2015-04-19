@@ -1,6 +1,10 @@
 """Useful functions and objects used more or less everywhere.
 """
 from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 
 __author__ = 'Lorenzo Bolla'
 
@@ -831,7 +835,7 @@ def snell(theta_inc, n):
 
     theta = numpy.zeros_like(n)
     theta[0] = theta_inc
-    for i in xrange(1, n.size):
+    for i in range(1, n.size):
         theta[i] = numpy.arcsin(n[i - 1] / n[i] * numpy.sin(theta[i - 1]))
     return theta
 
@@ -983,12 +987,12 @@ def interp2(x, y, xp, yp, fp):
     """
     f1r = numpy.zeros((len(xp), len(y)))
     f1i = numpy.zeros((len(xp), len(y)))
-    for ixp in xrange(len(xp)):
+    for ixp in range(len(xp)):
         f1r[ixp, :] = numpy.interp(y, yp, numpy.real(fp[ixp, :]))
         f1i[ixp, :] = numpy.interp(y, yp, numpy.imag(fp[ixp, :]))
     fr = numpy.zeros((len(x), len(y)))
     fi = numpy.zeros((len(x), len(y)))
-    for iy in xrange(len(y)):
+    for iy in range(len(y)):
         fr[:, iy] = numpy.interp(x, xp, f1r[:, iy])
         fi[:, iy] = numpy.interp(x, xp, f1i[:, iy])
     return fr + 1j * fi

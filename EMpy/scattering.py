@@ -1,3 +1,4 @@
+from builtins import object
 #-*- coding: UTF-8 -*-
 import numpy
 import EMpy

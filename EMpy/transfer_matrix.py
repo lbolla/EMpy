@@ -7,6 +7,9 @@ any thickness.
 Two versions of the algorithm are present: an isotropic one and an
 anisotropic one.
 """
+from builtins import zip
+from builtins import range
+from builtins import object
 
 __author__ = 'Lorenzo Bolla'
 
@@ -16,7 +19,7 @@ from EMpy.utils import snell, norm
 from EMpy.constants import c, mu0
 # import Gnuplot
 
-class TransferMatrix:
+class TransferMatrix(object):
     """Class to handle the transfer matrix solvers."""
 
     def __init__(self, multilayer):
@@ -284,7 +287,7 @@ class AnisotropicTransferMatrix(TransferMatrix):
             D = S.zeros((4,4,nlayers),dtype=complex)
             P = S.zeros((4,4,nlayers),dtype=complex)
 	
-            for i in xrange(nlayers):
+            for i in range(nlayers):
 			
                 k[:,:,i], p[:,:,i], q[:,:,i] = find_roots(wl, epsilon[:,:,i], kx, ky)
                 D[:,:,i] = [[S.dot(x,p[0,:,i]), S.dot(x,p[1,:,i]), S.dot(x,p[2,:,i]), S.dot(x,p[3,:,i])], \
@@ -292,11 +295,11 @@ class AnisotropicTransferMatrix(TransferMatrix):
                             [S.dot(y,p[0,:,i]), S.dot(y,p[1,:,i]), S.dot(y,p[2,:,i]), S.dot(y,p[3,:,i])], \
                             [S.dot(x,q[0,:,i]), S.dot(x,q[1,:,i]), S.dot(x,q[2,:,i]), S.dot(x,q[3,:,i])]]
 
-            for i in xrange(1,nlayers-1):
+            for i in range(1,nlayers-1):
                 P[:,:,i] = S.diag(S.exp(1j*k[:,2,i]*d[i]))
 
             M = inv(D[:,:,0])
-            for i in xrange(1,nlayers-1):
+            for i in range(1,nlayers-1):
                 M = S.dot(M,S.dot(D[:,:,i],S.dot(P[:,:,i],inv(D[:,:,i]))))
             M = S.dot(M,D[:,:,-1])
 
