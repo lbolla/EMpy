@@ -27,6 +27,7 @@ __author__ = 'Lorenzo Bolla'
 
 import numpy
 import EMpy.utils
+from functools import reduce
 
 
 class DeviceMatrix(object):

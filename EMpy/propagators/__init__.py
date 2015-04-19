@@ -6,8 +6,9 @@ Propagators:
     2. overlap "in fieri".
 
 """
+from __future__ import absolute_import
 
 __all__ = ['FDTD']
 __author__ = 'Lorenzo Bolla'
 
-import FDTD
+from . import FDTD

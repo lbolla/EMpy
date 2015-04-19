@@ -1,5 +1,6 @@
 """Useful functions and objects used more or less everywhere.
 """
+from __future__ import print_function
 
 __author__ = 'Lorenzo Bolla'
 
@@ -1018,7 +1019,7 @@ def warning(s):
     :type s: str
     :rtype : str
     """
-    print 'WARNING --- {}'.format(s)
+    print('WARNING --- {}'.format(s))
 
 
 class ProgressBar(object):
@@ -1091,7 +1092,7 @@ class ProgressBar(object):
         """ Updates the amount, and writes to stdout. Prints a carriage return
         first, so it will overwrite the current line in stdout."""
         if value % every == 0 or value >= self.max:
-            print '\r',
+            print('\r', end=' ')
             self.updateAmount(value)
             sys.stdout.write(self.progBar)
             sys.stdout.flush()

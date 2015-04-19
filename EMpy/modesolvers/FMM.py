@@ -11,6 +11,8 @@ Examples
     See L{FMM1d} and L{FMM2d}.
 
 """
+from __future__ import print_function
+from functools import reduce
 
 __author__ = 'Luca Gamberale & Lorenzo Bolla'
 
@@ -29,7 +31,7 @@ class Message:
         
     def show(self, verbosity=0):
         if self.verbosity <= verbosity:
-            print (self.verbosity - 1) * '\t' + self.msg
+            print((self.verbosity - 1) * '\t' + self.msg)
             
 class Struct:
     """Empty class to fill with whatever I want. Maybe a dictionary would do?"""    

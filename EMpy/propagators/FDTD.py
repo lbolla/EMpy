@@ -1,6 +1,7 @@
 """FDTD Postprocessing.
 
 """
+from __future__ import print_function
 
 import os
 import numpy
@@ -198,7 +199,7 @@ class FDTD:
         try:
             f = open(directory + filename)
         except:
-            print 'ERROR: input file'
+            print('ERROR: input file')
             return
         inp = Input(filename)
 
@@ -269,7 +270,7 @@ class FDTD:
         try:
             data = numpy.fromfile(directory + filename, sep = ' ')
         except:
-            print 'ERROR: param file'
+            print('ERROR: param file')
             return
         param.dx, param.dy, param.dz, param.dt = data[0:4]
         param.mx, param.my, param.mz, param.pmlx, param.pmly, param.pmlz, param.nflux, param.ntime, param.step1, param.step2 = data[4:14].astype(numpy.int32)
@@ -417,7 +418,7 @@ class FDTD:
         # exy, exz, eyx, eyz, ...
         dynamic_alloc_memory = dynamic_alloc_memory + 12*(self.param.mx+2*self.input.pmlx)*(self.param.my+2*self.input.pmly)*(self.param.mz+2*self.input.pmlz)*size_of_real
 
-        print 'Alloc mem = %g Gb, [%d%%]' % (1.*dynamic_alloc_memory/Gb, int(1.*dynamic_alloc_memory/max_available_RAM*100))
+        print('Alloc mem = %g Gb, [%d%%]' % (1.*dynamic_alloc_memory/Gb, int(1.*dynamic_alloc_memory/max_available_RAM*100)))
 
     def run(self, directory_='./', exe_file='/xlv1/labsoi_devices/devices/f3d', output_file='output', ncpu=12, bg=False, remote=True):
         """Run the simulation, possibly in remote."""
@@ -440,7 +441,7 @@ def load_fortran_unformatted(filename):
     try:        
         f = open(filename, 'rb')
     except:
-            print 'ERROR'
+            print('ERROR')
             return
     nbytes = numpy.fromfile(f, dtype=numpy.int32, count=1)
     n = nbytes / numpy.float32().nbytes

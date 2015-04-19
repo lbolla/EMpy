@@ -4,6 +4,7 @@
 @see: http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=12734&objectType=FILE
 
 """
+from __future__ import print_function
 
 import numpy
 import scipy
@@ -985,7 +986,7 @@ class FDMode(Mode):
         try:
             import pylab
         except ImportError:
-            print 'no pylab installed'
+            print('no pylab installed')
             return
         pylab.hot()
         pylab.contour(x, y, numpy.abs(field.T), 16)
@@ -1052,7 +1053,7 @@ class FDMode(Mode):
         try:
             import pylab
         except ImportError:
-            print 'no pylab installed'
+            print('no pylab installed')
             return
         pylab.figure()
         pylab.subplot(2,3,1)
