@@ -27,6 +27,7 @@ setup(
         'matplotlib',
     ],
     provides=['EMpy'],
+    test_suite='tests',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',

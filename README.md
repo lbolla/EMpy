@@ -8,4 +8,17 @@ Visit https://github.com/lbolla/EMpy for more information.
 
 ## Installation
 
-From inside a virtualenv, run `bootstrap.sh`.
+From inside a virtualenv, install with:
+
+    >>> python setup.py install
+    
+Run tests with:
+
+    >>> python setup.py test
+    
+# TODO
+
+- unittests
+- Travis CI
+- six
+- py3
