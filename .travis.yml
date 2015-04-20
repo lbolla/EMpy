@@ -1,8 +1,10 @@
 language: python
-
 python:
   - "2.7"
   - "3.4"
+
+# http://docs.travis-ci.com/user/caching/#pip-cache
+cache: pip
 
 notifications:
   # email: false
