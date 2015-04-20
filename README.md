@@ -6,7 +6,7 @@
 the transfer matrix algorithm, the rigorous coupled wave analysis algorithm and more.
 
 Run the examples in `examples/*` to have an idea how EMpy works.
-Visit https://github.com/lbolla/EMpy for more information.
+Visit http://lbolla.github.io/EMpy/ for more information.
 
 ## Installation
 
