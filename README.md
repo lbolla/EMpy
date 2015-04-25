@@ -10,10 +10,20 @@ Visit http://lbolla.github.io/EMpy/ for more information.
 
 ## Installation
 
-From inside a virtualenv, install with:
+  $> pip install ElectromagneticPython
 
+## Development
+
+- Download the source code from https://github.com/lbolla/EMpy.
+- From inside a virtualenv, install with:
+
+    >>> pip install -r requirements.txt
     >>> python setup.py install
+
+  or
+
+    >>> python setup.py develop
     
-Run tests with:
+- Run tests with:
 
     >>> python setup.py test
