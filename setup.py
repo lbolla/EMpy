@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 DOCSTRING = __doc__.split('\n')
 
 setup(
-    name='EMpy',
+    name='EMpy----ElectroMagnetic-Python',
     version='1.0',
     author='Lorenzo Bolla',
     author_email='lbolla@gmail.com',
