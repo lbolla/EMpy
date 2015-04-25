@@ -11,7 +11,7 @@ DOCSTRING = __doc__.split('\n')
 
 setup(
     name='EMpy',
-    version='1.0b1',
+    version='1.0',
     author='Lorenzo Bolla',
     author_email='lbolla@gmail.com',
     description=DOCSTRING[0],
@@ -21,7 +21,7 @@ setup(
     license='BSD',
     platforms=['Windows', 'Linux', 'Mac OS-X'],
     packages=find_packages(),
-    requires=[
+    install_requires=[
         'future',
         'numpy',
         'scipy',
