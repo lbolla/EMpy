@@ -24,9 +24,11 @@ y = numpy.linspace(0, 2.22e-6, 112)
 
 neigs = 2
 tol = 1e-8
-boundary = '0000' 
+boundary = '0000'
 
-solver = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, epsfunc, boundary).solve(neigs, tol)
+solver = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, epsfunc, boundary).solve(
+    neigs, tol)
+
 fig = pylab.figure()
 fig.add_subplot(1, 3, 1)
 pylab.contourf(abs(solver.modes[0].Ex), 50)
