@@ -24,13 +24,13 @@ Development
 
 First, download the source code from https://github.com/lbolla/EMpy. Then, from inside a `virtualenv`, install with:
 
-.. code-block:: python
+.. code-block:: bash
 
-    >>> pip install -r requirements.txt
-    >>> python setup.py install
+    $> pip install -r requirements.txt
+    $> python setup.py install
     
 Run tests with:
 
-.. code-block:: python
+.. code-block:: bash
 
-    >>> python setup.py test
+    $> python setup.py test
