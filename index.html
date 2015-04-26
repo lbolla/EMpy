@@ -76,42 +76,7 @@
                     href="http://hyperphysics.phy-astr.gsu.edu/hbase/phyopt/antiref.html#c1">here</a>,
                 is computed by the following script.</p>
 
-                <div class="code">
-                    <pre>
-<span class="comment">#!/usr/bin/python
-</span>
-<span class="comment"># taken from <a href="http://hyperphysics.phy-astr.gsu.edu/hbase/phyopt/antiref.html#c1">http://hyperphysics.phy-astr.gsu.edu/hbase/phyopt/antiref.html#c1</a>
-</span>
-<span class="keyword">import</span> numpy, EMpy, pylab
-
-<span class="comment"># define multilayer
-</span>n = numpy.array([1.,1.38,1.9044])
-d = numpy.array([numpy.inf,387.5e-9/1.38,numpy.inf])
-iso_layers = EMpy.utils.Multilayer()
-<span class="keyword">for</span> i <span class="keyword">in</span> <span class="py-builtins">xrange</span>(n.size):
-    n0 = EMpy.materials.RefractiveIndex(n[i])
-    iso_layers.append(EMpy.utils.Layer(EMpy.materials.IsotropicMaterial(<span class="string">'mat'</span>, n0=n0).setRixFromConst(n[i]),d[i]))
-
-<span class="comment"># define incident wave plane
-</span>theta_inc = EMpy.utils.deg2rad(10.)
-wls = numpy.linspace(0.85e-6,2.25e-6,300)
-
-<span class="comment"># solve
-</span>solution_iso   = EMpy.transfer_matrix.IsotropicTransferMatrix(iso_layers, theta_inc).solve(wls)
-
-<span class="comment"># plot
-</span>pylab.figure()
-pylab.plot(wls, 10*numpy.log10(solution_iso.Rs), <span class="string">'rx-'</span>, wls, 10*numpy.log10(solution_iso.Rp), <span class="string">'g.-'</span>)
-pylab.legend((<span class="string">'Rs'</span>, <span class="string">'Rp'</span>))
-pylab.title(<span class="string">'Single Layer Anti-Reflection Coating'</span>)
-pylab.xlabel(<span class="string">'wavelength /m'</span>)
-pylab.ylabel(<span class="string">'Power /dB'</span>)
-pylab.grid()
-pylab.xlim(wls.min(), wls.max())
-pylab.savefig(__file__ + '.png')
-pylab.show()
-</pre>
-                </div>
+                <script src="http://gist-it.appspot.com/github/lbolla/EMpy/blob/master/examples/ex_transfer_matrix_2.py"></script>
 
                 <p>In the lines 8-12 the multilayer is defined. Indices and
                 thicknesses are chosen so that a single layer of refractive index 1.38
@@ -133,54 +98,7 @@ pylab.show()
 
                 <p>The anisotropic transfer-matrix can be used to study the following example.
 
-                <div class="code">
-                    <pre>
-<span class="comment">#!/usr/bin/python
-</span>
-<span class="keyword">import</span> numpy, EMpy, pylab
-
-<span class="comment"># define the multilayer
-</span>epsilon = [1.0**2 * EMpy.constants.eps0 * numpy.eye(3), \
-           EMpy.constants.eps0 * numpy.diag([2.1, 2.0, 1.9]), \
-           2.3**2 * EMpy.constants.eps0 * numpy.eye(3), \
-           4.3**2 * EMpy.constants.eps0 * numpy.eye(3), \
-           3.0**2 * EMpy.constants.eps0 * numpy.eye(3)]
-
-d = numpy.array([numpy.inf,1e-6,2.3e-6,0.1e-6,numpy.inf])
-
-aniso_layers = EMpy.utils.Multilayer()
-<span class="keyword">for</span> i <span class="keyword">in</span> <span class="py-builtins">xrange</span>(len(epsilon)):
-    aniso_layers.append(EMpy.utils.Layer(EMpy.materials.AnisotropicMaterial(<span class="string">'Air'</span>).
-                                         setEpsilonTensorFromConst(epsilon[i]), d[i]))
-
-<span class="comment"># define the planewave
-</span>theta_inc_x = EMpy.utils.deg2rad(0.)
-theta_inc_y = 0.
-wls = numpy.linspace(1.4e-6,1.7e-6,100)
-
-<span class="comment"># solve
-</span>solution_aniso = EMpy.transfer_matrix.AnisotropicTransferMatrix(aniso_layers, 
-                                                                theta_inc_x, 
-                                                                theta_inc_y).solve(wls)
-
-<span class="comment"># plot
-</span>pylab.figure()
-pylab.plot(wls, solution_aniso.R[0,0,:], \
-           wls, solution_aniso.R[1,0,:], \
-           wls, solution_aniso.R[0,1,:], \
-           wls, solution_aniso.R[1,1,:], \
-           wls, solution_aniso.T[0,0,:], \
-           wls, solution_aniso.T[1,0,:], \
-           wls, solution_aniso.T[0,1,:], \
-           wls, solution_aniso.T[1,1,:])
-pylab.legend((<span class="string">'Rss'</span>, <span class="string">'Rps'</span>,<span class="string">'Rsp'</span>, <span class="string">'Rpp'</span>,<span class="string">'Tss'</span>, <span class="string">'Tps'</span>,<span class="string">'Tsp'</span>, <span class="string">'Tpp'</span>))
-pylab.title(<span class="string">'Anisotropic Multilayer'</span>)
-pylab.xlabel(<span class="string">'wavelength /m'</span>)
-pylab.ylabel(<span class="string">'Power /dB'</span>)
-pylab.xlim(wls.min(), wls.max())
-pylab.show()
-</pre>
-                </div>
+                <script src="http://gist-it.appspot.com/github/lbolla/EMpy/blob/master/examples/ex_transfer_matrix_3.py"></script>
 
                 The result is shown in the following graph.
 
@@ -198,30 +116,7 @@ pylab.show()
 
                 <p>This is the script to study a single <a href="http://en.wikipedia.org/wiki/Optical_ring_resonators">ring resonator</a>:
 
-                <div class="code">
-                    <pre>
-<span class="keyword">import</span> EMpy
-<span class="keyword">import</span> numpy
-<span class="keyword">import</span> pylab
-
-wls = numpy.linspace(1.53e-6, 1.56e-6, 1000)
-K1 = EMpy.devices.Coupler(wls, numpy.sqrt(0.08), 1.)
-K2 = EMpy.devices.Coupler(wls, numpy.sqrt(0.08), 1.)
-l1 = numpy.pi * 5e-6
-l2 = numpy.pi * 5e-6
-SWG = EMpy.devices.SWG(488, 220, 25).solve(wls)
-SRR = EMpy.devices.SRR(K1, K2, SWG.neff, l1, l2).solve()
-
-pylab.plot(wls, numpy.absolute(SRR.THRU), <span class="string">'r.-'</span>,
-           wls, numpy.absolute(SRR.DROP), <span class="string">'g.-'</span>)
-pylab.axis(<span class="string">'tight'</span>)
-pylab.ylim([0, 1])
-pylab.xlabel(<span class="string">'wavelength /m'</span>)
-pylab.ylabel(<span class="string">'power'</span>)
-pylab.legend((<span class="string">'THRU'</span>, <span class="string">'DROP'</span>))
-pylab.show()
-</pre>
-                </div>
+                <script src="http://gist-it.appspot.com/github/lbolla/EMpy/blob/master/examples/ex_SRR.py"></script>
 
                 <p>In lines 4 and 5 the two coupling coefficients and the two coupler losses
                 are defined. The length of the ring is defined in line 6, while its
@@ -243,38 +138,7 @@ pylab.show()
 
             <p>This is the script to study a ring resonator made of 3 rings:
 
-            <div class="code">
-                <pre>
-<span class="keyword">import</span> EMpy
-<span class="keyword">import</span> numpy
-<span class="keyword">import</span> pylab
-
-wls = numpy.linspace(1.53e-6, 1.57e-6, 1000)
-
-Ks = [EMpy.devices.Coupler(wls, numpy.sqrt(0.08), 1.),
-      EMpy.devices.Coupler(wls, numpy.sqrt(0.008), 1.),
-      EMpy.devices.Coupler(wls, numpy.sqrt(0.006), 1.),
-      EMpy.devices.Coupler(wls, numpy.sqrt(0.09), 1.)]
-
-R = 5e-6
-l1s = [numpy.pi * R, numpy.pi * R, numpy.pi * R]
-l2s = [numpy.pi * R, numpy.pi * R, numpy.pi * R]
-
-SWG = EMpy.devices.SWG(400, 220, 125).solve(wls)
-neffs = [SWG.neff, SWG.neff, SWG.neff]
-
-NRR = EMpy.devices.NRR(Ks, neffs, l1s, l2s).solve()
-
-pylab.plot(wls, 20 * numpy.log10(numpy.absolute(NRR.THRU)), <span class="string">'r.-'</span>,
-           wls, 20 * numpy.log10(numpy.absolute(NRR.DROP)), <span class="string">'g.-'</span>)
-pylab.axis(<span class="string">'tight'</span>)
-pylab.ylim([-30, 0])
-pylab.xlabel(<span class="string">'wavelength /m'</span>)
-pylab.ylabel(<span class="string">'power /dB'</span>)
-pylab.legend((<span class="string">'THRU'</span>, <span class="string">'DROP'</span>))
-pylab.show()
-</pre>
-            </div>
+            <script src="http://gist-it.appspot.com/github/lbolla/EMpy/blob/master/examples/ex_NRR.py"></script>
 
             <p>After the "imports", a list of couplers is defined: four, in this
             case, because the resonator is made of 3 rings. Then, the arcs
@@ -298,33 +162,7 @@ pylab.show()
 
             <p>This is the script to find the first two modes of a channel SOI waveguide:
 
-            <div class="code">
-                <pre>
-<span class="keyword">import</span> numpy
-<span class="keyword">import</span> EMpy
-
-<span class="keyword">def</span> <span class="function-name">epsfunc</span>(x, y):
-    [X, Y] = numpy.meshgrid(x, y)
-    <span class="keyword">return</span> numpy.where((numpy.abs(X.T - 1.24e-6) &lt;= .24e-6) *
-                       (numpy.abs(Y.T - 1.11e-6) &lt;= .11e-6),
-                       3.4757**2,
-                       1.446**2)
-
-wl = 1.55e-6
-x = numpy.linspace(0, 2.48e-6, 125)
-y = numpy.linspace(0, 2.22e-6, 112)
-
-neigs = 2
-tol = 1e-8
-boundary = <span class="string">'0000'</span> 
-
-solver = EMpy.modesolvers.VFDModeSolver(wl, x, y, epsfunc, boundary).solve(neigs, tol)
-print [m.neff for m in solver.modes]
-</pre>
-            </div>
-
-            <p>Effective indices are printed on stdout.
-
+            <script src="http://gist-it.appspot.com/github/lbolla/EMpy/blob/master/examples/ex_modesolver.py"></script>
             <p>This is a screenshot of the first (TE) mode:
 
             <img class="centered" src="images/mode_channel.png" alt="Mode Channel WG">
@@ -343,85 +181,13 @@ print [m.neff for m in solver.modes]
             the reflectivity is made with a similar multilayer, where the grating
             layer has been substituted by an "effective" isotropic layer.
 
-            <div class="code">
-                <pre>
-<span class="comment">#!/usr/bin/python
-</span>
-<span class="keyword">import</span> numpy, EMpy, pylab
-
-alpha = 0.
-delta = 0.
-<span class="comment"># psi = EMpy.utils.deg2rad(0.)                       # TM
-# psi = EMpy.utils.deg2rad(90.)                      # TE
-</span>psi = EMpy.utils.deg2rad(70.)                      <span class="comment"># hybrid
-</span>phi = EMpy.utils.deg2rad(90.)
-
-LAMBDA = 1016e-9                        <span class="comment"># grating periodicity
-</span>n = 2                                   <span class="comment"># orders of diffraction
-</span>
-UV6    = EMpy.materials.IsotropicMaterial(<span class="string">'UV6'</span>).setRixFromConst(1.560)
-SiN    = EMpy.materials.AnisotropicMaterial(<span class="string">'SiN'</span>).setEpsilonTensorFromConst(EMpy.constants.eps0 * \
-         EMpy.utils.euler_rotate(numpy.diag(numpy.asarray([1.8550, 1.8750, 1.9130])**2), \
-                                 EMpy.utils.deg2rad(14), \
-                                 EMpy.utils.deg2rad(25), \
-                                 EMpy.utils.deg2rad(32)))
-BPTEOS = EMpy.materials.IsotropicMaterial(<span class="string">'BPTEOS'</span>).setRixFromConst(1.448)
-ARC1   = EMpy.materials.IsotropicMaterial(<span class="string">'ARC1'</span>).setRixFromConst(1.448)
-
-EFF    = EMpy.materials.IsotropicMaterial(<span class="string">'EFF'</span>).setRixFromConst(1.6)
-
-multilayer1 = EMpy.utils.Multilayer([ \
-    EMpy.utils.Layer(EMpy.materials.Air, numpy.inf), \
-    EMpy.utils.Layer(SiN, 226e-9), \
-    EMpy.utils.Layer(BPTEOS, 226e-9), \
-    EMpy.utils.BinaryGrating(SiN, BPTEOS, .659, LAMBDA, 123e-9), \
-    EMpy.utils.Layer(SiN, 219e-9), \
-    EMpy.utils.Layer(EMpy.materials.SiO2, 2188e-9), \
-    EMpy.utils.Layer(EMpy.materials.Si, numpy.inf), \
-    ])
-
-multilayer2 = EMpy.utils.Multilayer([ \
-    EMpy.utils.Layer(EMpy.materials.Air, numpy.inf), \
-    EMpy.utils.Layer(SiN, 226e-9), \
-    EMpy.utils.Layer(BPTEOS, 226e-9), \
-    EMpy.utils.Layer(EMpy.materials.IsotropicMaterial().setRixFromConst(1.6), 123e-9), \
-    EMpy.utils.Layer(SiN, 219e-9), \
-    EMpy.utils.Layer(EMpy.materials.SiO2, 2188e-9), \
-    EMpy.utils.Layer(EMpy.materials.Si, numpy.inf), \
-    ])
-
-wls = numpy.linspace(1.50e-6, 1.60e-6, 301)
-
-solution1 = EMpy.RCWA.AnisotropicRCWA(multilayer1, alpha, delta, psi, phi, n).solve(wls)
-solution2 = EMpy.RCWA.AnisotropicRCWA(multilayer2, alpha, delta, psi, phi, n).solve(wls)
-
-pylab.plot(wls, solution1.DEO1[n,:], <span class="string">'k.-'</span>, \
-           wls, solution1.DEO3[n,:], <span class="string">'r.-'</span>, \
-           wls, solution1.DEE1[n,:], <span class="string">'b.-'</span>, \
-           wls, solution1.DEE3[n,:], <span class="string">'g.-'</span>, \
-           wls, solution2.DEO1[n,:], <span class="string">'k--'</span>, \
-           wls, solution2.DEO3[n,:], <span class="string">'r--'</span>, \
-           wls, solution2.DEE1[n,:], <span class="string">'b--'</span>, \
-           wls, solution2.DEE3[n,:], <span class="string">'g--'</span>, \
-           )
-pylab.xlabel(<span class="string">'wavelength'</span>)
-pylab.ylabel(<span class="string">'diffraction efficiency'</span>)
-pylab.legend((<span class="string">'DEO1'</span>, <span class="string">'DEO3'</span>, <span class="string">'DEE1'</span>, <span class="string">'DEE3'</span>))
-pylab.axis(<span class="string">'tight'</span>)
-pylab.ylim([0,1])
-pylab.show()
-</pre>
-            </div>
+            <script src="http://gist-it.appspot.com/github/lbolla/EMpy/blob/master/examples/ex_RCWA.py"></script>
 
             <p>The reflectivity are shown in the picture below (in dashed lines is
             the reflectivity withouth the grating): the effect of the grating is
             clearly visible as a peak in the reflectivity.
 
             <img class="centered" src="images/RCWA.png" alt="RCWA">
-
-
-
-
 
             </section>
         </div>
