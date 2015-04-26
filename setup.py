@@ -1,27 +1,24 @@
-"""EMpy: Electromagnetic Python.
-
-EMpy is a suite of numerical algorithms used in electromagnetism.
-"""
-
 __author__ = 'Lorenzo Bolla'
 
 from setuptools import setup, find_packages
 
-DOCSTRING = __doc__.splitlines()
+with open('README.rst', 'r') as readme:
+    long_description = readme.read()
 
 setup(
-    name='ElectromagneticPython',
+    name='ElectroMagneticPython',
     version='1.0',
     author='Lorenzo Bolla',
     author_email='lbolla@gmail.com',
-    description=DOCSTRING[0],
-    long_description='\n'.join(DOCSTRING[2:]),
+    description='EMpy - ElectroMagnetic Python',
+    long_description=long_description,
     url='http://lbolla.github.io/EMpy/',
     download_url='https://github.com/lbolla/EMpy',
     license='BSD',
     platforms=['Windows', 'Linux', 'Mac OS-X'],
     packages=find_packages(),
     install_requires=[
+        'distribute>=0.6.28',
         'future',
         'numpy',
         'scipy',
