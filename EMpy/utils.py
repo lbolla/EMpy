@@ -1,5 +1,7 @@
-"""Useful functions and objects used more or less everywhere.
-"""
+# pylint: disable=R0913,R0914,W0201,W0622,C0302,R0902,R0903,W1001,W0612,W0613
+
+"""Useful functions and objects used more or less everywhere."""
+
 from __future__ import print_function
 from builtins import zip
 from builtins import str
@@ -19,6 +21,7 @@ import sys
 
 
 class Layer(object):
+
     """A layer is defined by a material (iso or aniso) and a thickness."""
 
     def __init__(self, mat, thickness):
@@ -49,7 +52,8 @@ class Layer(object):
             # anisotropic
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
-            EPS[:, :, hmax] = numpy.squeeze(self.mat.epsilonTensor(wl)) / EMpy.constants.eps0
+            EPS[:, :, hmax] = numpy.squeeze(
+                self.mat.epsilonTensor(wl)) / EMpy.constants.eps0
             EPS1[:, :, hmax] = scipy.linalg.inv(EPS[:, :, hmax])
             return EPS, EPS1
 
@@ -71,7 +75,8 @@ class Layer(object):
 
 
 class BinaryGrating(object):
-    """A Binary Grating is defined by two materials (iso or aniso), a duty cycle, a pitch and a thickness."""
+    """A Binary Grating is defined by two materials (iso or aniso), a
+    duty cycle, a pitch and a thickness."""
 
     def __init__(self, mat1, mat2, dc, pitch, thickness):
         """Set the materials, the duty cycle and the thickness."""
@@ -95,19 +100,24 @@ class BinaryGrating(object):
             rix2 = self.mat2.n(wl)
             f = self.dc
             h = numpy.arange(-hmax, hmax + 1)
-            EPS = (rix1 ** 2 - rix2 ** 2) * f * numpy.sinc(h * f) + rix2 ** 2 * (h == 0)
-            EPS1 = (rix1 ** -2 - rix2 ** -2) * f * numpy.sinc(h * f) + rix2 ** -2 * (h == 0)
+            EPS = (rix1 ** 2 - rix2 ** 2) * f * \
+                numpy.sinc(h * f) + rix2 ** 2 * (h == 0)
+            EPS1 = (rix1 ** -2 - rix2 ** -2) * f * \
+                numpy.sinc(h * f) + rix2 ** -2 * (h == 0)
             return EPS, EPS1
         else:
             # anisotropic
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
-            eps1 = numpy.squeeze(self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
-            eps2 = numpy.squeeze(self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps1 = numpy.squeeze(
+                self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps2 = numpy.squeeze(
+                self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
             f = self.dc
             h = numpy.arange(-hmax, hmax + 1)
             for ih, hh in enumerate(h):
-                EPS[:, :, ih] = (eps1 - eps2) * f * numpy.sinc(hh * f) + eps2 * (hh == 0)
+                EPS[:, :, ih] = (eps1 - eps2) * f * \
+                    numpy.sinc(hh * f) + eps2 * (hh == 0)
                 EPS1[:, :, ih] = (
                     scipy.linalg.inv(eps1) - scipy.linalg.inv(eps2)
                 ) * f * numpy.sinc(hh * f) + scipy.linalg.inv(eps2) * (hh == 0)
@@ -118,7 +128,8 @@ class BinaryGrating(object):
 
         if self.isIsotropic():
             eps = EMpy.constants.eps0 * numpy.real(
-                self.mat1.n(wl) ** 2 * self.dc + self.mat2.n(wl) ** 2 * (1 - self.dc))
+                self.mat1.n(wl) ** 2 * self.dc + self.mat2.n(wl) ** 2
+                * (1 - self.dc))
         else:
             eps1 = self.mat1.epsilonTensor(wl)[2, 2, 0]
             eps2 = self.mat2.epsilonTensor(wl)[2, 2, 0]
@@ -133,11 +144,11 @@ class BinaryGrating(object):
 
 
 class SymmetricDoubleGrating(object):
-    """A Symmetric Double Grating is defined by three materials (iso or aniso), two duty cycles, a pitch and a
-    thickness.
-    
-    Inside the pitch there are two rect of width dc1*pitch of mat1 and dc2*pitch of mat2, with a spacer of fixed width
-    made of mat3 between them.
+    """A Symmetric Double Grating is defined by three materials (iso
+    or aniso), two duty cycles, a pitch and a thickness.
+
+    Inside the pitch there are two rect of width dc1*pitch of mat1 and
+    dc2*pitch of mat2, with a spacer of fixed width made of mat3 between them.
     """
 
     def __init__(self, mat1, mat2, mat3, dc1, dc2, pitch, thickness):
@@ -152,7 +163,9 @@ class SymmetricDoubleGrating(object):
 
     def isIsotropic(self):
         """Return True if all the materials are isotropic, False otherwise."""
-        return self.mat1.isIsotropic() and self.mat2.isIsotropic() and self.mat3.isIsotropic()
+        return (self.mat1.isIsotropic() and
+                self.mat2.isIsotropic() and
+                self.mat3.isIsotropic())
 
     def getEPSFourierCoeffs(self, wl, n, anisotropic=True):
         """Return the Fourier coefficients of eps and eps**-1, orders [-n,n]."""
@@ -169,20 +182,29 @@ class SymmetricDoubleGrating(object):
             N = len(h)
             A = -N / 4.
             B = N / 4.
-            EPS = rix3 ** 2 * (h == 0) + (rix1 ** 2 - rix3 ** 2) * f1 * numpy.sinc(h * f1) * numpy.exp(
-                2j * numpy.pi * h / N * A) + (rix2 ** 2 - rix3 ** 2) * f2 * numpy.sinc(h * f2) * numpy.exp(
-                2j * numpy.pi * h / N * B)
-            EPS1 = rix3 ** -2 * (h == 0) + (rix1 ** -2 - rix3 ** -2) * f1 * numpy.sinc(h * f1) * numpy.exp(
-                2j * numpy.pi * h / N * A) + (rix2 ** -2 - rix3 ** -2) * f2 * numpy.sinc(h * f2) * numpy.exp(
-                2j * numpy.pi * h / N * B)
+            EPS = (
+                rix3 ** 2 * (h == 0) + (rix1 ** 2 - rix3 ** 2) * f1 *
+                numpy.sinc(h * f1) * numpy.exp(2j * numpy.pi * h / N * A) +
+                (rix2 ** 2 - rix3 ** 2) * f2 * numpy.sinc(h * f2) *
+                numpy.exp(2j * numpy.pi * h / N * B)
+            )
+            EPS1 = (
+                rix3 ** -2 * (h == 0) + (rix1 ** -2 - rix3 ** -2) * f1 *
+                numpy.sinc(h * f1) * numpy.exp(2j * numpy.pi * h / N * A) +
+                (rix2 ** -2 - rix3 ** -2) * f2 * numpy.sinc(h * f2) *
+                numpy.exp(2j * numpy.pi * h / N * B)
+            )
             return EPS, EPS1
         else:
             # anisotropic
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
-            eps1 = numpy.squeeze(self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
-            eps2 = numpy.squeeze(self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
-            eps3 = numpy.squeeze(self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps1 = numpy.squeeze(
+                self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps2 = numpy.squeeze(
+                self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps3 = numpy.squeeze(
+                self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
             f1 = self.dc1
             f2 = self.dc2
             h = numpy.arange(-hmax, hmax + 1)
@@ -190,12 +212,22 @@ class SymmetricDoubleGrating(object):
             A = -N / 4.
             B = N / 4.
             for ih, hh in enumerate(h):
-                EPS[:, :, ih] = (eps1 - eps3) * f1 * numpy.sinc(hh * f1) * numpy.exp(2j * numpy.pi * hh / N * A) + (
-                    eps2 - eps3) * f2 * numpy.sinc(hh * f2) * numpy.exp(2j * numpy.pi * hh / N * B) + eps3 * (hh == 0)
-                EPS1[:, :, ih] = (scipy.linalg.inv(eps1) - scipy.linalg.inv(eps3)) * f1 * numpy.sinc(
-                    hh * f1) * numpy.exp(2j * numpy.pi * hh / N * A) + (scipy.linalg.inv(eps2) - scipy.linalg.inv(
-                        eps3)) * f2 * numpy.sinc(hh * f2) * numpy.exp(2j * numpy.pi * hh / N * B) + scipy.linalg.inv(
-                            eps3) * (hh == 0)
+                EPS[:, :, ih] = (
+                    (eps1 - eps3) * f1 * numpy.sinc(hh * f1) *
+                    numpy.exp(2j * numpy.pi * hh / N * A) +
+                    (eps2 - eps3) * f2 * numpy.sinc(hh * f2) *
+                    numpy.exp(2j * numpy.pi * hh / N * B) +
+                    eps3 * (hh == 0)
+                )
+                EPS1[:, :, ih] = (
+                    (scipy.linalg.inv(eps1) - scipy.linalg.inv(eps3)) * f1 *
+                    numpy.sinc(hh * f1) *
+                    numpy.exp(2j * numpy.pi * hh / N * A) +
+                    (scipy.linalg.inv(eps2) - scipy.linalg.inv(eps3)) * f2 *
+                    numpy.sinc(hh * f2) *
+                    numpy.exp(2j * numpy.pi * hh / N * B) +
+                    scipy.linalg.inv(eps3) * (hh == 0)
+                )
             return EPS, EPS1
 
     def capacitance(self, area=1., wl=0):
@@ -203,32 +235,37 @@ class SymmetricDoubleGrating(object):
 
         if self.isIsotropic():
             eps = EMpy.constants.eps0 * numpy.real(
-                self.mat1.n(wl) ** 2 * self.dc1 + self.mat2.n(wl) ** 2 * self.dc2 + self.mat3.n(wl) ** 2 * (
-                    1 - self.dc1 - self.dc2))
+                self.mat1.n(wl) ** 2 * self.dc1 + self.mat2.n(wl) ** 2
+                * self.dc2 + self.mat3.n(wl) ** 2 * (1 - self.dc1 - self.dc2))
         else:
             eps1 = self.mat1.epsilonTensor(wl)[2, 2, 0]
             eps2 = self.mat2.epsilonTensor(wl)[2, 2, 0]
             eps3 = self.mat3.epsilonTensor(wl)[2, 2, 0]
-            eps = numpy.real(eps1 * self.dc1 + eps2 * self.dc2 + eps3 * (1 - self.dc1 - self.dc2))
+            eps = numpy.real(
+                eps1 * self.dc1 + eps2 * self.dc2 +
+                eps3 * (1 - self.dc1 - self.dc2))
 
         return eps * area / self.thickness
 
     def __str__(self):
         """Return the description of a binary grating."""
         return "(%s, %s, %s), dc1: %g, dc2: %g, pitch: %g, thickness: %g" % (
-            self.mat1, self.mat2, self.mat3, self.dc1, self.dc2, self.pitch, self.thickness)
+            self.mat1, self.mat2, self.mat3, self.dc1, self.dc2, self.pitch,
+            self.thickness)
 
 
 class AsymmetricDoubleGrating(SymmetricDoubleGrating):
-    """An Asymmetric Double Grating is defined by three materials (iso or aniso), three duty cycles, a pitch and a
-    thickness.
-    
-    Inside the pitch there are two rect of width dc1*pitch of mat1 and dc2*pitch of mat2, separated by dcM*pitch mat3
-    (between mat1 e mat2, not between mat2 and mat1!).
+    """An Asymmetric Double Grating is defined by three materials (iso
+    or aniso), three duty cycles, a pitch and a thickness.
+
+    Inside the pitch there are two rect of width dc1*pitch of mat1 and
+    dc2*pitch of mat2, separated by dcM*pitch mat3 (between mat1 e
+    mat2, not between mat2 and mat1!).
     """
 
     def __init__(self, mat1, mat2, mat3, dc1, dc2, dcM, pitch, thickness):
-        SymmetricDoubleGrating.__init__(self, mat1, mat2, mat3, dc1, dc2, pitch, thickness)
+        SymmetricDoubleGrating.__init__(
+            self, mat1, mat2, mat3, dc1, dc2, pitch, thickness)
         self.dcM = dcM
 
     def getEPSFourierCoeffs(self, wl, n, anisotropic=True):
@@ -247,20 +284,29 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
             N = len(h)
             A = -N * (f1 + fM) / 2.
             B = N * (f2 + fM) / 2.
-            EPS = rix3 ** 2 * (h == 0) + (rix1 ** 2 - rix3 ** 2) * f1 * numpy.sinc(h * f1) * numpy.exp(
-                2j * numpy.pi * h / N * A) + (rix2 ** 2 - rix3 ** 2) * f2 * numpy.sinc(h * f2) * numpy.exp(
-                2j * numpy.pi * h / N * B)
-            EPS1 = rix3 ** -2 * (h == 0) + (rix1 ** -2 - rix3 ** -2) * f1 * numpy.sinc(h * f1) * numpy.exp(
-                2j * numpy.pi * h / N * A) + (rix2 ** -2 - rix3 ** -2) * f2 * numpy.sinc(h * f2) * numpy.exp(
-                2j * numpy.pi * h / N * B)
+            EPS = (
+                rix3 ** 2 * (h == 0) + (rix1 ** 2 - rix3 ** 2) * f1 *
+                numpy.sinc(h * f1) * numpy.exp(2j * numpy.pi * h / N * A) +
+                (rix2 ** 2 - rix3 ** 2) * f2 *
+                numpy.sinc(h * f2) * numpy.exp(2j * numpy.pi * h / N * B)
+            )
+            EPS1 = (
+                rix3 ** -2 * (h == 0) + (rix1 ** -2 - rix3 ** -2) * f1 *
+                numpy.sinc(h * f1) * numpy.exp(2j * numpy.pi * h / N * A) +
+                (rix2 ** -2 - rix3 ** -2) * f2 * numpy.sinc(h * f2) *
+                numpy.exp(2j * numpy.pi * h / N * B)
+            )
             return EPS, EPS1
         else:
             # anisotropic
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
-            eps1 = numpy.squeeze(self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
-            eps2 = numpy.squeeze(self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
-            eps3 = numpy.squeeze(self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps1 = numpy.squeeze(
+                self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps2 = numpy.squeeze(
+                self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
+            eps3 = numpy.squeeze(
+                self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
             f1 = self.dc1
             f2 = self.dc2
             fM = self.dcM
@@ -269,12 +315,22 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
             A = -N * (f1 + fM) / 2.
             B = N * (f2 + fM) / 2.
             for ih, hh in enumerate(h):
-                EPS[:, :, ih] = (eps1 - eps3) * f1 * numpy.sinc(hh * f1) * numpy.exp(2j * numpy.pi * hh / N * A) + (
-                    eps2 - eps3) * f2 * numpy.sinc(hh * f2) * numpy.exp(2j * numpy.pi * hh / N * B) + eps3 * (hh == 0)
-                EPS1[:, :, ih] = (scipy.linalg.inv(eps1) - scipy.linalg.inv(eps3)) * f1 * numpy.sinc(
-                    hh * f1) * numpy.exp(2j * numpy.pi * hh / N * A) + (scipy.linalg.inv(eps2) - scipy.linalg.inv(
-                        eps3)) * f2 * numpy.sinc(hh * f2) * numpy.exp(2j * numpy.pi * hh / N * B) + scipy.linalg.inv(
-                        eps3) * (hh == 0)
+                EPS[:, :, ih] = (
+                    (eps1 - eps3) * f1 * numpy.sinc(hh * f1) *
+                    numpy.exp(2j * numpy.pi * hh / N * A) +
+                    (eps2 - eps3) * f2 * numpy.sinc(hh * f2) *
+                    numpy.exp(2j * numpy.pi * hh / N * B) +
+                    eps3 * (hh == 0)
+                )
+                EPS1[:, :, ih] = (
+                    (scipy.linalg.inv(eps1) - scipy.linalg.inv(eps3)) * f1 *
+                    numpy.sinc(hh * f1) *
+                    numpy.exp(2j * numpy.pi * hh / N * A) +
+                    (scipy.linalg.inv(eps2) - scipy.linalg.inv(eps3)) * f2 *
+                    numpy.sinc(hh * f2) *
+                    numpy.exp(2j * numpy.pi * hh / N * B) +
+                    scipy.linalg.inv(eps3) * (hh == 0)
+                )
             return EPS, EPS1
 
     def capacitance(self, area=1., wl=0):
@@ -282,32 +338,40 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
 
         if self.isIsotropic():
             eps = EMpy.constants.eps0 * numpy.real(
-                self.mat1.n(wl) ** 2 * self.dc1 + self.mat2.n(wl) ** 2 * self.dc2 + self.mat3.n(wl) ** 2 * (
-                    1 - self.dc1 - self.dc2))
+                self.mat1.n(wl) ** 2 * self.dc1 + self.mat2.n(wl) ** 2 *
+                self.dc2 + self.mat3.n(wl) ** 2 * (1 - self.dc1 - self.dc2))
         else:
             eps1 = self.mat1.epsilonTensor(wl)[2, 2, 0]
             eps2 = self.mat2.epsilonTensor(wl)[2, 2, 0]
             eps3 = self.mat3.epsilonTensor(wl)[2, 2, 0]
-            eps = numpy.real(eps1 * self.dc1 + eps2 * self.dc2 + eps3 * (1 - self.dc1 - self.dc2))
+            eps = numpy.real(
+                eps1 * self.dc1 + eps2 * self.dc2 +
+                eps3 * (1 - self.dc1 - self.dc2))
 
         return eps * area / self.thickness
 
     def __str__(self):
         """Return the description of a binary grating."""
-        return "(%s, %s, %s), dc1: %g, dc2: %g, dcM: %g, pitch: %g, thickness: %g" % (
-            self.mat1, self.mat2, self.mat3, self.dc1, self.dc2, self.dcM, self.pitch, self.thickness)
+        return ("(%s, %s, %s), dc1: %g, dc2: %g, dcM: %g, "
+                "pitch: %g, thickness: %g") % (
+            self.mat1, self.mat2, self.mat3, self.dc1, self.dc2,
+            self.dcM, self.pitch, self.thickness)
 
 
 class LiquidCrystalCell(object):
     """Liquid Crystal Cell.
-    
-    A liquid crystal cell is determined by a liquid crystal, a voltage applied to it, a total thickness, an anchoring
-    thickness.
-    The liquid crystal molecules are anchored to the cell with a given pretilt angle (that, at zero volts, is constant
-    throughout all the LC cell).
-    The cell is decomposed in nlayers homogeneous layers. The LC characteristics in each layer is either read from file
-    or deduced by the LC physical parameters solving a boundary value problem (bvp).
-    Inspiration from here: U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}.
+
+    A liquid crystal cell is determined by a liquid crystal, a voltage
+    applied to it, a total thickness, an anchoring thickness.  The
+    liquid crystal molecules are anchored to the cell with a given
+    pretilt angle (that, at zero volts, is constant throughout all the LC cell).
+    The cell is decomposed in nlayers homogeneous layers. The LC
+    characteristics in each layer is either read from file or deduced
+    by the LC physical parameters solving a boundary value problem
+    (bvp).
+
+    Inspiration from:
+    U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}.
 
     @ivar lc: Liquid Crystal.
     @ivar voltage: voltage applied.
@@ -320,7 +384,8 @@ class LiquidCrystalCell(object):
 
     """
 
-    def __init__(self, lc, voltage, t_tot, t_anchoring, pretilt=0, totaltwist=0, nlayers=100, data_file=None):
+    def __init__(self, lc, voltage, t_tot, t_anchoring, pretilt=0,
+                 totaltwist=0, nlayers=100, data_file=None):
 
         self.lc = lc
         self.t_tot = t_tot
@@ -330,14 +395,17 @@ class LiquidCrystalCell(object):
         self.nlayers = nlayers
         self.data_file = data_file
         # thicknesses of internal layers
-        tlc_internal = (self.t_tot - 2. * self.t_anchoring) / (self.nlayers - 2.) * numpy.ones(self.nlayers - 2)
+        tlc_internal = (self.t_tot - 2. * self.t_anchoring) / \
+            (self.nlayers - 2.) * numpy.ones(self.nlayers - 2)
         # thicknesses of layers
         self.tlc = numpy.r_[self.t_anchoring, tlc_internal, self.t_anchoring]
         # internal sample points
         lhs = numpy.r_[0, numpy.cumsum(tlc_internal)]
         # normalized sample points: at the center of internal layers, plus the
         # boundaries (i.e. the anchoring layers)
-        self.normalized_sample_points = numpy.r_[0, (lhs[1:] + lhs[:-1]) / 2. / (self.t_tot - 2 * self.t_anchoring), 1]
+        self.normalized_sample_points = numpy.r_[
+            0, (lhs[1:] + lhs[:-1]) / 2. / (self.t_tot - 2 * self.t_anchoring),
+            1]
         tmp = numpy.r_[0, numpy.cumsum(self.tlc)]
         self.sample_points = .5 * (tmp[1:] + tmp[:-1])
         # finally, apply voltage
@@ -361,7 +429,8 @@ class LiquidCrystalCell(object):
     angles = property(fget=getangles)
 
     def __ode_3k(self, z, f):
-        """Inspiration from here: U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
+        """Inspiration from:
+        U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
         # ------------------------------------------------------------
         # minimise Oseen Frank free energy and solve Laplace equation
@@ -404,12 +473,14 @@ class LiquidCrystalCell(object):
             K3322 * dphi2dz
         ) / costheta1 / (K3322 * costheta1 ** 2 - K22 - K3322)
 
-        ddu2dz = -2 * e0 * deleps * sintheta1 * costheta1 * dtheta2dz * du2dz / ezz
+        ddu2dz = -2 * e0 * deleps * sintheta1 * \
+            costheta1 * dtheta2dz * du2dz / ezz
 
         return numpy.array([ddtheta2dz, ddphi2dz, ddu2dz])
 
     def __bc_nosplay(self, f):
-        """Inspiration from here: U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
+        """Inspiration from:
+        U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
         theta2, dtheta2dz, phi2, dphi2dz, u2, du2dz = f
         return numpy.array([theta2[0] - self.pretilt,
@@ -420,7 +491,8 @@ class LiquidCrystalCell(object):
                             u2[5] - self.voltage])
 
     def __ic_nosplay(self, z):
-        """Inspiration from here: U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
+        """Inspiration from:
+        U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
         self.maxtilt = 90 * numpy.pi / 180 - self.pretilt
         init = numpy.array([self.pretilt + self.maxtilt * 4 * z * (1 - z),
@@ -433,7 +505,8 @@ class LiquidCrystalCell(object):
         return init, self.__ode_3k(z, init)
 
     def __apply_tension(self):
-        """Inspiration from here: U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
+        """Inspiration from:
+        U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
         try:
             from scikits.bvp1lg import colnew
@@ -454,7 +527,8 @@ class LiquidCrystalCell(object):
         self.bvp_solution = solution
 
     def get_parameters(self, z=None):
-        """Inspiration from here: U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
+        """Inspiration from:
+        U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
         if z is None:
             z = self.bvp_solution.mesh
@@ -493,11 +567,11 @@ class LiquidCrystalCell(object):
         m = []
         for a, t in zip(EMpy.utils.deg2rad(self.angles), self.tlc):
             epsT = EMpy.materials.EpsilonTensor(
-                epsilon_tensor_const=
-                EMpy.utils.euler_rotate(numpy.diag([self.lc.nE,
-                                                    self.lc.nO,
-                                                    self.lc.nO]) ** 2,
-                                        0., numpy.pi / 2., numpy.pi / 2. - a) * EMpy.constants.eps0,
+                epsilon_tensor_const=EMpy.utils.euler_rotate(
+                    numpy.diag([self.lc.nE,
+                                self.lc.nO,
+                                self.lc.nO]) ** 2,
+                    0., numpy.pi / 2., numpy.pi / 2. - a) * EMpy.constants.eps0,
                 epsilon_tensor_known={
                     0: EMpy.utils.euler_rotate(
                         numpy.diag([self.lc.nE_electrical,
@@ -505,9 +579,11 @@ class LiquidCrystalCell(object):
                                     self.lc.nO_electrical]) ** 2,
                         0., numpy.pi / 2.,
                         numpy.pi / 2. - a) * EMpy.constants.eps0,
-                    }
+                }
             )
-            m.append(Layer(EMpy.materials.AnisotropicMaterial('LC', epsilon_tensor=epsT), t))
+            m.append(
+                Layer(EMpy.materials.AnisotropicMaterial(
+                    'LC', epsilon_tensor=epsT), t))
 
         return Multilayer(m)
 
@@ -522,12 +598,14 @@ class LiquidCrystalCell(object):
 
     def __str__(self):
         """Return the description of a LiquidCrystal."""
-        return "datafile: %s, voltage: %g, t_tot: %g, t_anchoring: %g, (nO, nE) = (%g, %g)" % \
-               (self.data_file, self.voltage, self.t_tot, self.t_anchoring,
-                self.lc.nO, self.lc.nE)
+        return ("datafile: %s, voltage: %g, t_tot: %g, "
+                "t_anchoring: %g, (nO, nE) = (%g, %g)") % (
+                    self.data_file, self.voltage, self.t_tot, self.t_anchoring,
+                    self.lc.nO, self.lc.nE)
 
 
 class Multilayer(object):
+
     """A Multilayer is a list of layers with some more methods."""
 
     def __init__(self, data=None):
@@ -580,7 +658,8 @@ class Multilayer(object):
         return self.data.pop(i)
 
     def isIsotropic(self):
-        """Return True if all the layers of the multilayers are isotropic, False otherwise."""
+        """Return True if all the layers of the multilayers are
+        isotropic, False otherwise."""
         return numpy.asarray([m.isIsotropic() for m in self.data]).all()
 
     def simplify(self):
@@ -620,11 +699,14 @@ class Multilayer(object):
         if self.__len__() == 0:
             list_str = "<emtpy>"
         else:
-            list_str = '\n'.join(['%d: %s' % (il, l.__str__()) for il, l in enumerate(self.data)])
+            list_str = '\n'.join([
+                '%d: %s' % (il, l.__str__()) for il, l in enumerate(self.data)
+            ])
         return 'Multilayer\n----------\n' + list_str
 
 
 class Slice(Multilayer):
+
     def __init__(self, width, *argv):
         Multilayer.__init__(self, *argv)
         self.width = width
@@ -657,7 +739,9 @@ class Slice(Multilayer):
             y1 = y0 + l.thickness
             n = l.mat.n(wl)
             r = 1. - (1. * (n - nmin) / (nmax - nmin))
-            pylab.fill([x0, x1, x1, x0], [y0, y0, y1, y1], ec='yellow', fc=(r, r, r), alpha=.5)
+            pylab.fill(
+                [x0, x1, x1, x0], [y0, y0, y1, y1], ec='yellow', fc=(r, r, r),
+                alpha=.5)
             y0 = y1
         pylab.axis('image')
 
@@ -666,6 +750,7 @@ class Slice(Multilayer):
 
 
 class CrossSection(list):
+
     def __str__(self):
         return '\n'.join('%s' % s for s in self)
 
@@ -762,6 +847,7 @@ class CrossSection(list):
 
 
 class Peak(object):
+
     def __init__(self, x, y, idx, x0, y0, xFWHM_1, xFWHM_2):
         self.x = x
         self.y = y
@@ -773,7 +859,8 @@ class Peak(object):
         self.FWHM = numpy.abs(xFWHM_2 - xFWHM_1)
 
     def __str__(self):
-        return '(%g, %g) [%d, (%g, %g)] FWHM = %s' % (self.x, self.y, self.idx, self.x0, self.y0, self.FWHM)
+        return '(%g, %g) [%d, (%g, %g)] FWHM = %s' % (
+            self.x, self.y, self.idx, self.x0, self.y0, self.FWHM)
 
 
 def deg2rad(x):
@@ -798,27 +885,34 @@ def normalize(x):
 
 def euler_rotate(X, phi, theta, psi):
     """Euler rotate.
-    
+
     Rotate the matrix X by the angles phi, theta, psi.
-    
+
     INPUT
     X = 2d numpy.array.
     phi, theta, psi = rotation angles.
-    
+
     OUTPUT
     Rotated matrix = 2d numpy.array.
-    
+
     NOTE
     see http://mathworld.wolfram.com/EulerAngles.html
     """
 
-    A = numpy.array([[numpy.cos(psi) * numpy.cos(phi) - numpy.cos(theta) * numpy.sin(phi) * numpy.sin(psi),
-                      -numpy.sin(psi) * numpy.cos(phi) - numpy.cos(theta) * numpy.sin(phi) * numpy.cos(psi),
-                      numpy.sin(theta) * numpy.sin(phi)],
-                     [numpy.cos(psi) * numpy.sin(phi) + numpy.cos(theta) * numpy.cos(phi) * numpy.sin(psi),
-                      -numpy.sin(psi) * numpy.sin(phi) + numpy.cos(theta) * numpy.cos(phi) * numpy.cos(psi),
-                      -numpy.sin(theta) * numpy.cos(phi)],
-                     [numpy.sin(theta) * numpy.sin(psi), numpy.sin(theta) * numpy.cos(psi), numpy.cos(theta)]])
+    A = numpy.array([
+        [numpy.cos(psi) * numpy.cos(phi) -
+         numpy.cos(theta) * numpy.sin(phi) * numpy.sin(psi),
+         -numpy.sin(psi) * numpy.cos(phi) -
+         numpy.cos(theta) * numpy.sin(phi) * numpy.cos(psi),
+         numpy.sin(theta) * numpy.sin(phi)],
+        [numpy.cos(psi) * numpy.sin(phi) +
+         numpy.cos(theta) * numpy.cos(phi) * numpy.sin(psi),
+         -numpy.sin(psi) * numpy.sin(phi) +
+         numpy.cos(theta) * numpy.cos(phi) * numpy.cos(psi),
+         -numpy.sin(theta) * numpy.cos(phi)],
+        [numpy.sin(theta) * numpy.sin(psi),
+         numpy.sin(theta) * numpy.cos(psi), numpy.cos(theta)]
+    ])
     return numpy.dot(A, numpy.dot(X, scipy.linalg.inv(A)))
 
 
@@ -828,7 +922,7 @@ def snell(theta_inc, n):
     INPUT
     theta_inc = angle of incidence.
     n = 1D numpy.array of refractive indices.
-    
+
     OUTPUT
     theta = 1D numpy.array.
     """
@@ -846,7 +940,7 @@ def group_delay_and_dispersion(wls, y):
     INPUT
     wls = wavelengths (ndarray).
     y = function (ndarray).
-    
+
     OUTPUT
     phi = phase of function in rad.
     tau = group delay in ps.
@@ -880,15 +974,15 @@ def group_delay_and_dispersion(wls, y):
     tau = -.5 / numpy.pi * numpy.diff(phi) / df * 1E12
 
     # dispersion in ps/nm
-    Dpsnm = -.5 / numpy.pi / cnmps * f[1:-1] ** 2 * numpy.diff(phi, 2) / df[0:-1] ** 2
+    Dpsnm = -.5 / numpy.pi / cnmps * \
+        f[1:-1] ** 2 * numpy.diff(phi, 2) / df[0:-1] ** 2
 
     return phi, tau, Dpsnm
 
 
 def rix2losses(n, wl):
-    """Return real(n), imag(n), alpha, alpha_cm1, alpha_dBcm1, given a complex refractive index.
-    Power goes as: P = P0 exp(-alpha*z).
-    """
+    """Return real(n), imag(n), alpha, alpha_cm1, alpha_dBcm1, given a
+    complex refractive index.  Power goes as: P = P0 exp(-alpha*z)."""
     nr = numpy.real(n)
     ni = numpy.imag(n)
     alpha = 4 * numpy.pi * ni / wl
@@ -939,7 +1033,8 @@ def find_peaks(x, y, threshold=1e-6):
 
         # look around the candidate
         xtol = (x.max() - x.min()) * 1e-6
-        xopt = scipy.optimize.fminbound(absdy, x[idx - 1], x[idx + 1], xtol=xtol, disp=False)
+        xopt = scipy.optimize.fminbound(
+            absdy, x[idx - 1], x[idx + 1], xtol=xtol, disp=False)
         yopt = scipy.interpolate.splev(xopt, tck)
 
         if yopt > threshold * y.max():
@@ -1027,9 +1122,10 @@ def warning(s):
 
 
 class ProgressBar(object):
+
     """ Creates a text-based progress bar. Call the object with the `print'
     command to see the progress bar, which looks something like this:
-    
+
     [=======>        22%                  ]
 
     You may specify the progress bar's width, min and max values on init.
@@ -1086,11 +1182,13 @@ class ProgressBar(object):
 
         # slice the percentage into the bar
         self.progBar = ''.join([self.progBar[0:percentPlace], percentString,
-                                self.progBar[percentPlace + len(percentString):],
+                                self.progBar[
+                                    percentPlace + len(percentString):],
                                 ])
 
         if percentDone > 0:
-            self.progBar += ' %6ds / %6ds' % (int(elapsed_time), int(elapsed_time * (100. / percentDone - 1)))
+            self.progBar += ' %6ds / %6ds' % (
+                int(elapsed_time), int(elapsed_time * (100. / percentDone - 1)))
 
     def update(self, value, every=1):
         """ Updates the amount, and writes to stdout. Prints a carriage return
