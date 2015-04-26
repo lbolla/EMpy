@@ -19,6 +19,12 @@ Installation
 
   $> pip install ElectromagneticPython
 
+Optionally, install `bvp`:
+
+.. code-block:: bash
+
+  $> pip install scikits.bvp1lg
+
 Development
 ===========
 

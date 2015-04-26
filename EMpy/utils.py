@@ -436,7 +436,7 @@ class LiquidCrystalCell(object):
         """Inspiration from here: U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
         try:
-            import bvp
+            from scikits.bvp1lg import colnew
         except ImportError:
             warning("bvp module not found.")
             raise
@@ -445,7 +445,7 @@ class LiquidCrystalCell(object):
         tol = 1e-6 * numpy.ones_like(boundary_points)
         degrees = numpy.array([2, 2, 2])
 
-        solution = bvp.colnew.solve(
+        solution = colnew.solve(
             boundary_points, degrees, self.__ode_3k, self.__bc_nosplay,
             is_linear=False, initial_guess=self.__ic_nosplay,
             tolerances=tol, vectorized=True,
