@@ -56,7 +56,8 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
     """
 
     if kx.shape != ky.shape or c.size != 3:
-        raise ValueError('kx and ky must have the same length and c must have 3 components')
+        raise ValueError(
+            'kx and ky must have the same length and c must have 3 components')
 
     kz = S.empty_like(kx)
 
@@ -83,6 +84,7 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
 
 
 class RCWA(object):
+
     """Class to handle the RCWA solvers.
 
     NOTE
@@ -110,7 +112,7 @@ class RCWA(object):
 
     def __init__(self, multilayer, alpha, delta, psi, phi, n):
         """Set the multilayer, the angles of incidence and the diffraction order.
-        
+
         INPUT
         multilayer = Multilayer obj describing the sequence of layers.
         alpha, delta, psi, phi = angles of the incident wave (in
@@ -142,23 +144,25 @@ class RCWA(object):
             # check that all the pitches are the same!
             l = S.asarray([self.multilayer[i].pitch for i in idx])
             if not S.all(l == l[0]):
-                raise ValueError('All the BinaryGratings must have the same pitch.')
+                raise ValueError(
+                    'All the BinaryGratings must have the same pitch.')
             else:
                 return l[0]
 
 
 class IsotropicRCWA(RCWA):
+
     """Isotropic RCWA solver."""
 
     def solve(self, wls):
         """Isotropic solver.
-    
+
         INPUT
         wls = wavelengths to scan (any asarray-able object).
-        
+
         OUTPUT
         self.DE1, self.DE3 = power reflected and transmitted.
-        
+
         NOTE
         see:
         Moharam, "Formulation for stable and efficient implementation
@@ -187,7 +191,9 @@ class IsotropicRCWA(RCWA):
         hmax = nood - 1
 
         # grating vector (on the xz plane)
-        K = 2 * pi / LAMBDA * S.array([S.sin(phi), 0., S.cos(phi)], dtype=complex)  # grating on the xy plane
+        # grating on the xy plane
+        K = 2 * pi / LAMBDA * \
+            S.array([S.sin(phi), 0., S.cos(phi)], dtype=complex)
 
         DE1 = S.zeros((nood, self.wls.size))
         DE3 = S.zeros_like(DE1)
@@ -270,7 +276,8 @@ class IsotropicRCWA(RCWA):
                 layer = multilayer[nlayer]
                 d = layer.thickness
 
-                EPS2, EPS21 = layer.getEPSFourierCoeffs(wl, n, anisotropic=False)
+                EPS2, EPS21 = layer.getEPSFourierCoeffs(
+                    wl, n, anisotropic=False)
 
                 E = toeplitz(EPS2[hmax::-1], EPS2[hmax:])
                 E1 = toeplitz(EPS21[hmax::-1], EPS21[hmax:])
@@ -295,7 +302,8 @@ class IsotropicRCWA(RCWA):
 
                 if S.absolute(K[2] / k) > 1e-10:
 
-                    raise ValueError('First Order Helmholtz Operator not implemented, yet!')
+                    raise ValueError(
+                        'First Order Helmholtz Operator not implemented, yet!')
 
                 elif ky == 0 or S.allclose(S.diag(Ky / ky * k), 1):
 
@@ -354,11 +362,18 @@ class IsotropicRCWA(RCWA):
                     MTp1[:, :, nlayer] = MTp[0:2 * nood, :]
                     MTp2 = MTp[2 * nood:, :]
 
-                    MT = S.dot(Mc1, S.r_[I2, S.dot(MTp2, linsolve(MTp1[:, :, nlayer], X[:, :, nlayer]))])
+                    MT = S.dot(
+                        Mc1, S.r_[
+                            I2, S.dot(
+                                MTp2, linsolve(
+                                    MTp1[
+                                        :, :, nlayer], X[
+                                        :, :, nlayer]))])
 
                 else:
 
-                    ValueError('Second Order Helmholtz Operator not implemented, yet!')
+                    ValueError(
+                        'Second Order Helmholtz Operator not implemented, yet!')
 
             # M = S.asarray(S.bmat([-MR, MT]))
             M = S.c_[-MR, MT]
@@ -375,9 +390,11 @@ class IsotropicRCWA(RCWA):
             Ts, Tp = S.split(T, 2)
 
             DE1[:, iwl] = (k1i[2, :] / (k1[2])).real * S.absolute(Rs) ** 2 + \
-                          (k1i[2, :] / (k1[2] * n1 ** 2)).real * S.absolute(Rp) ** 2
+                          (k1i[2, :] / (k1[2] * n1 ** 2)).real * \
+                S.absolute(Rp) ** 2
             DE3[:, iwl] = (k3i[2, :] / (k1[2])).real * S.absolute(Ts) ** 2 + \
-                          (k3i[2, :] / (k1[2] * n3 ** 2)).real * S.absolute(Tp) ** 2
+                          (k3i[2, :] / (k1[2] * n3 ** 2)).real * \
+                S.absolute(Tp) ** 2
 
         # save the results
         self.DE1 = DE1
@@ -398,18 +415,25 @@ class IsotropicRCWA(RCWA):
 
     def __str__(self):
         return 'ISOTROPIC RCWA SOLVER\n\n%s\n\nLAMBDA = %g\nalpha = %g\ndelta = %g\npsi = %g\nphi = %g\nn = %d' % \
-               (self.multilayer.__str__(), self.LAMBDA, self.alpha, self.delta, self.psi, self.phi, self.n)
+               (self.multilayer.__str__(),
+                self.LAMBDA,
+                self.alpha,
+                self.delta,
+                self.psi,
+                self.phi,
+                self.n)
 
 
 class AnisotropicRCWA(RCWA):
+
     """Anisotropic RCWA solver."""
 
     def solve(self, wls):
         """Anisotropic solver.
-    
+
         INPUT
         wls = wavelengths to scan (any asarray-able object).
-        
+
         OUTPUT
         self.DEO1, self.DEE1, self.DEO3, self.DEE3 = power reflected
         and transmitted.
@@ -437,14 +461,17 @@ class AnisotropicRCWA(RCWA):
 
         c1 = S.array([1., 0., 0.])
         c3 = S.array([1., 0., 0.])
-        K = 2 * pi / LAMBDA * S.array([S.sin(phi), 0., S.cos(phi)], dtype=complex)  # grating on the xy plane
+        # grating on the xy plane
+        K = 2 * pi / LAMBDA * \
+            S.array([S.sin(phi), 0., S.cos(phi)], dtype=complex)
         dirk1 = S.array([S.sin(alpha) * S.cos(delta),
                          S.sin(alpha) * S.sin(delta),
                          S.cos(alpha)])
 
         # D polarization vector
         u = S.array([S.cos(psi) * S.cos(alpha) * S.cos(delta) - S.sin(psi) * S.sin(delta),
-                     S.cos(psi) * S.cos(alpha) * S.sin(delta) + S.sin(psi) * S.cos(delta),
+                     S.cos(psi) * S.cos(alpha) * S.sin(delta) +
+                     S.sin(psi) * S.cos(delta),
                      -S.cos(psi) * S.sin(alpha)])
 
         kO1i = S.zeros((3, i.size), dtype=complex)
@@ -479,19 +506,36 @@ class AnisotropicRCWA(RCWA):
 
             kO1i[0, :] = k1[0] - i * K[0]
             kO1i[1, :] = k1[1] * S.ones_like(i)
-            kO1i[2, :] = -dispersion_relation_ordinary(kO1i[0, :], kO1i[1, :], k, nO1)
+            kO1i[2, :] = - \
+                dispersion_relation_ordinary(kO1i[0, :], kO1i[1, :], k, nO1)
 
             kE1i[0, :] = kO1i[0, :]
             kE1i[1, :] = kO1i[1, :]
-            kE1i[2, :] = -dispersion_relation_extraordinary(kE1i[0, :], kE1i[1, :], k, nO1, nE1, c1)
+            kE1i[2,
+                 :] = -dispersion_relation_extraordinary(kE1i[0,
+                                                              :],
+                                                         kE1i[1,
+                                                              :],
+                                                         k,
+                                                         nO1,
+                                                         nE1,
+                                                         c1)
 
             kO3i[0, :] = kO1i[0, :]
             kO3i[1, :] = kO1i[1, :]
-            kO3i[2, :] = dispersion_relation_ordinary(kO3i[0, :], kO3i[1, :], k, nO3)
+            kO3i[
+                2, :] = dispersion_relation_ordinary(
+                kO3i[
+                    0, :], kO3i[
+                    1, :], k, nO3)
 
             kE3i[0, :] = kO1i[0, :]
             kE3i[1, :] = kO1i[1, :]
-            kE3i[2, :] = dispersion_relation_extraordinary(kE3i[0, :], kE3i[1, :], k, nO3, nE3, c3)
+            kE3i[
+                2, :] = dispersion_relation_extraordinary(
+                kE3i[
+                    0, :], kE3i[
+                    1, :], k, nO3, nE3, c3)
 
             # k2i = S.r_[[k1[0] - i * K[0]], [k1[1] - i * K[1]], [k1[2] - i * K[2]]]
             k2i = S.r_[[k1[0] - i * K[0]], [k1[1] - i * K[1]], [- i * K[2]]]
@@ -579,7 +623,8 @@ class AnisotropicRCWA(RCWA):
                 layer = multilayer[nlayer]
                 thickness = layer.thickness
 
-                EPS2, EPS21 = layer.getEPSFourierCoeffs(wl, n, anisotropic=True)
+                EPS2, EPS21 = layer.getEPSFourierCoeffs(
+                    wl, n, anisotropic=True)
 
                 # Exx = S.squeeze(EPS2[0, 0, :])
                 # Exx = toeplitz(S.flipud(Exx[0:hmax + 1]), Exx[hmax:])
@@ -674,7 +719,8 @@ class AnisotropicRCWA(RCWA):
 
             Mtot = S.eye(4 * nood, dtype=complex)
             for nlayer in range(1, nlayers - 1):
-                Mtot = S.dot(S.dot(Mtot, Mp[:, :, nlayer]), inv(M[:, :, nlayer]))
+                Mtot = S.dot(
+                    S.dot(Mtot, Mp[:, :, nlayer]), inv(M[:, :, nlayer]))
 
             BC_b = S.r_[b, S.zeros_like(b)]
             BC_A1 = S.c_[-MR, S.dot(Mtot, MT)]
@@ -732,5 +778,10 @@ class AnisotropicRCWA(RCWA):
 
     def __str__(self):
         return 'ANISOTROPIC RCWA SOLVER\n\n%s\n\nLAMBDA = %g\nalpha = %g\ndelta = %g\npsi = %g\nphi = %g\nn = %d' % \
-               (self.multilayer.__str__(), self.LAMBDA, self.alpha, self.delta, self.psi, self.phi, self.n)
-
+               (self.multilayer.__str__(),
+                self.LAMBDA,
+                self.alpha,
+                self.delta,
+                self.psi,
+                self.phi,
+                self.n)
