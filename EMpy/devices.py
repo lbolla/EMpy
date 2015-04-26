@@ -1,6 +1,10 @@
-"""Set of objects and functions to describe the behaviour of some widely known devices and build new ones.
+# pylint: disable=C0302,W0622,W1001,R0902,R0903,W0201,R0913,R0914,C0325,W0221
 
-A set of widely known devices is described, by its transfer function, transfer matrix and chain matrix:
+"""Set of objects and functions to describe the behaviour of some
+widely known devices and build new ones.
+
+A set of widely known devices is described, by its transfer function,
+transfer matrix and chain matrix:
 
     - Coupler.
     - Line.
@@ -14,12 +18,17 @@ A set of widely known devices is described, by its transfer function, transfer m
     - Straight Waveguide.
     - Etalon.
 
-By combining the transfer matrices and chain matrices of known devices, new ones can be studied.
+By combining the transfer matrices and chain matrices of known
+devices, new ones can be studied.
 
-@see: U{Schwelb, "Transmission, Group Delay, and Dispersion in Single-Ring Optical Resonators and Add/Drop Filters -
-      A Tutorial Overview", JLT 22(5), p. 1380, 2004 <http://jlt.osa.org/abstract.cfm?id=80103>}
-@see: U{Barbarossa, "Theoretical Analysis of Triple-Coupler Ring-Based Optical Guided-Wave Resonator", JLT 13(2),
-    p. 148, 1995 <http://ieeexplore.ieee.org/xpl/freeabs_all.jsp?tp=&arnumber=365200&isnumber=8367>}
+@see: U{Schwelb, "Transmission, Group Delay, and Dispersion in
+      Single-Ring Optical Resonators and Add/Drop Filters - A Tutorial
+      Overview", JLT 22(5), p. 1380, 2004
+      <http://jlt.osa.org/abstract.cfm?id=80103>}
+@see: U{Barbarossa, "Theoretical Analysis of Triple-Coupler Ring-Based
+    Optical Guided-Wave Resonator", JLT 13(2), p. 148, 1995
+    <http://ieeexplore.ieee.org/xpl/freeabs_all.jsp?tp=&arnumber=365200&
+    isnumber=8367>}
 
 """
 from builtins import zip
@@ -34,17 +43,19 @@ from functools import reduce
 
 
 class DeviceMatrix(object):
+
     """Device Matrix.
-    
+
     Base class for TransferMatrix and ChainMatrix.
 
     Notes
     =====
-    
+
         - Data is stored as numpy.matrix.
         - It is a virtual class.
 
-    @ivar data: Device matrix data, automatically converted into a numpy.matrix on assignment.
+    @ivar data: Device matrix data, automatically converted into a
+                numpy.matrix on assignment.
 
     """
 
@@ -62,8 +73,9 @@ class DeviceMatrix(object):
 
     def compose(self, A):
         """Compose two device matrices.
-        
-        @raise NotImplementedError: always, because DeviceMatrix is a virtual class.
+
+        @raise NotImplementedError: always, because DeviceMatrix is a
+            virtual class.
 
         """
         raise NotImplementedError('DeviceMatrix is virtual class.')
@@ -75,10 +87,11 @@ class DeviceMatrix(object):
 
 
 class TransferMatrix(DeviceMatrix):
+
     """Transfer Matrix.
 
     Notation::
-    
+
         b1 = h11 h12 * a1 --> b12 = H a12
         b2   h21 h22   a2
 
@@ -100,19 +113,22 @@ class TransferMatrix(DeviceMatrix):
         """Convert to chain matrix.
 
         Notation::
-        
-            b1 = h11 a1 + h12 a2 --> a1 = (b2 - h22 a2) / h21 = 1 / h21 b2 - h22 / h21 a2
-            b2 = h21 a1 + h22 a2     b1 = h11 / h21 * (b2 - h22 a2) + h12 a2
-                                        = h11 / h21 b2 + (h12 * h21 - h11 * h22) / h12 a2
+
+            b1 = h11 a1 + h12 a2
+                --> a1 = (b2 - h22 a2) / h21 = 1 / h21 b2 - h22 / h21 a2
+            b2 = h21 a1 + h22 a2
+                --> b1 = h11 / h21 * (b2 - h22 a2) + h12 a2
+                       = h11 / h21 b2 + (h12 * h21 - h11 * h22) / h12 a2
 
         @rtype: L{ChainMatrix}
-            
+
         """
         return ChainMatrix([
             [1. / self.data[1, 0],
              -self.data[1, 1] / self.data[1, 0]],
             [self.data[0, 0] / self.data[1, 0],
-             (self.data[0, 1] * self.data[1, 0] - self.data[0, 0] * self.data[1, 1]) / self.data[1, 0]]
+             (self.data[0, 1] * self.data[1, 0] -
+              self.data[0, 0] * self.data[1, 1]) / self.data[1, 0]]
         ])
 
     def compose(self, M):
@@ -125,7 +141,7 @@ class TransferMatrix(DeviceMatrix):
         therefore::
 
             d12 = H2*H1 a12.
-        
+
         Notes
         =====
 
@@ -140,10 +156,11 @@ class TransferMatrix(DeviceMatrix):
 
 
 class ChainMatrix(DeviceMatrix):
+
     """Chain Matrix.
 
     Notation::
-    
+
         a1 = g11 g12 * b2 --> ab1 = G ba2
         b1   g21 g22   a2
 
@@ -156,17 +173,20 @@ class ChainMatrix(DeviceMatrix):
         """Convert to transfer matrix.
 
         Notation::
-        
-            a1 = g11 b2 + g12 a2 --> b2 = 1 / g11 a1 - g12 / g11 a2 = 1 / g11 a1 - g12 / g11 a2
-            b1 = g21 b2 + g22 a2     b1 = g21 / g11 a1 + (g22 - g12 * g21 / g11) a2
-                                        = g21 / g11 a1 + (g11 g22 - g12 g21) / g11 a2
+
+            a1 = g11 b2 + g12 a2
+            b2 = 1 / g11 a1 - g12 / g11 a2 = 1 / g11 a1 - g12 / g11 a2
+            b1 = g21 b2 + g22 a2
+            b1 = g21 / g11 a1 + (g22 - g12 * g21 / g11) a2
+               = g21 / g11 a1 + (g11 g22 - g12 g21) / g11 a2
 
         @rtype: L{TransferMatrix}
-        
+
         """
         return TransferMatrix([
             [self.data[1, 0] / self.data[0, 0],
-             (self.data[0, 0] * self.data[1, 1] - self.data[0, 1] * self.data[1, 0]) / self.data[0, 0]],
+             (self.data[0, 0] * self.data[1, 1] -
+              self.data[0, 1] * self.data[1, 0]) / self.data[0, 0]],
             [1. / self.data[0, 0],
              -self.data[0, 1] / self.data[0, 0]]])
 
@@ -183,7 +203,7 @@ class ChainMatrix(DeviceMatrix):
         """Compose the chain matrix with another device matrix.
 
         Notation::
-        
+
             ab1 = G1 ba2 and ab3 = G2 ba4, but ba2 == ab3,
 
         therefore::
@@ -210,11 +230,11 @@ def composeTM(A, B):
     =====
 
     First convert them to TM, to be sure.
-    
+
     @param A: First L{TransferMatrix}.
     @param B: Second L{TransferMatrix}.
     @rtype: L{TransferMatrix}
-    
+
     """
 
     return A.to_transfer().compose(B)
@@ -231,7 +251,7 @@ def composeCM(A, B):
     @param A: First L{ChainMatrix}.
     @param B: Second L{ChainMatrix}.
     @rtype: L{ChainMatrix}
-    
+
     """
 
     return A.to_chain().compose(B)
@@ -260,11 +280,12 @@ def composeCMlist(CMlist):
 
 
 class Device(object):
+
     """Generic device.
 
     Notes
     =====
-    
+
     Parent virtual class for all the other devices.
 
     """
@@ -277,12 +298,14 @@ class Device(object):
 
 
 class Coupler(Device):
+
     """Coupler.
 
     Examples
     ========
 
-    Here is how to compute the THRU and DROP of a 3dB coupler, with wavelength-dependent losses:
+    Here is how to compute the THRU and DROP of a 3dB coupler, with
+    wavelength-dependent losses:
 
     >>> wls = numpy.linspace(1.52e-6, 1.57e-6, 1000)
     >>> k = .5 ** .5
@@ -307,7 +330,8 @@ class Coupler(Device):
 
         self.wl = wl
         one = numpy.ones_like(wl)
-        self.K = K * one  # make K,q of the same shape as wl (scalar or ndarray)
+        # make K,q of the same shape as wl (scalar or ndarray)
+        self.K = K * one
         self.q = q * one
         self.sanity_check()
 
@@ -318,11 +342,15 @@ class Coupler(Device):
 
         """
 
-        if (numpy.isscalar(self.q) or numpy.isscalar(self.K)) and not numpy.isscalar(self.wl):
+        if (numpy.isscalar(self.q) or
+            numpy.isscalar(self.K)) and not numpy.isscalar(self.wl):
             raise ValueError('wl is not a scalar but K and q are.')
-        if (not numpy.isscalar(self.q) or not numpy.isscalar(self.K)) and numpy.isscalar(self.wl):
+        if (not numpy.isscalar(self.q) or
+            not numpy.isscalar(self.K)) and numpy.isscalar(self.wl):
             raise ValueError('wl is a scalar but K and q are not.')
-        if not (numpy.asarray(self.wl).shape == numpy.asarray(self.K).shape == numpy.asarray(self.q).shape):
+        if not (numpy.asarray(self.wl).shape ==
+                numpy.asarray(self.K).shape ==
+                numpy.asarray(self.q).shape):
             raise ValueError('wl, K and q must have the same shape')
 
     def solve(self):
@@ -342,14 +370,16 @@ class Coupler(Device):
             TM = q * [ t jk] , with t = (1 - k**2)**.5
                      [jk  t]
 
-        @param wl: Wavelength at which computing the TM. If None, use the only wl provided at construction time.
+        @param wl: Wavelength at which computing the TM. If None, use
+            the only wl provided at construction time.
         @type wl: scalar
 
         @return: L{TransferMatrix}.
         @rtype: L{TransferMatrix}
 
-        @raise ValueError: (if wl=None and self.wl is not scalar) or wl is not scalar.
-        
+        @raise ValueError: (if wl=None and self.wl is not scalar) or
+            wl is not scalar.
+
         """
 
         if wl is None:
@@ -358,8 +388,10 @@ class Coupler(Device):
             K = self.K
             q = self.q
         elif numpy.isscalar(wl):
-            K = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(self.wl), numpy.atleast_1d(self.K)).item()
-            q = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(self.wl), numpy.atleast_1d(self.q)).item()
+            K = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(
+                self.wl), numpy.atleast_1d(self.K)).item()
+            q = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(
+                self.wl), numpy.atleast_1d(self.q)).item()
         else:
             raise ValueError('wl must be scalar')
 
@@ -375,7 +407,7 @@ class Coupler(Device):
         First build its L{TransferMatrix}, then convert it to L{ChainMatrix}.
 
         @param wl: Wavelength at which computing the L{ChainMatrix}.
-        
+
         @return: L{ChainMatrix}.
         @rtype: L{ChainMatrix}
 
@@ -385,17 +417,20 @@ class Coupler(Device):
 
 
 class Line(Device):
+
     """Line.
 
     Notes
     =====
 
-    The Line device is a four ports device, hence is made of two two-ports lines.
+    The Line device is a four ports device, hence is made of two
+    two-ports lines.
 
     Examples
     ========
 
-    Here is how to create a L{Line}, where the first line is a 2.pi.R1 long L{SWG} and the second has zero length.
+    Here is how to create a L{Line}, where the first line is a 2.pi.R1
+    long L{SWG} and the second has zero length.
 
     >>> wls = numpy.linspace(1.52e-6, 1.57e-6, 1000)
     >>> SWG = EMpy.devices.SWG(400, 220, 125).solve(wls)
@@ -458,14 +493,16 @@ class Line(Device):
             TM = [exp(-1j * beta1 * l1) 0                    ]
                  [0                     exp(-1j * beta2 * l2)]
 
-        @param wl: Wavelength at which computing the TM. If None, use the only wl provided at construction time.
+        @param wl: Wavelength at which computing the TM. If None, use
+            the only wl provided at construction time.
         @type wl: scalar
 
         @return: L{TransferMatrix}.
         @rtype: L{TransferMatrix}
 
-        @raise ValueError: (if wl=None and self.wl is not scalar) or wl is not scalar.
-        
+        @raise ValueError: (if wl=None and self.wl is not scalar) or
+            wl is not scalar.
+
         """
 
         if wl is None:
@@ -475,8 +512,10 @@ class Line(Device):
             neff2 = self.neff2
             wl = self.wl
         elif numpy.isscalar(wl):
-            neff1 = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(self.wl), numpy.atleast_1d(self.neff1)).item()
-            neff2 = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(self.wl), numpy.atleast_1d(self.neff2)).item()
+            neff1 = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(
+                self.wl), numpy.atleast_1d(self.neff1)).item()
+            neff2 = numpy.interp(numpy.atleast_1d(wl), numpy.atleast_1d(
+                self.wl), numpy.atleast_1d(self.neff2)).item()
         else:
             raise ValueError('wl must be scalar')
 
@@ -495,17 +534,19 @@ class Line(Device):
 
         @return: L{ChainMatrix}.
         @rtype: L{ChainMatrix}
-        
+
         """
 
         return self.TM(wl).to_chain()
 
 
 class MZ(Device):
+
     """Mach-Zehnder Interferometer (MZI).
 
     A MZI is made of two L{Coupler}s connected by a L{Line}.
-    A different phase shift on either arms of the L{Line} determines the amount of power in bar (THRU) or cross (DROP).
+    A different phase shift on either arms of the L{Line} determines
+    the amount of power in bar (THRU) or cross (DROP).
 
     Examples
     ========
@@ -568,8 +609,10 @@ class MZ(Device):
         dephasing1 = numpy.exp(-1j * beta1 * self.line.l1)
         dephasing2 = numpy.exp(-1j * beta2 * self.line.l2)
 
-        self.THRU = q1 * q2 * (K1bar * K2bar * dephasing1 - K1 * K2 * dephasing2)
-        self.DROP = q1 * q2 * 1j * (K1 * K2bar * dephasing2 + K2 * K1bar * dephasing1)
+        self.THRU = q1 * q2 * \
+            (K1bar * K2bar * dephasing1 - K1 * K2 * dephasing2)
+        self.DROP = q1 * q2 * 1j * \
+            (K1 * K2bar * dephasing2 + K2 * K1bar * dephasing1)
 
         return self
 
@@ -586,7 +629,8 @@ class MZ(Device):
 
         """
 
-        return composeTMlist([self.coupler1.TM(wl), self.line.TM(wl), self.coupler2.TM(wl)])
+        return composeTMlist([
+            self.coupler1.TM(wl), self.line.TM(wl), self.coupler2.TM(wl)])
 
     def CM(self, wl=None):
         """Return the chain matrix of the MZ.
@@ -605,6 +649,7 @@ class MZ(Device):
 
 
 class APRR(Device):
+
     """All-Pass Ring Resonator.
 
     An APRR is made of a L{Coupler} with a feedback line (the ring).
@@ -628,7 +673,7 @@ class APRR(Device):
     @type l: scalar
     @ivar THRU: THRU of the all-pass.
     @type THRU: numpy.ndarray
-    
+
     """
 
     def __init__(self, coupler, neff, l):
@@ -643,7 +688,8 @@ class APRR(Device):
     def sanity_check(self):
         """Check for good input.
 
-        @raise ValueError: if l is not a scalar or wl and neff have different shapes.
+        @raise ValueError: if l is not a scalar or wl and neff have
+        different shapes.
 
         """
 
@@ -670,9 +716,11 @@ class APRR(Device):
 
 
 class SRR(Device):
+
     """Single Ring Resonator.
 
-    A SRR is made of the parallel of a L{Coupler} a feedback line (the ring) and another L{Coupler}.
+    A SRR is made of the parallel of a L{Coupler} a feedback line (the
+    ring) and another L{Coupler}.
 
     Examples
     ========
@@ -692,15 +740,17 @@ class SRR(Device):
     @type coupler2: L{Coupler}
     @ivar neff: Effective index of the feedback line.
     @type neff: numpy.ndarray
-    @ivar l1: Length of the feedback line (perimeter of the ring) from coupler1 to coupler2.
+    @ivar l1: Length of the feedback line (perimeter of the ring) from
+        coupler1 to coupler2.
     @type l1: scalar
-    @ivar l2: Length of the feedback line (perimeter of the ring) from coupler2 to coupler1.
+    @ivar l2: Length of the feedback line (perimeter of the ring) from
+        coupler2 to coupler1.
     @type l2: scalar
     @ivar THRU: THRU of the filter.
     @type THRU: numpy.ndarray
     @ivar DROP: DROP of the filter.
     @type DROP: numpy.ndarray
-    
+
     """
 
     def __init__(self, coupler1, coupler2, neff, l1, l2):
@@ -783,11 +833,14 @@ class SRR(Device):
 
         """
 
-        return composeCM(composeTMlist([self.line1.TM(wl), self.coupler1.TM(wl), self.line2.TM(wl)]),
-                         self.coupler2.CM(wl))
+        return composeCM(
+            composeTMlist([
+                self.line1.TM(wl), self.coupler1.TM(wl), self.line2.TM(wl)]),
+            self.coupler2.CM(wl))
 
 
 class NRR(Device):
+
     """N-Rings Resonator.
 
     A NRR is made of the parallel of two lines connected by N ring resonators.
@@ -797,7 +850,8 @@ class NRR(Device):
 
     >>> wls = numpy.linspace(1.5e-6, 1.6e-6, 1000)
     >>> from EMpy.devices import Coupler
-    >>> couplers = [Coupler(wls, 0.08**.5), Coupler(wls, 0.003**.5), Coupler(wls, 0.08**.5)]
+    >>> couplers = [Coupler(wls, 0.08**.5), Coupler(wls, 0.003**.5),
+        Coupler(wls, 0.08**.5)]
     >>> q = [1., 1., 1.]
     >>> R = 5e-6
     >>> l1s = [numpy.pi * R, numpy.pi * R]
@@ -818,7 +872,7 @@ class NRR(Device):
     @type THRU: numpy.ndarray
     @ivar DROP: DROP of the filter.
     @type DROP: numpy.ndarray
-    
+
     """
 
     def __init__(self, Ks, neffs, l1s, l2s):
@@ -842,8 +896,12 @@ class NRR(Device):
             K.sanity_check()
             if not (numpy.alltrue(self.wl == K.wl)):
                 raise ValueError('incompatible wl')
-        if not (len(self.Ks) - 1 == len(self.neffs) == len(self.l1s) == len(self.l2s)):
-            raise ValueError('number of couplers and number of rings do not match.')
+        if not (len(self.Ks) - 1 ==
+                len(self.neffs) ==
+                len(self.l1s) ==
+                len(self.l2s)):
+            raise ValueError(
+                'number of couplers and number of rings do not match.')
 
     def solve(self):
         """Compute the THRU and the DROP.
@@ -851,7 +909,8 @@ class NRR(Device):
         Notes
         =====
 
-        No analytic expression is available, therefore build the TM of the device for each wl.
+        No analytic expression is available, therefore build the TM of
+        the device for each wl.
 
         """
 
@@ -896,12 +955,14 @@ class NRR(Device):
             wl = self.wl
         Hs = []
         for K, neff, l1, l2 in zip(self.Ks, self.neffs, self.l1s, self.l2s):
-            Hs.append(composeTMlist(
-                [Line(self.wl, neff, 0., neff, l1).TM(wl), K.TM(wl), Line(self.wl, neff, 0., neff, l2).TM(wl)]))
+            Hs.append(composeTMlist([
+                Line(self.wl, neff, 0., neff, l1).TM(wl), K.TM(wl),
+                Line(self.wl, neff, 0., neff, l2).TM(wl)]))
         return composeCM(composeTMlist(Hs), self.Ks[-1].CM(wl))
 
 
 class T_TCRR(Device):
+
     """Tunable Triple-Coupled Ring Resonator.
 
     A T_TCRR is made of a L{MZ}, with a feedback line.
@@ -910,7 +971,7 @@ class T_TCRR(Device):
 
     def __init__(self, neff, K, q, l, coupling=None):
         """Set the parameters of the device.
-    
+
         INPUT
         neff = effective index (can be complex).
         K = field coupling coeffs.
@@ -937,7 +998,8 @@ class T_TCRR(Device):
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
-        neff, K, q, l, coupling = self.neff, self.K, self.q, self.l, self.coupling
+        neff, K, q, l, coupling = (
+            self.neff, self.K, self.q, self.l, self.coupling)
 
         # transform the input in ndarrays
         wls = numpy.asarray(wls)
@@ -960,15 +1022,19 @@ class T_TCRR(Device):
         t3 = numpy.exp(-1j * beta * l[2])
         t4 = numpy.exp(-1j * beta * l[3])
 
-        denom = q ** 3 * Kbar[2] * t3 * t4 * (Kbar[0] * Kbar[1] * t1 - K[0] * K[1] * t2) - 1.
-        self.DROP = q ** 3 * K[2] * t3 * (K[0] * Kbar[1] * t1 + Kbar[0] * K[1] * t2) / denom
+        denom = q ** 3 * Kbar[2] * t3 * t4 * \
+            (Kbar[0] * Kbar[1] * t1 - K[0] * K[1] * t2) - 1.
+        self.DROP = q ** 3 * \
+            K[2] * t3 * (K[0] * Kbar[1] * t1 + Kbar[0] * K[1] * t2) / denom
         self.THRU = (
-            q ** 2 * (K[0] * K[1] * t1 - Kbar[0] * Kbar[1] * t2) + q ** 5 * Kbar[2] * t1 * t2 * t3 * t4) / denom
+            q ** 2 * (K[0] * K[1] * t1 - Kbar[0] * Kbar[1] * t2) +
+            q ** 5 * Kbar[2] * t1 * t2 * t3 * t4) / denom
 
         return self
 
 
 class T_CRTCRR(Device):
+
     """Tunable Coupled Ring Triple-Coupled Ring Resonator.
 
     NOTE
@@ -977,7 +1043,7 @@ class T_CRTCRR(Device):
 
     def __init__(self, neff, K, q, l, coupling=None):
         """Set the parameters of the device.
-        
+
         INPUT
         neff = effective index (can be complex).
         K = field coupling coeffs.
@@ -1002,7 +1068,8 @@ class T_CRTCRR(Device):
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
-        neff, K, q, l, coupling = self.neff, self.K, self.q, self.l, self.coupling
+        neff, K, q, l, _ = (
+            self.neff, self.K, self.q, self.l, self.coupling)
 
         # transform the input in ndarrays
         wls = numpy.asarray(wls)
@@ -1020,25 +1087,30 @@ class T_CRTCRR(Device):
         N1 = Kbar[0] ** 2 - K[0] ** 2 * t31
         N1bar = K[0] ** 2 - Kbar[0] ** 2 * t31
 
-        denom = 1 - q ** 3 * t1 ** 2 * N1 * Kbar[2] - q ** 2 * Kbar[1] * t2 ** 2 * (Kbar[2] - q ** 3 * t1 ** 2 * N1)
-        self.DROP = 1j * q ** 4 * K[0] * K[1] * K[2] * Kbar[0] * t1 ** 1.5 * t2 * (1 + t31) / denom
+        denom = 1 - q ** 3 * t1 ** 2 * N1 * \
+            Kbar[2] - q ** 2 * Kbar[1] * t2 ** 2 * \
+            (Kbar[2] - q ** 3 * t1 ** 2 * N1)
+        self.DROP = 1j * q ** 4 * \
+            K[0] * K[1] * K[2] * Kbar[0] * t1 ** 1.5 * t2 * (1 + t31) / denom
         self.THRU = q ** 2 * t1 * (
-            N1bar - q ** 2 * Kbar[1] * Kbar[2] * t2 ** 2 * N1bar + q ** 3 * Kbar[2] * t1 * t3 - q ** 5 * Kbar[
-                1] * t1 * t2 ** 2 * t3) / denom
+            N1bar - q ** 2 * Kbar[1] * Kbar[2] * t2 ** 2 * N1bar +
+            q ** 3 * Kbar[2] * t1 * t3 -
+            q ** 5 * Kbar[1] * t1 * t2 ** 2 * t3) / denom
 
         return self
 
 
 class T_CTCRR(Device):
+
     """Tunable Coupled Triple Coupled Ring Resonator.
-    
+
     NOTE
     see 1997_IEEE Proc El_Barbarossa_Novel
     """
 
     def __init__(self, neff, K, q, l, coupling=None):
         """Set the parameters of the device.
-        
+
         INPUT
         neff = effective index (can be complex).
         K = field coupling coeffs.
@@ -1065,7 +1137,8 @@ class T_CTCRR(Device):
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
-        neff, K, q, l, coupling = self.neff, self.K, self.q, self.l, self.coupling
+        neff, K, q, l, coupling = (
+            self.neff, self.K, self.q, self.l, self.coupling)
 
         # transform the input in ndarrays
         wls = numpy.asarray(wls)
@@ -1078,8 +1151,10 @@ class T_CTCRR(Device):
             l[2] = 2 * l[0]
             l[3] = 2 * l[1]
             # optimum: see article
-            K[2] = numpy.absolute(2 * K[0] * K[1] * numpy.sqrt(1 - K[0] ** 2) * numpy.sqrt(1 - K[1] ** 2) / (
-                K[0] ** 2 + K[1] ** 2 - 2 * K[0] ** 2 * K[1] ** 2 - 1))
+            K[2] = numpy.absolute(
+                2 * K[0] * K[1] * numpy.sqrt(1 - K[0] ** 2) *
+                numpy.sqrt(1 - K[1] ** 2) /
+                (K[0] ** 2 + K[1] ** 2 - 2 * K[0] ** 2 * K[1] ** 2 - 1))
 
         Kbar = numpy.sqrt(1. - K ** 2)
         beta = 2. * numpy.pi * neff / wls
@@ -1095,22 +1170,27 @@ class T_CTCRR(Device):
         N1bar = K[0] ** 2 - Kbar[0] ** 2 * t31
         N2 = Kbar[1] ** 2 - K[1] ** 2 * t42
 
-        denom = 1. - q ** 3 * t1 ** 2 * N1 * Kbar[2] - q ** 3 * t2 ** 2 * N2 * (Kbar[2] - q ** 3 * t1 ** 2 * N1)
-        self.DROP = 1j * q ** 5 * K[0] * K[1] * K[2] * Kbar[0] * Kbar[1] * t1 ** 1.5 * t2 ** 1.5 * (1 + t31) * (
-            1 + t42) / denom
-        self.THRU = (q ** 5 * t1 ** 2 * t3 * (q ** 3 * t2 ** 2 * N2 - Kbar[2]) + q ** 2 * t1 * N1bar * (
-            q ** 3 * t2 ** 2 * N2 * Kbar[2] - 1.)) / denom
+        denom = 1. - q ** 3 * t1 ** 2 * N1 * \
+            Kbar[2] - q ** 3 * t2 ** 2 * N2 * (Kbar[2] - q ** 3 * t1 ** 2 * N1)
+        self.DROP = (
+            1j * q ** 5 * K[0] * K[1] * K[2] * Kbar[0] * Kbar[1] * t1 ** 1.5 *
+            t2 ** 1.5 * (1 + t31) * (1 + t42) / denom)
+        self.THRU = (
+            q ** 5 * t1 ** 2 * t3 *
+            (q ** 3 * t2 ** 2 * N2 - Kbar[2]) + q ** 2 * t1 * N1bar *
+            (q ** 3 * t2 ** 2 * N2 * Kbar[2] - 1.)) / denom
 
         return self
 
 
 class SWG(Device):
     """SOI rib straight waveguides.
-    
-    Compute the effective index, dispersion and group index of a SOI rib straight waveguides.
+
+    Compute the effective index, dispersion and group index of a SOI
+    rib straight waveguides.
 
     Available dimensions:
-    
+
         - width: 400nm..488nm.
         - height: 220nm.
         - temperature: 25..225 centrigrades.
@@ -1120,7 +1200,7 @@ class SWG(Device):
 
     The effective index is interpolated from values obtained by FimmWAVE.
     Interpolation is done by a polynomial of degree 2.
-    
+
     @ivar w: Width of the waveguide.
     @type w: scalar
     @ivar h: Height of the waveguide.
@@ -1133,16 +1213,19 @@ class SWG(Device):
     @type disp: numpy.ndarray
     @ivar ng: Group index.
     @type ng: numpy.ndarray
-    
+
     """
 
     pf488_25 = [-0.00000006023385, -0.00096294997155, 4.06422992413444]
     pf488_125 = [-0.00000006391000, -0.00095671206284, 4.08461627147979]
     pf488_225 = [-0.00000006806052, -0.00094901669805, 4.10613946676196]
 
-    pf400_25 = [1.733732171601458e-007, -1.911057235401467e-003, 4.774734532616097e+000]
-    pf400_125 = [1.477287990868007e-007, -1.842388456386622e-003, 4.750925877259235e+000]
-    pf400_225 = [1.255208385485759e-007, -1.784557912270417e-003, 4.737972109281652e+000]
+    pf400_25 = [1.733732171601458e-007, -
+                1.911057235401467e-003, 4.774734532616097e+000]
+    pf400_125 = [1.477287990868007e-007, -
+                 1.842388456386622e-003, 4.750925877259235e+000]
+    pf400_225 = [1.255208385485759e-007, -
+                 1.784557912270417e-003, 4.737972109281652e+000]
 
     def __init__(self, w, h, T):
 
@@ -1159,7 +1242,8 @@ class SWG(Device):
         @param wls: Wavelength.
         @type wls: numpy.ndarray
 
-        @raise ValueError: if w or T are out of bounds (and interpolation is not possible).
+        @raise ValueError: if w or T are out of bounds (and
+            interpolation is not possible).
 
         """
 
@@ -1175,9 +1259,12 @@ class SWG(Device):
             pf = SWG.pf400_125
         elif (self.w, self.T) == (400, 225):
             pf = SWG.pf400_225
+        elif (self.w < 400 or
+              self.w > 488 or
+              self.T < 25 or
+              self.T > 225):
+            raise ValueError('input out of bounds')
         else:
-            if (self.w < 400) or (self.w > 488) or (self.T < 25) or (self.T > 225):
-                raise ValueError('input out of bounds')
             import scipy.interpolate
 
             pf_ = numpy.zeros((2, 3, 3))
@@ -1188,7 +1275,8 @@ class SWG(Device):
             pf_[1, 0, :] = SWG.pf488_25
             pf_[1, 1, :] = SWG.pf488_125
             pf_[1, 2, :] = SWG.pf488_225
-            pf = [scipy.interpolate.interp2d(w_.T, T_.T, pf_[:, :, i])(self.w, self.T)[0] for i in range(3)]
+            pf = [scipy.interpolate.interp2d(w_.T, T_.T, pf_[:, :, i])(
+                self.w, self.T)[0] for i in range(3)]
 
         # transform the input in an ndarray
         wls = numpy.asarray(wls)
@@ -1208,13 +1296,14 @@ class SWG(Device):
 
 
 class Etalon(Device):
+
     """Etalon.
 
     @ivar R: Reflectivity.
     @ivar theta: Angle of incidence.
-    
+
     @see: U{http://en.wikipedia.org/wiki/Etalon}
-    
+
     """
 
     def __init__(self, layer, R, theta):
@@ -1244,7 +1333,8 @@ class Etalon(Device):
         self.Rmax = 1. - 1. / (1. + self.F)
 
         self.wl0 = numpy.mean(wls)
-        self.FSRwl = self.wl0 ** 2 / (2 * n * l * numpy.cos(self.theta) + self.wl0)
+        self.FSRwl = self.wl0 ** 2 / \
+            (2 * n * l * numpy.cos(self.theta) + self.wl0)
 
         (self.f0, self.FSR) = EMpy.utils.wl2f(self.wl0, self.FSRwl)
 
