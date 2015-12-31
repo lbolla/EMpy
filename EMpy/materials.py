@@ -33,10 +33,29 @@ class RefractiveIndex(object):
     """Refractive Index.
 
     Unaware of temperature.
+    
+    Parameters
+    ----------
+    Provide ONE of the following named-arguments:
+    
+    n0_const : float
+        A single-value of refractive index, to be used regardless of the wavelength requested.
+        Eg. n0_const = 1.448 for SiO2
+        
+    n0_poly : list/tuple
+        For polynomial rix dispersion function: provide the polynomial coefficients to be evaluated by numpy.polyval.  
+         Eg. `n0_poly = (9,5,3,1)` sets the refractive index function as n = 9(wl**3) + 5(wl**2) + 3(wl) + 1
+    
+    n0_smcoeffs (Sellmeier coefficients): 6-element list/tuple
+        Set the rix dispersion function to the 6-parameter Sellmeier function as so:
+            n =  1. +
+            B1 * wls ** 2 / (wls ** 2 - C1) +
+            B2 * wls ** 2 / (wls ** 2 - C2) +
+            B3 * wls ** 2 / (wls ** 2 - C3)
+        Eg. `n0_smcoeffs=[B1, B2, B3, C1, C2, C3]`; six values total
 
-    Note:
-
-    n0_known only used if RefractiveIndex is evaluated at a single wls.
+    n0_known is only used if RefractiveIndex is evaluated at a single wls.
+        Retrieved as RefractiveIndex.n0_known
 
     """
 
