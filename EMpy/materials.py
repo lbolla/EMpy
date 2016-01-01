@@ -57,12 +57,12 @@ class RefractiveIndex(object):
     n0_func : function
         Provide an arbitrary function to return the refractive index versus wavelength.
         Eg. 
-            >>> SiN_rix = RefractiveIndex(   n0_func = lambda wl: 1.887 + 0.01929/x**2 + 1.6662e-4/x**4   )
-        or
             >>> def SiN_func(wl):
             >>>     x = wl * 1e6    # convert to microns
             >>>     return   1.887 + 0.01929/x**2 + 1.6662e-4/x**4  # cauchy func
             >>> SiN_rix = RefractiveIndex( n0_func = SiN_func )
+        or
+            >>> SiN_rix = RefractiveIndex(   n0_func = lambda wl: 1.887 + 0.01929/(wl*1e6)**2 + 1.6662e-4/(wl*1e6)**4   )
         
     
     n0_known : dictionary
