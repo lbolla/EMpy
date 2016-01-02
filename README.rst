@@ -40,3 +40,11 @@ Run tests with:
 .. code-block:: bash
 
     $> python setup.py test
+
+Release process
+===============
+
+1. Edit CHANGES
+2. Edit `version` in `setup.py`
+3. `git tag`
+4. Push to PyPi: `python setup.py release`
