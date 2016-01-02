@@ -33,38 +33,45 @@ class RefractiveIndex(object):
     """Refractive Index.
 
     Unaware of temperature.
-    
+
     Parameters
     ----------
     Provide ONE of the following named-arguments:
-    
+
     n0_const : float
-        A single-value of refractive index, to be used regardless of the wavelength requested.
+        A single-value of refractive index, to be used regardless of
+        the wavelength requested.
         Eg. n0_const = 1.448 for SiO2
-        
+
     n0_poly : list/tuple
-        Use a polynomial rix dispersion function: provide the polynomial coefficients to be evaluated by numpy.polyval.  
-         Eg. >>> n0_poly = (9,5,3,1)   # sets the refractive index function as n = 9(wl**3) + 5(wl**2) + 3(wl) + 1
-    
+        Use a polynomial rix dispersion function: provide the
+        polynomial coefficients to be evaluated by numpy.polyval.
+         # sets the refractive index function as n = 9(wl**3) +
+         # 5(wl**2) + 3(wl) + 1
+         Eg. >>> n0_poly = (9,5,3,1)
+
     n0_smcoeffs (Sellmeier coefficients): 6-element list/tuple
-        Set the rix dispersion function to the 6-parameter Sellmeier function as so:
+        Set the rix dispersion function to the 6-parameter Sellmeier
+        function as so:
             n =  1. +
             B1 * wls ** 2 / (wls ** 2 - C1) +
             B2 * wls ** 2 / (wls ** 2 - C2) +
             B3 * wls ** 2 / (wls ** 2 - C3)
         Eg. >>> n0_smcoeffs = [B1, B2, B3, C1, C2, C3]    # six values total
-    
+
     n0_func : function
-        Provide an arbitrary function to return the refractive index versus wavelength.
-        Eg. 
+        Provide an arbitrary function to return the refractive index
+        versus wavelength.
+        E.g.:
             >>> def SiN_func(wl):
-            >>>     x = wl * 1e6    # convert to microns
-            >>>     return   1.887 + 0.01929/x**2 + 1.6662e-4/x**4  # cauchy func
-            >>> SiN_rix = RefractiveIndex( n0_func = SiN_func )
+            >>>     x = wl * 1e6 # convert to microns
+            >>>     return 1.887 + 0.01929/x**2 + 1.6662e-4/x**4  # Cauchy func
+            >>> SiN_rix = RefractiveIndex(n0_func=SiN_func)
         or
-            >>> SiN_rix = RefractiveIndex(   n0_func = lambda wl: 1.887 + 0.01929/(wl*1e6)**2 + 1.6662e-4/(wl*1e6)**4   )
-        
-    
+            >>> SiN_rix = RefractiveIndex(
+                    n0_func=lambda wl: 1.887 + 0.01929/(wl*1e6)**2 +
+                                       1.6662e-4/(wl*1e6)**4)
+
     n0_known : dictionary
         Use if RefractiveIndex will only evaluated at a specific set of `wls`.
         n0_known should be a dictionary of key:value == wavelength:rix pairs.
@@ -118,14 +125,14 @@ class RefractiveIndex(object):
             B2 * wls ** 2 / (wls ** 2 - C2) +
             B3 * wls ** 2 / (wls ** 2 - C3)
         ) * numpy.ones_like(wls)
-    
+
     def __from_function(self, wls):
         wls = numpy.atleast_1d(wls)
         if wls.size == 1:
             if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
-        return  self.__data( wls )
-    
+        return self.__data(wls)
+
     def __call__(self, wls):
         return self.get_rix(wls)
 
