@@ -4,7 +4,7 @@ EMpy - ElectroMagnetic Python
 .. image:: https://travis-ci.org/lbolla/EMpy.svg?branch=master
     :target: https://travis-ci.org/lbolla/EMpy
 
-`EMpy - Electromagnetic Python` is a suite of algorithms widely knonw
+`EMpy - Electromagnetic Python` is a suite of algorithms widely known
 and used in electromagnetic problems and optics: the transfer matrix
 algorithm, the rigorous coupled wave analysis algorithm and more.
 
@@ -40,3 +40,11 @@ Run tests with:
 .. code-block:: bash
 
     $> python setup.py test
+
+Release process
+===============
+
+1. Edit CHANGES
+2. Edit `version` in `setup.py`
+3. `git tag`
+4. Push to PyPi: `python setup.py release`

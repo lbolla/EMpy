@@ -1,7 +1,7 @@
 *.pyc
 *.egg-info/
+*.egg
 dist
 build
 .idea
 .DS_Store
-

@@ -7,7 +7,7 @@ with open('README.rst', 'r') as readme:
 
 setup(
     name='ElectroMagneticPython',
-    version='1.0',
+    version='1.1',
     author='Lorenzo Bolla',
     author_email='lbolla@gmail.com',
     description='EMpy - ElectroMagnetic Python',
