@@ -53,7 +53,7 @@ class RefractiveIndex(object):
     n0_smcoeffs (Sellmeier coefficients): 6-element list/tuple
         Set the rix dispersion function to the 6-parameter Sellmeier
         function as so:
-            n =  1. +
+            n(wls) =  1. +
             B1 * wls ** 2 / (wls ** 2 - C1) +
             B2 * wls ** 2 / (wls ** 2 - C2) +
             B3 * wls ** 2 / (wls ** 2 - C3)
@@ -61,7 +61,7 @@ class RefractiveIndex(object):
 
     n0_func : function
         Provide an arbitrary function to return the refractive index
-        versus wavelength.
+        versus wavelength.  
         E.g.:
             >>> def SiN_func(wl):
             >>>     x = wl * 1e6 # convert to microns
@@ -71,6 +71,8 @@ class RefractiveIndex(object):
             >>> SiN_rix = RefractiveIndex(
                     n0_func=lambda wl: 1.887 + 0.01929/(wl*1e6)**2 +
                                        1.6662e-4/(wl*1e6)**4)
+        Your function should return a `numpy.array`, since it will be passed a `numpy.array` of the wavelengths requested.  This conversion to `array` happens automatically if your function does math on the wavelength.  If you want to return a constant, include the wavelength like so:
+            >>> rix_func = lambda wl:  0*wl + 1.448     # always returns 1.448
 
     n0_known : dictionary
         Use if RefractiveIndex will only evaluated at a specific set of `wls`.
@@ -131,7 +133,7 @@ class RefractiveIndex(object):
         if wls.size == 1:
             if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
-        return self.__data(wls)
+        return self.__data( numpy.ones_like(wls) )
 
     def __call__(self, wls):
         return self.get_rix(wls)
