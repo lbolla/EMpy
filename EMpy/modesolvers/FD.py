@@ -126,7 +126,7 @@ class SVFDModeSolver(ModeSolver):
         elif boundary[0] == 'A':
             Ap[ib] -= An[ib]
         else:
-            raise ValueError('unknonw boundary')
+            raise ValueError('unknown boundary')
         
         # south
         ib = ii[:, 0]
@@ -135,7 +135,7 @@ class SVFDModeSolver(ModeSolver):
         elif boundary[1] == 'A':
             Ap[ib] -= As[ib]
         else:
-            raise ValueError('unknonw boundary')
+            raise ValueError('unknown boundary')
         
         # east
         ib = ii[-1, :]
@@ -144,7 +144,7 @@ class SVFDModeSolver(ModeSolver):
         elif boundary[2] == 'A':
             Ap[ib] -= Ae[ib]
         else:
-            raise ValueError('unknonw boundary')
+            raise ValueError('unknown boundary')
         
         # west
         ib = ii[0, :]
@@ -153,7 +153,7 @@ class SVFDModeSolver(ModeSolver):
         elif boundary[3] == 'A':
             Ap[ib] -= Aw[ib]
         else:
-            raise ValueError('unknonw boundary')
+            raise ValueError('unknown boundary')
     
         iall = ii.flatten()
         i_n = ii[:, 1:].flatten()
