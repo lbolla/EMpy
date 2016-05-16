@@ -125,8 +125,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += An[ib]
         elif boundary[0] == 'A':
             Ap[ib] -= An[ib]
-        else:
-            raise ValueError('unknown boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
         
         # south
         ib = ii[:, 0]
@@ -134,8 +134,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += As[ib]
         elif boundary[1] == 'A':
             Ap[ib] -= As[ib]
-        else:
-            raise ValueError('unknown boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
         
         # east
         ib = ii[-1, :]
@@ -143,8 +143,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += Ae[ib]
         elif boundary[2] == 'A':
             Ap[ib] -= Ae[ib]
-        else:
-            raise ValueError('unknown boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
         
         # west
         ib = ii[0, :]
@@ -152,8 +152,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += Aw[ib]
         elif boundary[3] == 'A':
             Ap[ib] -= Aw[ib]
-        else:
-            raise ValueError('unknown boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
     
         iall = ii.flatten()
         i_n = ii[:, 1:].flatten()
@@ -212,6 +212,43 @@ class SVFDModeSolver(ModeSolver):
         return descr
 
 class VFDModeSolver(ModeSolver):
+    """
+    The VFDModeSolver class computes the electric and magnetic fields for modes of a dielectric
+    waveguide using the "Vector Finite Difference (VFD)" method, as described in
+    A. B. Fallahkhair, K. S. Li and T. E. Murphy, "Vector Finite Difference Modesolver for 
+    Anisotropic Dielectric Waveguides", J. Lightwave Technol. 26(11), 1423-1431, (2008).
+    
+    Parameters
+    ----------
+    wl : float
+        The wavelength of the optical radiation (units are arbitrary, but must be self-consistent
+        between all inputs. Recommandation is to just use micron for everthing)
+    x : 1D array of floats
+        Array of x-values
+    y : 1D array of floats
+        Array of y-values
+    epsfunc : function
+        This is a function that provides the relative permittivity (square of the refractive index)
+        as a function of the x and y position. The function must be of the form:
+        ``myRelativePermittivity(x,y)``
+        The function can either return a single float, corresponding the an isotropic refractive index,
+        or, ir may a length-5 tuple. In the tuple case, the relative permittivity is given in the form
+        (epsxx, epsxy, epsyx, epsyy, epszz).
+    boundary : str
+        This is a string that identifies the type of boundary conditions applied.
+        The following options are available:
+           'A' - Hx is antisymmetric, Hy is symmetric.
+           'S' - Hx is symmetric and, Hy is antisymmetric.
+           '0' - Hx and Hy are zero immediately outside of the boundary.
+        The string identifies all four boundary conditions, in the order: North, south, east, west. 
+        For example, boundary='000A'
+    
+    Returns
+    -------
+    self : an instance of the VFDModeSolver class
+        Typically self.solve() will be called.
+        
+    """
 
     def __init__(self, wl, x, y, epsfunc, boundary):
         self.wl = wl
