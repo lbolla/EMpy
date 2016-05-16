@@ -12,7 +12,7 @@ It is based on U{numpy<http://numpy.scipy.org>} and U{scipy<http://www.scipy.org
 """
 from __future__ import absolute_import
 
-__all__ = ['constants', 'devices', 'materials', 'modesolvers', 'propagators', 'RCWA', 'scattering', 'transfer_matrix',
+__all__ = ['constants', 'devices', 'materials', 'modesolvers', 'RCWA', 'scattering', 'transfer_matrix',
            'utils']
 __author__ = 'Lorenzo Bolla'
 
@@ -22,7 +22,6 @@ from . import constants
 from . import devices
 from . import materials
 from . import modesolvers
-from . import propagators
 from . import RCWA
 from . import scattering
 from . import transfer_matrix
