@@ -4,7 +4,8 @@ import numpy
 import pylab
 
 import EMpy
-from EMpy.materials import IsotropicMaterial, AnisotropicMaterial, RefractiveIndex, EpsilonTensor
+from EMpy.materials import (
+    IsotropicMaterial, AnisotropicMaterial, RefractiveIndex, EpsilonTensor)
 
 
 alpha = 0.
@@ -51,7 +52,8 @@ multilayer2 = EMpy.utils.Multilayer([
     EMpy.utils.Layer(EMpy.materials.Air, numpy.inf),
     EMpy.utils.Layer(SiN, 226e-9),
     EMpy.utils.Layer(BPTEOS, 226e-9),
-    EMpy.utils.Layer(IsotropicMaterial(n0=RefractiveIndex(n0_const=1.6)), 123e-9),
+    EMpy.utils.Layer(
+        IsotropicMaterial(n0=RefractiveIndex(n0_const=1.6)), 123e-9),
     EMpy.utils.Layer(SiN, 219e-9),
     EMpy.utils.Layer(EMpy.materials.SiO2, 2188e-9),
     EMpy.utils.Layer(EMpy.materials.Si, numpy.inf),
@@ -59,21 +61,25 @@ multilayer2 = EMpy.utils.Multilayer([
 
 wls = numpy.linspace(1.45e-6, 1.75e-6, 301)
 
-solution1 = EMpy.RCWA.AnisotropicRCWA(multilayer1, alpha, delta, psi, phi, n).solve(wls)
-solution2 = EMpy.RCWA.AnisotropicRCWA(multilayer2, alpha, delta, psi, phi, n).solve(wls)
+solution1 = EMpy.RCWA.AnisotropicRCWA(
+    multilayer1, alpha, delta, psi, phi, n).solve(wls)
+solution2 = EMpy.RCWA.AnisotropicRCWA(
+    multilayer2, alpha, delta, psi, phi, n).solve(wls)
 
-pylab.plot(wls, solution1.DEO1[n, :], 'k.-',
-           wls, solution1.DEO3[n, :], 'r.-',
-           wls, solution1.DEE1[n, :], 'b.-',
-           wls, solution1.DEE3[n, :], 'g.-',
-           wls, solution2.DEO1[n, :], 'k--',
-           wls, solution2.DEO3[n, :], 'r--',
-           wls, solution2.DEE1[n, :], 'b--',
-           wls, solution2.DEE3[n, :], 'g--',
-           )
-pylab.xlabel('wavelength')
+um = 1e-6
+pylab.plot(
+    # wls / um, solution1.DEO1[n, :], 'k.-',
+    # wls / um, solution1.DEO3[n, :], 'r.-',
+    wls / um, solution1.DEE1[n, :], 'b.-',
+    wls / um, solution1.DEE3[n, :], 'g.-',
+    # wls / um, solution2.DEO1[n, :], 'k--',
+    # wls / um, solution2.DEO3[n, :], 'r--',
+    wls / um, solution2.DEE1[n, :], 'b--',
+    wls / um, solution2.DEE3[n, :], 'g--',
+)
+pylab.xlabel('wavelength [um]')
 pylab.ylabel('diffraction efficiency')
 pylab.legend(('DEO1', 'DEO3', 'DEE1', 'DEE3'))
 pylab.axis('tight')
-pylab.ylim([0, 1])
+pylab.ylim([0, 0.15])
 pylab.show()
