@@ -1,6 +1,6 @@
 """Finite Difference Modesolver.
 
-@see: U{Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides", JLT 2007 <http://www.photonics.umd.edu/pubs/journal-articles/JA-D/anisotropic-modesolver.pdf>}
+@see: Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides", JLT 2007 <http://www.photonics.umd.edu/pubs/journal-articles/JA-D/anisotropic-modesolver.pdf>}
 @see: http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=12734&objectType=FILE
 
 """
@@ -21,9 +21,9 @@ class SVFDModeSolver(ModeSolver):
         self.wl = wl
         self.x = x
         self.y = y
-        self.epsfunc = epsfunc
+        self.epsfunc  = epsfunc
         self.boundary = boundary
-        self.method = method
+        self.method   = method
 
     def build_matrix(self):
 
@@ -215,9 +215,10 @@ class VFDModeSolver(ModeSolver):
     """
     The VFDModeSolver class computes the electric and magnetic fields for modes of a dielectric
     waveguide using the "Vector Finite Difference (VFD)" method, as described in
-    A. B. Fallahkhair, K. S. Li and T. E. Murphy, "Vector Finite Difference Modesolver for 
+    A. B. Fallahkhair, K. S. Li and T. E. Murphy, "Vector Finite Difference Modesolver for
     Anisotropic Dielectric Waveguides", J. Lightwave Technol. 26(11), 1423-1431, (2008).
-    
+
+
     Parameters
     ----------
     wl : float
@@ -242,12 +243,12 @@ class VFDModeSolver(ModeSolver):
            '0' - Hx and Hy are zero immediately outside of the boundary.
         The string identifies all four boundary conditions, in the order: North, south, east, west. 
         For example, boundary='000A'
-    
+
     Returns
     -------
     self : an instance of the VFDModeSolver class
-        Typically self.solve() will be called.
-        
+        Typically self.solve() will be called in order to actually find the modes.
+
     """
 
     def __init__(self, wl, x, y, epsfunc, boundary):
@@ -960,7 +961,7 @@ class FDMode(Mode):
         if (y is None):
             y = y2
         
-        # interpola m1 sulla griglia di m2
+        # Interpolates m1 onto m2 grid:
         Ex1 = EMpy.utils.interp2(x, y, x1, y1, self.Ex)
         Ey1 = EMpy.utils.interp2(x, y, x1, y1, self.Ey)
         Ex2 = EMpy.utils.interp2(x, y, x2, y2, m.Ex)
