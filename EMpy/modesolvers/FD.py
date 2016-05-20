@@ -16,7 +16,53 @@ import EMpy.utils
 from EMpy.modesolvers.interface import *
 
 class SVFDModeSolver(ModeSolver):
+    """
+    This function calculates the modes of a dielectric waveguide 
+    using the semivectorial finite difference method.
+    It is slightly faster than the full-vectorial VFDModeSolver,
+    but it does not accept non-isotropic permittivity. For example, 
+    birefringent materials, which have
+    different refractive indices along different dimensions cannot be used. 
+    It is adapted from the svmodes.m matlab code of Thomas Murphy and co-workers. 
+    
+    Parameters
+    ----------
+    wl : float
+        optical wavelength
+        units are arbitrary, but must be self-consistent. It's recommended to just work in microns.
+    x : 1D array of floats
+        Array of x-values
+    y : 1D array of floats
+        Array of y-values
+    epsfunc : function
+        This is a function that provides the relative permittivity (square of the refractive index)
+        as a function of the x and y position. The function must be of the form:
+        ``myRelativePermittivity(x,y)``
+        The function can either return a single float, corresponding the an isotropic refractive index,
+        or, ir may a length-5 tuple. In the tuple case, the relative permittivity is given in the form
+        (epsxx, epsxy, epsyx, epsyy, epszz).
 
+    boundary : str
+        This is a string that identifies the type of boundary conditions applied.
+        The following options are available:
+           'A' - Hx is antisymmetric, Hy is symmetric.
+           'S' - Hx is symmetric and, Hy is antisymmetric.
+           '0' - Hx and Hy are zero immediately outside of the boundary.
+        The string identifies all four boundary conditions, in the order: North, south, east, west. 
+        For example, boundary='000A'
+
+    method : str
+        must be 'Ex', 'Ey', or 'scalar'
+        this identifies the field that will be calculated.
+
+    
+    Returns
+    -------
+    self : an instance of the SVFDModeSolver class
+        Typically self.solve() will be called in order to actually find the modes.
+    
+    """
+    
     def __init__(self, wl, x, y, epsfunc, boundary, method='Ex'):
         self.wl = wl
         self.x = x
@@ -790,7 +836,29 @@ class VFDModeSolver(ModeSolver):
 
         return (Hzs, Exs, Eys, Ezs)
     
-    def solve(self, neigs, tol):
+    def solve(self, neigs=4, tol=0, guess=None):
+        """
+        This function finds the eigenmodes. 
+        
+        Parameters
+        ----------
+        neigs : int
+            number of eigenmodes to find
+        tol : float
+            Relative accuracy for eigenvalues. The default value of 0 implies machine precision.
+        guess : float
+            a guess for the refractive index. Only finds eigenvectors with an effective refrative index 
+            higher than this value. 
+        
+        Returns
+        -------
+        self : an instance of the VFDModeSolver class
+            obtain the fields of interest for specific modes using, for example:
+            solver = EMpy.modesolvers.FD.VFDModeSolver(wavelength, x, y, epsf, boundary).solve()
+            Ex = solver.modes[0].Ex
+            Ey = solver.modes[0].Ey
+            Ez = solver.modes[0].Ez
+        """
 
         from scipy.sparse.linalg import eigen
 
@@ -799,12 +867,20 @@ class VFDModeSolver(ModeSolver):
         
         A = self.build_matrix()
         
+        
+        if guess != None:          # calculate shift for eigs function
+            k = 2*numpy.pi/self.wl # calculate k-vector
+            shift = (guess*k)**2   # calculate shift 
+        else:
+            shift = None
+        
         [eigvals, eigvecs] = eigen.eigs(A,
                 k=neigs, 
                 which='LR', 
                 tol=tol, 
                 ncv=10 * neigs, 
-                return_eigenvectors=True)
+                return_eigenvectors=True,
+                sigma=shift)
     
         neffs = self.wl * scipy.sqrt(eigvals) / (2 * numpy.pi)
         Hxs = []
