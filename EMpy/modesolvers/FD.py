@@ -1,6 +1,6 @@
 """Finite Difference Modesolver.
 
-@see: U{Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides", JLT 2007 <http://www.photonics.umd.edu/pubs/journal-articles/JA-D/anisotropic-modesolver.pdf>}
+@see: Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides", JLT 2007 <http://www.photonics.umd.edu/pubs/journal-articles/JA-D/anisotropic-modesolver.pdf>}
 @see: http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=12734&objectType=FILE
 
 """
@@ -16,14 +16,60 @@ import EMpy.utils
 from EMpy.modesolvers.interface import *
 
 class SVFDModeSolver(ModeSolver):
+    """
+    This function calculates the modes of a dielectric waveguide 
+    using the semivectorial finite difference method.
+    It is slightly faster than the full-vectorial VFDModeSolver,
+    but it does not accept non-isotropic permittivity. For example, 
+    birefringent materials, which have
+    different refractive indices along different dimensions cannot be used. 
+    It is adapted from the svmodes.m matlab code of Thomas Murphy and co-workers. 
+    
+    Parameters
+    ----------
+    wl : float
+        optical wavelength
+        units are arbitrary, but must be self-consistent. It's recommended to just work in microns.
+    x : 1D array of floats
+        Array of x-values
+    y : 1D array of floats
+        Array of y-values
+    epsfunc : function
+        This is a function that provides the relative permittivity (square of the refractive index)
+        as a function of the x and y position. The function must be of the form:
+        ``myRelativePermittivity(x,y)``
+        The function can either return a single float, corresponding the an isotropic refractive index,
+        or, ir may a length-5 tuple. In the tuple case, the relative permittivity is given in the form
+        (epsxx, epsxy, epsyx, epsyy, epszz).
 
+    boundary : str
+        This is a string that identifies the type of boundary conditions applied.
+        The following options are available:
+           'A' - Hx is antisymmetric, Hy is symmetric.
+           'S' - Hx is symmetric and, Hy is antisymmetric.
+           '0' - Hx and Hy are zero immediately outside of the boundary.
+        The string identifies all four boundary conditions, in the order: North, south, east, west. 
+        For example, boundary='000A'
+
+    method : str
+        must be 'Ex', 'Ey', or 'scalar'
+        this identifies the field that will be calculated.
+
+    
+    Returns
+    -------
+    self : an instance of the SVFDModeSolver class
+        Typically self.solve() will be called in order to actually find the modes.
+    
+    """
+    
     def __init__(self, wl, x, y, epsfunc, boundary, method='Ex'):
         self.wl = wl
         self.x = x
         self.y = y
-        self.epsfunc = epsfunc
+        self.epsfunc  = epsfunc
         self.boundary = boundary
-        self.method = method
+        self.method   = method
 
     def build_matrix(self):
 
@@ -125,8 +171,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += An[ib]
         elif boundary[0] == 'A':
             Ap[ib] -= An[ib]
-        else:
-            raise ValueError('unknonw boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
         
         # south
         ib = ii[:, 0]
@@ -134,8 +180,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += As[ib]
         elif boundary[1] == 'A':
             Ap[ib] -= As[ib]
-        else:
-            raise ValueError('unknonw boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
         
         # east
         ib = ii[-1, :]
@@ -143,8 +189,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += Ae[ib]
         elif boundary[2] == 'A':
             Ap[ib] -= Ae[ib]
-        else:
-            raise ValueError('unknonw boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
         
         # west
         ib = ii[0, :]
@@ -152,8 +198,8 @@ class SVFDModeSolver(ModeSolver):
             Ap[ib] += Aw[ib]
         elif boundary[3] == 'A':
             Ap[ib] -= Aw[ib]
-        else:
-            raise ValueError('unknonw boundary')
+        # else:
+        #     raise ValueError('unknown boundary')
     
         iall = ii.flatten()
         i_n = ii[:, 1:].flatten()
@@ -212,6 +258,44 @@ class SVFDModeSolver(ModeSolver):
         return descr
 
 class VFDModeSolver(ModeSolver):
+    """
+    The VFDModeSolver class computes the electric and magnetic fields for modes of a dielectric
+    waveguide using the "Vector Finite Difference (VFD)" method, as described in
+    A. B. Fallahkhair, K. S. Li and T. E. Murphy, "Vector Finite Difference Modesolver for
+    Anisotropic Dielectric Waveguides", J. Lightwave Technol. 26(11), 1423-1431, (2008).
+
+
+    Parameters
+    ----------
+    wl : float
+        The wavelength of the optical radiation (units are arbitrary, but must be self-consistent
+        between all inputs. Recommandation is to just use micron for everthing)
+    x : 1D array of floats
+        Array of x-values
+    y : 1D array of floats
+        Array of y-values
+    epsfunc : function
+        This is a function that provides the relative permittivity (square of the refractive index)
+        as a function of the x and y position. The function must be of the form:
+        ``myRelativePermittivity(x,y)``
+        The function can either return a single float, corresponding the an isotropic refractive index,
+        or, ir may a length-5 tuple. In the tuple case, the relative permittivity is given in the form
+        (epsxx, epsxy, epsyx, epsyy, epszz).
+    boundary : str
+        This is a string that identifies the type of boundary conditions applied.
+        The following options are available:
+           'A' - Hx is antisymmetric, Hy is symmetric.
+           'S' - Hx is symmetric and, Hy is antisymmetric.
+           '0' - Hx and Hy are zero immediately outside of the boundary.
+        The string identifies all four boundary conditions, in the order: North, south, east, west. 
+        For example, boundary='000A'
+
+    Returns
+    -------
+    self : an instance of the VFDModeSolver class
+        Typically self.solve() will be called in order to actually find the modes.
+
+    """
 
     def __init__(self, wl, x, y, epsfunc, boundary):
         self.wl = wl
@@ -752,7 +836,29 @@ class VFDModeSolver(ModeSolver):
 
         return (Hzs, Exs, Eys, Ezs)
     
-    def solve(self, neigs, tol):
+    def solve(self, neigs=4, tol=0, guess=None):
+        """
+        This function finds the eigenmodes. 
+        
+        Parameters
+        ----------
+        neigs : int
+            number of eigenmodes to find
+        tol : float
+            Relative accuracy for eigenvalues. The default value of 0 implies machine precision.
+        guess : float
+            a guess for the refractive index. Only finds eigenvectors with an effective refrative index 
+            higher than this value. 
+        
+        Returns
+        -------
+        self : an instance of the VFDModeSolver class
+            obtain the fields of interest for specific modes using, for example:
+            solver = EMpy.modesolvers.FD.VFDModeSolver(wavelength, x, y, epsf, boundary).solve()
+            Ex = solver.modes[0].Ex
+            Ey = solver.modes[0].Ey
+            Ez = solver.modes[0].Ez
+        """
 
         from scipy.sparse.linalg import eigen
 
@@ -761,12 +867,20 @@ class VFDModeSolver(ModeSolver):
         
         A = self.build_matrix()
         
+        
+        if guess != None:          # calculate shift for eigs function
+            k = 2*numpy.pi/self.wl # calculate k-vector
+            shift = (guess*k)**2   # calculate shift 
+        else:
+            shift = None
+        
         [eigvals, eigvecs] = eigen.eigs(A,
                 k=neigs, 
                 which='LR', 
                 tol=tol, 
                 ncv=10 * neigs, 
-                return_eigenvectors=True)
+                return_eigenvectors=True,
+                sigma=shift)
     
         neffs = self.wl * scipy.sqrt(eigvals) / (2 * numpy.pi)
         Hxs = []
@@ -923,7 +1037,7 @@ class FDMode(Mode):
         if (y is None):
             y = y2
         
-        # interpola m1 sulla griglia di m2
+        # Interpolates m1 onto m2 grid:
         Ex1 = EMpy.utils.interp2(x, y, x1, y1, self.Ex)
         Ey1 = EMpy.utils.interp2(x, y, x1, y1, self.Ey)
         Ex2 = EMpy.utils.interp2(x, y, x2, y2, m.Ex)
