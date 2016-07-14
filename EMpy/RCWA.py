@@ -42,6 +42,11 @@ def dispersion_relation_ordinary(kx, ky, k, nO):
         kz = S.sqrt(delta)
     else:
         kz = -1j * S.sqrt(-delta)
+
+    # Adjust sign of real/imag part
+    kz.real = abs(kz.real)
+    kz.imag = -abs(kz.imag)
+
     return kz
 
 
