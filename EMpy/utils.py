@@ -180,8 +180,8 @@ class SymmetricDoubleGrating(object):
             f2 = self.dc2
             h = numpy.arange(-hmax, hmax + 1)
             N = len(h)
-            A = -N / 4.
-            B = N / 4.
+            A = -N*f1 / 2.
+            B = N*f2 / 2.
             EPS = (
                 rix3 ** 2 * (h == 0) + (rix1 ** 2 - rix3 ** 2) * f1 *
                 numpy.sinc(h * f1) * numpy.exp(2j * numpy.pi * h / N * A) +
@@ -209,8 +209,8 @@ class SymmetricDoubleGrating(object):
             f2 = self.dc2
             h = numpy.arange(-hmax, hmax + 1)
             N = len(h)
-            A = -N / 4.
-            B = N / 4.
+            A = -N*f1 / 2.
+            B = N*f2 / 2.
             for ih, hh in enumerate(h):
                 EPS[:, :, ih] = (
                     (eps1 - eps3) * f1 * numpy.sinc(hh * f1) *
