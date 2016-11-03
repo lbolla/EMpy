@@ -98,26 +98,26 @@ class RefractiveIndex(object):
             self.__data = n0_func
             self.get_rix = self.__from_function
         else:
-            raise ValueError('n0 all None is not possible!')
+            raise ValueError('n0_const or n0_poly or n0_smcoeffs or n0_func should be defined, even if n0_known is defined')
         self.n0_known = n0_known
 
     def __from_const(self, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
+        if wls.size == 1: #If tm.solve is called with more than one wavelength as argument, I think this causes n0_known to be ignored
             if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
         return self.__data * numpy.ones_like(wls)
 
     def __from_poly(self, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
+        if wls.size == 1: #If tm.solve is called with more than one wavelength as argument, I think this causes n0_known to be ignored
             if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
         return numpy.polyval(self.__data, wls) * numpy.ones_like(wls)
 
     def __from_sellmeier(self, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
+        if wls.size == 1: #If tm.solve is called with more than one wavelength as argument, I think this causes n0_known to be ignored
             if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
         B1, B2, B3, C1, C2, C3 = self.__data
@@ -130,7 +130,7 @@ class RefractiveIndex(object):
 
     def __from_function(self, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
+        if wls.size == 1: #If tm.solve is called with more than one wavelength as argument, I think this causes n0_known to be ignored
             if wls.item() in self.n0_known:
                 return numpy.atleast_1d([self.n0_known[wls.item()]])
         return self.__data( numpy.ones_like(wls) )
