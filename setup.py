@@ -19,15 +19,15 @@ setup(
     packages=find_packages(),
     install_requires=[
         'distribute>=0.6.28',
-        'future',
-        'numpy',
-        'scipy',
-        'matplotlib',
+        'future<1.0dev',
+        'numpy<2.0dev',
+        'scipy<1.0dev',
+        'matplotlib<2.0dev',
     ],
     provides=['EMpy'],
     test_suite='tests',
     tests_require=[
-        'nose==1.3.7',
+        'nose<2.0dev',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
