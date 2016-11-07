@@ -1,34 +1,31 @@
 # pylint: disable=no-self-use
 from unittest import TestCase
 
-import random
-import math
-
 from numpy import array
-from numpy import pi
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_raises
 
 import EMpy.materials as mat
 
 
-class MaterialsTest(TestCase):
+class RefractiveIndexTest(TestCase):
 
-    def test_RefractiveIndex(self):
-        ''':: testing the EMpy.materials.RefractiveIndex class constructors'''
-        
-        # test const:
+    def test_all_nones(self):
+        with assert_raises(ValueError):
+            mat.RefractiveIndex()
+
+    def test_const(self):
         test_rix = 1.50
-        a = mat.RefractiveIndex( n0_const = test_rix )
-        self.assertEqual(  a.get_rix(1.0)[0]  ,  array([ test_rix ])  )
-        
-        # test poly:
-        test_poly = [1,1]   # n(wl) = 1*wl + 1
-        test_rix = 2.0      # n(1) = 1*1 + 1 = 2
-        a = mat.RefractiveIndex( n0_poly = test_poly )
-        assert_almost_equal(  a.get_rix(1.0)[0]  ,  array([ test_rix ])  )
-        
-        # test smcoeffs:
-        test_poly = [1]*6   
+        a = mat.RefractiveIndex(n0_const=test_rix)
+        self.assertEqual(a.get_rix(1.0)[0], array([test_rix]))
+
+    def test_poly(self):
+        test_poly = [1, 1]  # n(wl) = 1 * wl + 1
+        test_rix = 2.0  # n(1) = 1 * 1 + 1 = 2
+        a = mat.RefractiveIndex(n0_poly=test_poly)
+        assert_almost_equal(a.get_rix(1.0)[0], array([test_rix]))
+
+    def test_smcoeffs(self):
+        test_poly = [1] * 6
         ''' 6-coeffs:
             n(wls) =  1. +
             B1 * wls ** 2 / (wls ** 2 - C1) +
@@ -36,21 +33,24 @@ class MaterialsTest(TestCase):
             B3 * wls ** 2 / (wls ** 2 - C3)
         '''
         test_rix = 1.0536712127723509e-08
-        a = mat.RefractiveIndex( n0_smcoeffs = test_poly )
-        assert_almost_equal(  a.get_rix(0.5)[0]  ,  array([ test_rix ])  )
-        
-        # test func:
+        a = mat.RefractiveIndex(n0_smcoeffs=test_poly)
+        assert_almost_equal(a.get_rix(0.5)[0], array([test_rix]))
+
+    def test_func(self):
         test_rix = 1.50
-        test_poly = lambda x: 0.0*x + test_rix      # returns a constant
-        a = mat.RefractiveIndex( n0_func = test_poly )
-        assert_almost_equal(  a.get_rix([1.0,1.5])[0]  ,  array([ test_rix ])  )
-        
-        # test known:
+
+        def test_func(x):
+            # returns a const
+            return 0.0 * x + test_rix
+
+        a = mat.RefractiveIndex(n0_func=test_func)
+        assert_almost_equal(a.get_rix([1.0, 1.5])[0], array([test_rix]))
+
+    def test_known(self):
         test_rix = 1.50
         test_wl = 1.0
-        test_dict = {}
-        test_dict[test_wl] = test_rix
-        self.assertEqual(  a.get_rix(test_wl)[0]  , array([ test_rix ])  )
-        
-    #end test_RefractiveIndex()
-#end class(MaterialsTest)
+        n0_known = {
+            test_wl: test_rix
+        }
+        a = mat.RefractiveIndex(n0_known=n0_known)
+        self.assertEqual(a.get_rix(test_wl)[0], array([test_rix]))

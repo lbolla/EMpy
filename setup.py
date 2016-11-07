@@ -26,6 +26,9 @@ setup(
     ],
     provides=['EMpy'],
     test_suite='tests',
+    tests_require=[
+        'nose==1.3.7',
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
