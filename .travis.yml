@@ -28,7 +28,7 @@ before_install:
 # Install packages
 install:
   # Make sure the versions here match what we have in requirements.txt
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION "numpy<2.0dev" "scipy<1.0dev" "matplotlib<2.0dev" 'nose<2.0dev" "python-dateutil<3.0dev"
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION "numpy<2.0dev" "scipy<1.0dev" "matplotlib<2.0dev" "nose<2.0dev" "python-dateutil<3.0dev"
   - pip install -r requirements.txt
 
 # Run tests
