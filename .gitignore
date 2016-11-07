@@ -2,6 +2,7 @@
 *.egg-info/
 *.egg
 .eggs/
+.tox/
 dist
 build
 .idea

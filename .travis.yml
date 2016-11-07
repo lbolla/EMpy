@@ -1,13 +1,12 @@
 language: python
 python:
   - "2.7"
-  - "3.4"
+  - "3.5"
 
 # http://docs.travis-ci.com/user/caching/#pip-cache
 cache: pip
 
 notifications:
-  # email: false
   email:
     - lbolla@gmail.com
 
