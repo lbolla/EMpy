@@ -28,7 +28,7 @@ before_install:
 # Install packages
 install:
   # Make sure the versions here match what we have in requirements.txt
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION libgfortran atlas numpy scipy matplotlib nose
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION libgfortran atlas numpy scipy # matplotlib nose python-dateutil
   - pip install -r requirements.txt
 
 # Run tests
