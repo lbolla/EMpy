@@ -15,7 +15,7 @@ notifications:
 
 # Setup anaconda
 before_install:
-  - export PYMAJORVER=`python -c "import sys; print(sys.version_info).major"`
+  - export PYMAJORVER=`python -c "import sys; print(sys.version_info.major)"`
   - wget http://repo.continuum.io/miniconda/Miniconda$PYMAJORVER-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
