@@ -7,12 +7,13 @@ A material is an object with a refractive index function.
 """
 from builtins import str
 from builtins import object
-
-__author__ = 'Lorenzo Bolla'
+from functools import partial
 
 import numpy
 from scipy.integrate import quad
 from EMpy.constants import eps0
+
+__author__ = 'Lorenzo Bolla'
 
 
 class Material(object):
@@ -61,7 +62,7 @@ class RefractiveIndex(object):
 
     n0_func : function
         Provide an arbitrary function to return the refractive index
-        versus wavelength.  
+        versus wavelength.
         E.g.:
             >>> def SiN_func(wl):
             >>>     x = wl * 1e6 # convert to microns
@@ -71,56 +72,58 @@ class RefractiveIndex(object):
             >>> SiN_rix = RefractiveIndex(
                     n0_func=lambda wl: 1.887 + 0.01929/(wl*1e6)**2 +
                                        1.6662e-4/(wl*1e6)**4)
-        Your function should return a `numpy.array`, since it will be passed a `numpy.array` of the wavelengths requested.  This conversion to `array` happens automatically if your function does math on the wavelength.  If you want to return a constant, include the wavelength like so:
+        Your function should return a `numpy.array`, since it will be
+        passed a `numpy.array` of the wavelengths requested.  This
+        conversion to `array` happens automatically if your function
+        does math on the wavelength.  If you want to return a
+        constant, include the wavelength like so:
+
             >>> rix_func = lambda wl:  0*wl + 1.448     # always returns 1.448
 
     n0_known : dictionary
         Use if RefractiveIndex will only evaluated at a specific set of `wls`.
         n0_known should be a dictionary of key:value == wavelength:rix pairs.
-        Eg. >>> n0_known = { 1599e-9: 1.998,  1550e-9: 1.997,  1600e-9: 1.996 }
+        Eg.:
+
+            >>> n0_known = { 1599e-9: 1.998, 1550e-9: 1.997, 1600e-9: 1.996 }
 
     """
 
     def __init__(self, n0_const=None, n0_poly=None, n0_smcoeffs=None,
                  n0_known=None, n0_func=None):
-        if n0_known is None:
-            n0_known = {}
+
         if n0_const is not None:
-            self.__data = n0_const
-            self.get_rix = self.__from_const
+            self.get_rix = partial(self.__from_const, n0_const)
+
         elif n0_poly is not None:
-            self.__data = n0_poly
-            self.get_rix = self.__from_poly
+            self.get_rix = partial(self.__from_poly, n0_poly)
+
         elif n0_smcoeffs is not None:
-            self.__data = n0_smcoeffs
-            self.get_rix = self.__from_sellmeier
+            self.get_rix = partial(self.__from_sellmeier, n0_smcoeffs)
+
         elif n0_func is not None:
-            self.__data = n0_func
-            self.get_rix = self.__from_function
+            self.get_rix = partial(self.__from_function, n0_func)
+
+        elif n0_known is not None:
+            self.get_rix = partial(self.__from_known, n0_known)
+
         else:
-            raise ValueError('n0 all None is not possible!')
-        self.n0_known = n0_known
+            raise ValueError('Please provide at least one parameter')
 
-    def __from_const(self, wls):
+    @staticmethod
+    def __from_const(n0, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
-            if wls.item() in self.n0_known:
-                return numpy.atleast_1d([self.n0_known[wls.item()]])
-        return self.__data * numpy.ones_like(wls)
+        return n0 * numpy.ones_like(wls)
 
-    def __from_poly(self, wls):
+    @staticmethod
+    def __from_poly(n0_poly, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
-            if wls.item() in self.n0_known:
-                return numpy.atleast_1d([self.n0_known[wls.item()]])
-        return numpy.polyval(self.__data, wls) * numpy.ones_like(wls)
+        return numpy.polyval(n0_poly, wls) * numpy.ones_like(wls)
 
-    def __from_sellmeier(self, wls):
+    @staticmethod
+    def __from_sellmeier(n0_smcoeffs, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
-            if wls.item() in self.n0_known:
-                return numpy.atleast_1d([self.n0_known[wls.item()]])
-        B1, B2, B3, C1, C2, C3 = self.__data
+        B1, B2, B3, C1, C2, C3 = n0_smcoeffs
         return numpy.sqrt(
             1. +
             B1 * wls ** 2 / (wls ** 2 - C1) +
@@ -128,12 +131,16 @@ class RefractiveIndex(object):
             B3 * wls ** 2 / (wls ** 2 - C3)
         ) * numpy.ones_like(wls)
 
-    def __from_function(self, wls):
+    @staticmethod
+    def __from_function(n0_func, wls):
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
-            if wls.item() in self.n0_known:
-                return numpy.atleast_1d([self.n0_known[wls.item()]])
-        return self.__data( numpy.ones_like(wls) )
+        return n0_func(numpy.ones_like(wls))
+
+    @staticmethod
+    def __from_known(n0_known, wls):
+        wls = numpy.atleast_1d(wls)
+        # Note: we should interpolate...
+        return numpy.array([n0_known.get(wl, 0) for wl in wls])
 
     def __call__(self, wls):
         return self.get_rix(wls)

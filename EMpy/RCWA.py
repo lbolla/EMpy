@@ -38,10 +38,12 @@ def dispersion_relation_ordinary(kx, ky, k, nO):
         raise ValueError('kx and ky must have the same length')
 
     delta = (k * nO) ** 2 - (kx ** 2 + ky ** 2)
-    if S.all(delta > 0):
-        kz = S.sqrt(delta)
-    else:
-        kz = -1j * S.sqrt(-delta)
+    kz = S.sqrt(delta)
+
+    # Adjust sign of real/imag part
+    kz.real = abs(kz.real)
+    kz.imag = -abs(kz.imag)
+
     return kz
 
 
