@@ -42,11 +42,11 @@ class SVFDModeSolver(ModeSolver):
         Array of y-values
     epsfunc : function
         This is a function that provides the relative permittivity matrix (square of the refractive index)
-        as a function of it's x and y numpy.arrays that are input into the function. The function must be of the form:
+        as a function of its x and y numpy.arrays (the function's input parameters). The function must be of the form:
         ``myRelativePermittivity(x,y)``
         The function returns a relative permittivity numpy.array of shape( x.shape[0], y.shape[0] ) where each element of the array 
         can either be a single float, corresponding the an isotropic refractive index,
-        or, or may a length-5 tuple. In the tuple case, the relative permittivity is given in the form
+        or, a length-5 tuple. In the tuple case, the relative permittivity is given in the form
         (epsxx, epsxy, epsyx, epsyy, epszz).
     boundary : str
         This is a string that identifies the type of boundary conditions applied.
@@ -282,13 +282,13 @@ class VFDModeSolver(ModeSolver):
         Array of x-values
     y : 1D array of floats
         Array of y-values
-     epsfunc : function
+    epsfunc : function
         This is a function that provides the relative permittivity matrix (square of the refractive index)
-        as a function of it's x and y numpy.arrays that are input into the function. The function must be of the form:
+        as a function of its x and y numpy.arrays (the function's input parameters). The function must be of the form:
         ``myRelativePermittivity(x,y)``
         The function returns a relative permittivity numpy.array of shape( x.shape[0], y.shape[0] ) where each element of the array 
         can either be a single float, corresponding the an isotropic refractive index,
-        or, or may a length-5 tuple. In the tuple case, the relative permittivity is given in the form
+        or, a length-5 tuple. In the tuple case, the relative permittivity is given in the form
         (epsxx, epsxy, epsyx, epsyy, epszz).
     boundary : str
         This is a string that identifies the type of boundary conditions applied.
