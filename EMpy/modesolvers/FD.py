@@ -4,7 +4,8 @@
 # pylint: disable=arguments-differ,too-many-arguments
 """Finite Difference Modesolver.
 
-@see: Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides", JLT 2007 <http://www.photonics.umd.edu/pubs/journal-articles/JA-D/anisotropic-modesolver.pdf>}
+@see: Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides", JLT 2007 <http://www.photonics.umd.edu/wp-content/uploads/pubs/ja-20/Fallahkhair_JLT_26_1423_2008.pdf>}
+@see: DOI of above reference <http://doi.org/10.1109/JLT.2008.923643>
 @see: http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=12734&objectType=FILE
 
 """
