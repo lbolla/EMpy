@@ -4,6 +4,9 @@ EMpy - ElectroMagnetic Python
 .. image:: https://travis-ci.org/lbolla/EMpy.svg?branch=master
     :target: https://travis-ci.org/lbolla/EMpy
 
+.. image:: https://api.codacy.com/project/badge/Grade/25215dbf146d47818023159ee64fc563
+    :target: https://www.codacy.com/app/lbolla/EMpy?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=lbolla/EMpy&amp;utm_campaign=Badge_Grade
+
 `EMpy - Electromagnetic Python` is a suite of algorithms widely known
 and used in electromagnetic problems and optics: the transfer matrix
 algorithm, the rigorous coupled wave analysis algorithm and more.
