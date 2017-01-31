@@ -443,6 +443,9 @@ class VFDModeSolver(ModeSolver):
         ns34 = n * eyy3 + s * eyy4
         ew14 = e * exx1 + w * exx4
         ew23 = e * exx2 + w * exx3
+        
+        # calculate the finite difference coefficients following 
+        # Fallahkhair and Murphy, Appendix Eqs 21 though 37
 
         axxn = ((2 * eyy4 * e - eyx4 * n) * (eyy3 / ezz4) / ns34 +
                 (2 * eyy1 * w + eyx1 * n) * (eyy2 / ezz1) / ns21) / (n * (e + w))
@@ -952,10 +955,12 @@ class VFDModeSolver(ModeSolver):
         neigs : int
             number of eigenmodes to find
         tol : float
-            Relative accuracy for eigenvalues. The default value of 0 implies machine precision.
+            Relative accuracy for eigenvalues. 
+            The default value of 0 implies machine precision.
         guess : float
-            a guess for the refractive index. Only finds eigenvectors with an effective refrative index
-            higher than this value.
+            A guess for the refractive index. 
+            The modesolver will only finds eigenvectors with an 
+            effective refrative index higher than this value.
 
         Returns
         -------
@@ -981,13 +986,14 @@ class VFDModeSolver(ModeSolver):
         else:
             shift = None
 
+        # Here is where the actual mode-solving takes place! 
         [eigvals, eigvecs] = eigen.eigs(A,
-                                        k=neigs,
-                                        which='LR',
-                                        tol=tol,
-                                        ncv=10 * neigs,
-                                        return_eigenvectors=True,
-                                        sigma=shift)
+                                        k    = neigs,
+                                        which= 'LR',
+                                        tol  = tol,
+                                        ncv  = 10 * neigs,
+                                        return_eigenvectors = True,
+                                        sigma = shift)
 
         neffs = self.wl * scipy.sqrt(eigvals) / (2 * numpy.pi)
         Hxs = []
