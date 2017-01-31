@@ -26,5 +26,6 @@ from . import RCWA
 from . import scattering
 from . import transfer_matrix
 from . import utils
+from .version import version as __version__
 
 test = Tester().test
