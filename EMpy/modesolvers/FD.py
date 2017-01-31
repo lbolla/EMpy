@@ -78,6 +78,12 @@ class SVFDModeSolver(ModeSolver):
         self.boundary = boundary
         self.method = method
 
+    def _get_eps(self, xc, yc):
+        eps = self.epsfunc(xc, yc)
+        eps = numpy.c_[eps[:, 0:1], eps, eps[:, -1:]]
+        eps = numpy.r_[eps[0:1, :], eps, eps[-1:, :]]
+        return eps
+
     def build_matrix(self):
 
         from scipy.sparse import coo_matrix
@@ -85,7 +91,6 @@ class SVFDModeSolver(ModeSolver):
         wl = self.wl
         x = self.x
         y = self.y
-        epsfunc = self.epsfunc
         boundary = self.boundary
         method = self.method
 
@@ -97,10 +102,7 @@ class SVFDModeSolver(ModeSolver):
 
         xc = (x[:-1] + x[1:]) / 2
         yc = (y[:-1] + y[1:]) / 2
-
-        eps = epsfunc(xc, yc)
-        eps = numpy.c_[eps[:, 0:1], eps, eps[:, -1:]]
-        eps = numpy.r_[eps[0:1, :], eps, eps[-1:, :]]
+        eps = self._get_eps(xc, yc)
 
         nx = len(xc)
         ny = len(yc)
@@ -261,49 +263,59 @@ class SVFDModeSolver(ModeSolver):
         return self
 
     def __str__(self):
-        descr = 'Semi-Vectorial Finite Difference Modesolver\n\tmethod: %s\n' % self.method
+        descr = (
+            'Semi-Vectorial Finite Difference Modesolver\n\tmethod: %s\n' %
+            self.method)
         return descr
 
 
 class VFDModeSolver(ModeSolver):
 
     """
-    The VFDModeSolver class computes the electric and magnetic fields for modes of a dielectric
-    waveguide using the "Vector Finite Difference (VFD)" method, as described in
-    A. B. Fallahkhair, K. S. Li and T. E. Murphy, "Vector Finite Difference Modesolver for
-    Anisotropic Dielectric Waveguides", J. Lightwave Technol. 26(11), 1423-1431, (2008).
+    The VFDModeSolver class computes the electric and magnetic fields
+    for modes of a dielectric waveguide using the "Vector Finite
+    Difference (VFD)" method, as described in A. B. Fallahkhair,
+    K. S. Li and T. E. Murphy, "Vector Finite Difference Modesolver
+    for Anisotropic Dielectric Waveguides", J. Lightwave
+    Technol. 26(11), 1423-1431, (2008).
 
 
     Parameters
     ----------
     wl : float
-        The wavelength of the optical radiation (units are arbitrary, but must be self-consistent
-        between all inputs. Recommandation is to just use micron for everthing)
+        The wavelength of the optical radiation (units are arbitrary,
+        but must be self-consistent between all inputs. Recommandation
+        is to just use micron for everthing)
     x : 1D array of floats
         Array of x-values
     y : 1D array of floats
         Array of y-values
     epsfunc : function
-        This is a function that provides the relative permittivity matrix (square of the refractive index)
-        as a function of its x and y numpy.arrays (the function's input parameters). The function must be of the form:
-        ``myRelativePermittivity(x,y)``
-        The function returns a relative permittivity numpy.array of shape( x.shape[0], y.shape[0] ) where each element of the array
-        can either be a single float, corresponding the an isotropic refractive index,
-        or, a length-5 tuple. In the tuple case, the relative permittivity is given in the form
-        (epsxx, epsxy, epsyx, epsyy, epszz).
+        This is a function that provides the relative permittivity
+        matrix (square of the refractive index) as a function of its x
+        and y numpy.arrays (the function's input parameters). The
+        function must be of the form: ``myRelativePermittivity(x,y)``
+        The function returns a relative permittivity numpy.array of either
+        shape( x.shape[0], y.shape[0] ) where each element of the
+        array can either be a single float, corresponding the an
+        isotropic refractive index, or (x.shape[0], y.shape[0], 5),
+        where the last dimension describes therelative permittivity in
+        the form (epsxx, epsxy, epsyx, epsyy, epszz).
     boundary : str
-        This is a string that identifies the type of boundary conditions applied.
+        This is a string that identifies the type of boundary
+        conditions applied.
         The following options are available:
            'A' - Hx is antisymmetric, Hy is symmetric.
            'S' - Hx is symmetric and, Hy is antisymmetric.
            '0' - Hx and Hy are zero immediately outside of the boundary.
-        The string identifies all four boundary conditions, in the order: North, south, east, west.
-        For example, boundary='000A'
+        The string identifies all four boundary conditions, in the
+        order: North, south, east, west.  For example, boundary='000A'
 
     Returns
     -------
     self : an instance of the VFDModeSolver class
-        Typically self.solve() will be called in order to actually find the modes.
+        Typically self.solve() will be called in order to actually
+        find the modes.
 
     """
 
@@ -314,6 +326,32 @@ class VFDModeSolver(ModeSolver):
         self.epsfunc = epsfunc
         self.boundary = boundary
 
+    def _get_eps(self, xc, yc):
+        tmp = self.epsfunc(xc, yc)
+
+        def _reshape(tmp):
+            tmp = numpy.c_[tmp[:, 0:1], tmp, tmp[:, -1:]]
+            tmp = numpy.r_[tmp[0:1, :], tmp, tmp[-1:, :]]
+            return tmp
+
+        if tmp.ndim == 2:
+            tmp = _reshape(tmp)
+            epsxx = epsyy = epszz = tmp
+            epsxy = epsyx = numpy.zeros_like(epsxx)
+
+        elif tmp.ndim == 3:
+            assert tmp.shape[2] == 5, 'eps must be NxMx5'
+            epsxx = _reshape(tmp[:, :, 0])
+            epsxy = _reshape(tmp[:, :, 1])
+            epsyx = _reshape(tmp[:, :, 2])
+            epsyy = _reshape(tmp[:, :, 3])
+            epszz = _reshape(tmp[:, :, 4])
+
+        else:
+            raise ValueError('Invalid eps')
+
+        return epsxx, epsxy, epsyx, epsyy, epszz
+
     def build_matrix(self):
 
         from scipy.sparse import coo_matrix
@@ -321,7 +359,6 @@ class VFDModeSolver(ModeSolver):
         wl = self.wl
         x = self.x
         y = self.y
-        epsfunc = self.epsfunc
         boundary = self.boundary
 
         dx = numpy.diff(x)
@@ -332,15 +369,7 @@ class VFDModeSolver(ModeSolver):
 
         xc = (x[:-1] + x[1:]) / 2
         yc = (y[:-1] + y[1:]) / 2
-
-        tmp = epsfunc(xc, yc)
-        tmp = numpy.c_[tmp[:, 0:1], tmp, tmp[:, -1:]]
-        tmp = numpy.r_[tmp[0:1, :], tmp, tmp[-1:, :]]
-        if isinstance(tmp, tuple):
-            epsxx, epsxy, epsyx, epsyy, epszz = tmp
-        else:
-            epsxx = epsyy = epszz = tmp
-            epsxy = epsyx = numpy.zeros_like(epsxx)
+        epsxx, epsxy, epsyx, epsyy, epszz = self._get_eps(xc, yc)
 
         nx = len(x)
         ny = len(y)
@@ -631,7 +660,6 @@ class VFDModeSolver(ModeSolver):
         wl = self.wl
         x = self.x
         y = self.y
-        epsfunc = self.epsfunc
         boundary = self.boundary
 
         Hzs = []
@@ -648,15 +676,7 @@ class VFDModeSolver(ModeSolver):
 
             xc = (x[:-1] + x[1:]) / 2
             yc = (y[:-1] + y[1:]) / 2
-
-            tmp = epsfunc(xc, yc)
-            tmp = numpy.c_[tmp[:, 0:1], tmp, tmp[:, -1:]]
-            tmp = numpy.r_[tmp[0:1, :], tmp, tmp[-1:, :]]
-            if isinstance(tmp, tuple):
-                epsxx, epsxy, epsyx, epsyy, epszz = tmp
-            else:
-                epsxx = epsyy = epszz = tmp
-                epsxy = epsyx = numpy.zeros_like(epsxx)
+            epsxx, epsxy, epsyx, epsyy, epszz = self._get_eps(xc, yc)
 
             nx = len(x)
             ny = len(y)
