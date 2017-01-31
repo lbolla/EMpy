@@ -4,7 +4,7 @@
 # pylint: disable=arguments-differ,too-many-arguments
 """Finite Difference Modesolver.
 
-@see: Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides", 
+@see: Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides",
 @see: JLT 2007 <http://www.photonics.umd.edu/wp-content/uploads/pubs/ja-20/Fallahkhair_JLT_26_1423_2008.pdf>}
 @see: DOI of above reference <http://doi.org/10.1109/JLT.2008.923643>
 @see: http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=12734&objectType=FILE
@@ -38,22 +38,22 @@ class SVFDModeSolver(ModeSolver):
     ----------
     wl : float
         optical wavelength
-        units are arbitrary, but must be self-consistent. 
+        units are arbitrary, but must be self-consistent.
         I.e., just use micron for everything.
     x : 1D array of floats
         Array of x-values
     y : 1D array of floats
         Array of y-values
     epsfunc : function
-        This is a function that provides the relative permittivity matrix 
-        (square of the refractive index) as a function of its x and y 
-        numpy.arrays (the function's input parameters). The function must be 
-        of the form: ``myRelativePermittivity(x,y)``, where x and y are 2D 
+        This is a function that provides the relative permittivity matrix
+        (square of the refractive index) as a function of its x and y
+        numpy.arrays (the function's input parameters). The function must be
+        of the form: ``myRelativePermittivity(x,y)``, where x and y are 2D
         numpy "meshgrid" arrays that will be passed by this function.
-        The function returns a relative permittivity numpy.array of 
+        The function returns a relative permittivity numpy.array of
         shape( x.shape[0], y.shape[0] ) where each element of the array
         is a single float, corresponding the an isotropic refractive index.
-        If an anisotropic refractive index is desired, the full-vectorial 
+        If an anisotropic refractive index is desired, the full-vectorial
         VFDModeSolver function should be used.
     boundary : str
         This is a string that identifies the type of boundary conditions applied.
@@ -61,7 +61,7 @@ class SVFDModeSolver(ModeSolver):
            'A' - Hx is antisymmetric, Hy is symmetric.
            'S' - Hx is symmetric and, Hy is antisymmetric.
            '0' - Hx and Hy are zero immediately outside of the boundary.
-        The string identifies all four boundary conditions, in the order: 
+        The string identifies all four boundary conditions, in the order:
             North, south, east, west.
         For example, boundary='000A'
 
@@ -336,7 +336,10 @@ class VFDModeSolver(ModeSolver):
     def _get_eps(self, xc, yc):
         tmp = self.epsfunc(xc, yc)
 
-        def _reshape(tmp): # pad the array by duplicating edge values
+        def _reshape(tmp):
+            """
+            pads the array by duplicating edge values
+            """
             tmp = numpy.c_[tmp[:, 0:1], tmp, tmp[:, -1:]]
             tmp = numpy.r_[tmp[0:1, :], tmp, tmp[-1:, :]]
             return tmp
@@ -374,13 +377,13 @@ class VFDModeSolver(ModeSolver):
         dx = numpy.r_[dx[0], dx, dx[-1]].reshape(-1, 1)
         dy = numpy.r_[dy[0], dy, dy[-1]].reshape(1, -1)
 
-        # Note: the permittivity is actually defined at the center of each 
+        # Note: the permittivity is actually defined at the center of each
         # region *between* the mesh points used for the H-field calculation.
         # (See Fig. 1 of Fallahkhair and Murphy)
         # In other words, eps is defined on (xc,yc) which is offset from
-        # (x,y), the grid where H is calculated, by 
-        # "half a pixel" in the positive-x and positive-y directions. 
-        xc = (x[:-1] + x[1:]) / 2 
+        # (x,y), the grid where H is calculated, by
+        # "half a pixel" in the positive-x and positive-y directions.
+        xc = (x[:-1] + x[1:]) / 2
         yc = (y[:-1] + y[1:]) / 2
         epsxx, epsxy, epsyx, epsyy, epszz = self._get_eps(xc, yc)
 
@@ -400,7 +403,7 @@ class VFDModeSolver(ModeSolver):
         s = numpy.dot(ones_nx, dy[:, :-1]).flatten()
         e = numpy.dot(dx[1:, :], ones_ny).flatten()
         w = numpy.dot(dx[:-1, :], ones_ny).flatten()
-        
+
         # These define the permittivity (eps) tensor relative to each mesh point
         # using the following geometry:
         #
@@ -443,8 +446,8 @@ class VFDModeSolver(ModeSolver):
         ns34 = n * eyy3 + s * eyy4
         ew14 = e * exx1 + w * exx4
         ew23 = e * exx2 + w * exx3
-        
-        # calculate the finite difference coefficients following 
+
+        # calculate the finite difference coefficients following
         # Fallahkhair and Murphy, Appendix Eqs 21 though 37
 
         axxn = ((2 * eyy4 * e - eyx4 * n) * (eyy3 / ezz4) / ns34 +
@@ -955,11 +958,11 @@ class VFDModeSolver(ModeSolver):
         neigs : int
             number of eigenmodes to find
         tol : float
-            Relative accuracy for eigenvalues. 
+            Relative accuracy for eigenvalues.
             The default value of 0 implies machine precision.
         guess : float
-            A guess for the refractive index. 
-            The modesolver will only finds eigenvectors with an 
+            A guess for the refractive index.
+            The modesolver will only finds eigenvectors with an
             effective refrative index higher than this value.
 
         Returns
@@ -986,14 +989,14 @@ class VFDModeSolver(ModeSolver):
         else:
             shift = None
 
-        # Here is where the actual mode-solving takes place! 
+        # Here is where the actual mode-solving takes place!
         [eigvals, eigvecs] = eigen.eigs(A,
-                                        k    = neigs,
-                                        which= 'LR',
-                                        tol  = tol,
-                                        ncv  = 10 * neigs,
-                                        return_eigenvectors = True,
-                                        sigma = shift)
+                                        k=neigs,
+                                        which='LR',
+                                        tol=tol,
+                                        ncv=10*neigs,
+                                        return_eigenvectors=True,
+                                        sigma=shift)
 
         neffs = self.wl * scipy.sqrt(eigvals) / (2 * numpy.pi)
         Hxs = []
