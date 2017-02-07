@@ -829,21 +829,21 @@ class CrossSection(list):
                 eps[ix, iy] = self._epsfunc(xx, yy, wl)
         return eps
 
-#     def plot(self, wl=1.55e-6):
-#         try:
-#             import pylab
-#         except ImportError:
-#             warning('no pylab installed')
-#             return
-#         x0 = 0
-#         ns = [[l.mat.n(wl) for l in s] for s in self]
-#         nmax = max(max(ns))
-#         nmin = min(min(ns))
-#         for s in self:
-#             x1 = x0 + s.width
-#             s.plot(x0, x1, nmin, nmax, wl=wl)
-#             x0 = x1
-#         pylab.axis('image')
+    def plot(self, wl=1.55e-6):
+        try:
+            import pylab
+        except ImportError:
+            warning('no pylab installed')
+            return
+        x0 = 0
+        ns = [[l.mat.n(wl) for l in s] for s in self]
+        nmax = max(max(ns))
+        nmin = min(min(ns))
+        for s in self:
+            x1 = x0 + s.width
+            s.plot(x0, x1, nmin, nmax, wl=wl)
+            x0 = x1
+        pylab.axis('image')
 
 
 class Peak(object):
