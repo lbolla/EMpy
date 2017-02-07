@@ -404,21 +404,17 @@ class IsotropicRCWA(RCWA):
 
         return self
 
-    def plot(self):
-            try:
-                import Gnuplot
-            except ImportError:
-                print('no Gnuplot installed')
-            return
-            """Plot the diffraction efficiencies."""
-            g = Gnuplot.Gnuplot()
-            g('set xlabel "$\lambda$"')
-            g('set ylabel "diffraction efficiency"')
-            g('set yrange [0:1]')
-            g('set data style linespoints')
-            g.plot(Gnuplot.Data(self.wls, self.DE1[self.n,:], with_ = 'linespoints', title = 'DE1'), \
-                   Gnuplot.Data(self.wls, self.DE3[self.n,:], with_ = 'linespoints', title = 'DE3'))
-            raw_input('press enter to close the graph...')
+    # def plot(self):
+    #         """Plot the diffraction efficiencies."""
+    #         g = Gnuplot.Gnuplot()
+    #         g('set xlabel "$\lambda$"')
+    #         g('set ylabel "diffraction efficiency"')
+    #         g('set yrange [0:1]')
+    #         g('set data style linespoints')
+    #         g.plot(Gnuplot.Data(self.wls, self.DE1[self.n,:], with_ = 'linespoints', title = 'DE1'), \
+    #                Gnuplot.Data(self.wls, self.DE3[self.n,:], with_ = 'linespoints', title = 'DE3'))
+    #         raw_input('press enter to close the graph...')
+
 
     def __str__(self):
         return 'ISOTROPIC RCWA SOLVER\n\n%s\n\nLAMBDA = %g\nalpha = %g\ndelta = %g\npsi = %g\nphi = %g\nn = %d' % \
@@ -770,23 +766,18 @@ class AnisotropicRCWA(RCWA):
 
         return self
 
-    def plot(self):
-            try:
-                import Gnuplot
-            except ImportError:
-                print('no Gnuplot installed')
-            return
-            """Plot the diffraction efficiencies."""
-            g = Gnuplot.Gnuplot()
-            g('set xlabel "$\lambda$"')
-            g('set ylabel "diffraction efficiency"')
-            g('set yrange [0:1]')
-            g('set data style linespoints')
-            g.plot(Gnuplot.Data(self.wls, self.DEO1[self.n,:], with_ = 'linespoints', title = 'DEO1'), \
-                   Gnuplot.Data(self.wls, self.DEO3[self.n,:], with_ = 'linespoints', title = 'DEO3'), \
-                   Gnuplot.Data(self.wls, self.DEE1[self.n,:], with_ = 'linespoints', title = 'DEE1'), \
-                   Gnuplot.Data(self.wls, self.DEE3[self.n,:], with_ = 'linespoints', title = 'DEE3'))
-            raw_input('press enter to close the graph...')
+    # def plot(self):
+    #         """Plot the diffraction efficiencies."""
+    #         g = Gnuplot.Gnuplot()
+    #         g('set xlabel "$\lambda$"')
+    #         g('set ylabel "diffraction efficiency"')
+    #         g('set yrange [0:1]')
+    #         g('set data style linespoints')
+    #         g.plot(Gnuplot.Data(self.wls, self.DEO1[self.n,:], with_ = 'linespoints', title = 'DEO1'), \
+    #                Gnuplot.Data(self.wls, self.DEO3[self.n,:], with_ = 'linespoints', title = 'DEO3'), \
+    #                Gnuplot.Data(self.wls, self.DEE1[self.n,:], with_ = 'linespoints', title = 'DEE1'), \
+    #                Gnuplot.Data(self.wls, self.DEE3[self.n,:], with_ = 'linespoints', title = 'DEE3'))
+    #         raw_input('press enter to close the graph...')
 
     def __str__(self):
         return 'ANISOTROPIC RCWA SOLVER\n\n%s\n\nLAMBDA = %g\nalpha = %g\ndelta = %g\npsi = %g\nphi = %g\nn = %d' % \
