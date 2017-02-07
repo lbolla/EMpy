@@ -19,6 +19,7 @@ from EMpy.utils import snell, norm
 from EMpy.constants import c, mu0
 # import Gnuplot
 
+
 class TransferMatrix(object):
 
     """Class to handle the transfer matrix solvers."""
