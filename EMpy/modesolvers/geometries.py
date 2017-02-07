@@ -72,24 +72,29 @@ class SWG(object):
         self.T = T
         self.S = T2S(self.T)
         
-#     def plot(self, sumx=1, nxy=100, nz=100, z0=0):
-#         if sumx is None: # sum in y
-#             x = self.solver.modes[0].get_y(nxy)
-#             axis = 0
-#         else: # sum in x
-#             x = self.solver.modes[0].get_x(nxy)
-#             axis = 1
-#         z = numpy.linspace(0, self.length, nz)
-#         const_z = numpy.ones_like(z)
-#         f = numpy.zeros((len(x), len(z)), dtype=complex)
-#         for im, (coeffLHS,coeffRHS) in enumerate(zip(self.inputLHS, self.inputRHS)):
-#             m = self.solver.modes[im]
-#             beta = 2 * numpy.pi / self.solver.wl * m.neff
-#             tmp = numpy.sum(m.intensity(x, x), axis=axis)
-#             f += numpy.abs(coeffLHS)**2 * tmp[:, numpy.newaxis] * const_z + \
-#                  numpy.abs(coeffRHS)**2 * tmp[:, numpy.newaxis] * const_z
-#         pylab.hot()
-#         pylab.contourf(x, z0 + z, numpy.abs(f).T, 16)
+    def plot(self, sumx=1, nxy=100, nz=100, z0=0):
+        try:
+            import pylab
+        except ImportError:
+            print('no pylab installed')
+            return
+        if sumx is None: # sum in y
+            x = self.solver.modes[0].get_y(nxy)
+            axis = 0
+        else: # sum in x
+            x = self.solver.modes[0].get_x(nxy)
+            axis = 1
+        z = numpy.linspace(0, self.length, nz)
+        const_z = numpy.ones_like(z)
+        f = numpy.zeros((len(x), len(z)), dtype=complex)
+        for im, (coeffLHS,coeffRHS) in enumerate(zip(self.inputLHS, self.inputRHS)):
+            m = self.solver.modes[im]
+            beta = 2 * numpy.pi / self.solver.wl * m.neff
+            tmp = numpy.sum(m.intensity(x, x), axis=axis)
+            f += numpy.abs(coeffLHS)**2 * tmp[:, numpy.newaxis] * const_z + \
+                 numpy.abs(coeffRHS)**2 * tmp[:, numpy.newaxis] * const_z
+        pylab.hot()
+        pylab.contourf(x, z0 + z, numpy.abs(f).T, 16)
         
 class SimpleJoint(object):
     

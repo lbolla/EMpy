@@ -1232,97 +1232,97 @@ class FDMode(Mode):
 
         return (Ex_FDTD, Ey_FDTD, Ez_FDTD, Hx_FDTD, Hy_FDTD, Hz_FDTD)
 
-#    @staticmethod
-#     def plot_field(x, y, field):
-#         try:
-#             import pylab
-#         except ImportError:
-#             print('no pylab installed')
-#             return
-#         pylab.hot()
-#         pylab.contour(x, y, numpy.abs(field.T), 16)
-#         pylab.axis('image')
-# 
-#     def plot_Ex(self, x=None, y=None):
-#         if x is None:
-#             x = EMpy.utils.centered1d(self.x)
-#         if y is None:
-#             y = EMpy.utils.centered1d(self.y)
-#         Ex = self.get_field('Ex', x, y)
-#         self.plot_field(x, y, Ex)
-# 
-#     def plot_Ey(self, x=None, y=None):
-#         if x is None:
-#             x = EMpy.utils.centered1d(self.x)
-#         if y is None:
-#             y = EMpy.utils.centered1d(self.y)
-#         Ey = self.get_field('Ey', x, y)
-#         self.plot_field(x, y, Ey)
-# 
-#     def plot_Ez(self, x=None, y=None):
-#         if x is None:
-#             x = EMpy.utils.centered1d(self.x)
-#         if y is None:
-#             y = EMpy.utils.centered1d(self.y)
-#         Ez = self.get_field('Ez', x, y)
-#         self.plot_field(x, y, Ez)
-# 
-#     def plot_Hx(self, x=None, y=None):
-#         if x is None:
-#             x = self.x
-#         if y is None:
-#             y = self.y
-#         Hx = self.get_field('Hx', x, y)
-#         self.plot_field(x, y, Hx)
-# 
-#     def plot_Hy(self, x=None, y=None):
-#         if x is None:
-#             x = self.x
-#         if y is None:
-#             y = self.y
-#         Hy = self.get_field('Hy', x, y)
-#         self.plot_field(x, y, Hy)
-# 
-#     def plot_Hz(self, x=None, y=None):
-#         if x is None:
-#             x = self.x
-#         if y is None:
-#             y = self.y
-#         Hz = self.get_field('Hz', x, y)
-#         self.plot_field(x, y, Hz)
-# 
-#     def plot_intensity(self):
-#         x = EMpy.utils.centered1d(self.x)
-#         y = EMpy.utils.centered1d(self.y)
-#         I = self.intensity(x, y)
-#         self.plot_field(x, y, I)
-# 
-#     def plot(self):
-#         """Plot the mode's fields."""
-#         try:
-#             import pylab
-#         except ImportError:
-#             print('no pylab installed')
-#             return
-#         pylab.figure()
-#         pylab.subplot(2, 3, 1)
-#         self.plot_Ex()
-#         pylab.title('Ex')
-#         pylab.subplot(2, 3, 2)
-#         self.plot_Ey()
-#         pylab.title('Ey')
-#         pylab.subplot(2, 3, 3)
-#         self.plot_Ez()
-#         pylab.title('Ez')
-#         pylab.subplot(2, 3, 4)
-#         self.plot_Hx()
-#         pylab.title('Hx')
-#         pylab.subplot(2, 3, 5)
-#         self.plot_Hy()
-#         pylab.title('Hy')
-#         pylab.subplot(2, 3, 6)
-#         self.plot_Hz()
-#         pylab.title('Hz')
+    @staticmethod
+    def plot_field(x, y, field):
+        try:
+            import pylab
+        except ImportError:
+            print('no pylab installed')
+            return
+        pylab.hot()
+        pylab.contour(x, y, numpy.abs(field.T), 16)
+        pylab.axis('image')
+
+    def plot_Ex(self, x=None, y=None):
+        if x is None:
+            x = EMpy.utils.centered1d(self.x)
+        if y is None:
+            y = EMpy.utils.centered1d(self.y)
+        Ex = self.get_field('Ex', x, y)
+        self.plot_field(x, y, Ex)
+
+    def plot_Ey(self, x=None, y=None):
+        if x is None:
+            x = EMpy.utils.centered1d(self.x)
+        if y is None:
+            y = EMpy.utils.centered1d(self.y)
+        Ey = self.get_field('Ey', x, y)
+        self.plot_field(x, y, Ey)
+
+    def plot_Ez(self, x=None, y=None):
+        if x is None:
+            x = EMpy.utils.centered1d(self.x)
+        if y is None:
+            y = EMpy.utils.centered1d(self.y)
+        Ez = self.get_field('Ez', x, y)
+        self.plot_field(x, y, Ez)
+
+    def plot_Hx(self, x=None, y=None):
+        if x is None:
+            x = self.x
+        if y is None:
+            y = self.y
+        Hx = self.get_field('Hx', x, y)
+        self.plot_field(x, y, Hx)
+
+    def plot_Hy(self, x=None, y=None):
+        if x is None:
+            x = self.x
+        if y is None:
+            y = self.y
+        Hy = self.get_field('Hy', x, y)
+        self.plot_field(x, y, Hy)
+
+    def plot_Hz(self, x=None, y=None):
+        if x is None:
+            x = self.x
+        if y is None:
+            y = self.y
+        Hz = self.get_field('Hz', x, y)
+        self.plot_field(x, y, Hz)
+
+    def plot_intensity(self):
+        x = EMpy.utils.centered1d(self.x)
+        y = EMpy.utils.centered1d(self.y)
+        I = self.intensity(x, y)
+        self.plot_field(x, y, I)
+
+    def plot(self):
+        """Plot the mode's fields."""
+        try:
+            import pylab
+        except ImportError:
+            print('no pylab installed')
+            return
+        pylab.figure()
+        pylab.subplot(2, 3, 1)
+        self.plot_Ex()
+        pylab.title('Ex')
+        pylab.subplot(2, 3, 2)
+        self.plot_Ey()
+        pylab.title('Ey')
+        pylab.subplot(2, 3, 3)
+        self.plot_Ez()
+        pylab.title('Ez')
+        pylab.subplot(2, 3, 4)
+        self.plot_Hx()
+        pylab.title('Hx')
+        pylab.subplot(2, 3, 5)
+        self.plot_Hy()
+        pylab.title('Hy')
+        pylab.subplot(2, 3, 6)
+        self.plot_Hz()
+        pylab.title('Hz')
 
 
 def stretchmesh(x, y, nlayers, factor, method='PPPP'):
