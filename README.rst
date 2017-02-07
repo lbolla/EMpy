@@ -35,8 +35,8 @@ First, download the source code from https://github.com/lbolla/EMpy. Then, from 
 
 .. code-block:: bash
 
-    $> pip install -r requirements.txt
-    $> python setup.py install
+    $> pip install -r requirements_dev.txt
+    $> python setup.py develop
     
 Run tests with:
 
@@ -48,6 +48,6 @@ Release process
 ===============
 
 1. Edit CHANGES
-2. Edit `version` in `setup.py`
-3. `git tag`
+2. `bumpversion major|minor|patch`
+3. `git push && git push --tags`
 4. Push to PyPi: `python setup.py release`

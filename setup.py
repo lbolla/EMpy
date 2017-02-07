@@ -1,13 +1,14 @@
 __author__ = 'Lorenzo Bolla'
 
 from setuptools import setup, find_packages
+from EMpy import __version__
 
 with open('README.rst', 'r') as readme:
     long_description = readme.read()
 
 setup(
     name='ElectroMagneticPython',
-    version='1.1',
+    version=__version__,
     author='Lorenzo Bolla',
     author_email='lbolla@gmail.com',
     description='EMpy - ElectroMagnetic Python',
