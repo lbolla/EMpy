@@ -17,8 +17,6 @@ import scipy as S
 from scipy.linalg import inv
 from EMpy.utils import snell, norm
 from EMpy.constants import c, mu0
-# import Gnuplot
-
 
 class TransferMatrix(object):
 
@@ -136,18 +134,23 @@ class IsotropicTransferMatrix(TransferMatrix):
         self.Tp = Tp
         return self
 
-#     def plot(self):
-#         """Plot the solution."""
-#         g = Gnuplot.Gnuplot()
-#         g('set xlabel "$\lambda$"')
-#         g('set ylabel "power"')
-#         g('set yrange [0:1]')
-#         g('set data style linespoints')
-#         g.plot(Gnuplot.Data(self.wls, self.Rs, with_ = 'linespoints', title = 'Rs'), \
-#                Gnuplot.Data(self.wls, self.Ts, with_ = 'linespoints', title = 'Ts'), \
-#                Gnuplot.Data(self.wls, self.Rp, with_ = 'linespoints', title = 'Rp'), \
-#                Gnuplot.Data(self.wls, self.Tp, with_ = 'linespoints', title = 'Tp'))
-#         raw_input('press enter to close the graph...')
+    def plot(self):
+        try:
+            import Gnuplot
+        except ImportError:
+            print('no Gnuplot installed')
+            return
+        """Plot the solution."""
+        g = Gnuplot.Gnuplot()
+        g('set xlabel "$\lambda$"')
+        g('set ylabel "power"')
+        g('set yrange [0:1]')
+        g('set data style linespoints')
+        g.plot(Gnuplot.Data(self.wls, self.Rs, with_ = 'linespoints', title = 'Rs'), \
+               Gnuplot.Data(self.wls, self.Ts, with_ = 'linespoints', title = 'Ts'), \
+               Gnuplot.Data(self.wls, self.Rp, with_ = 'linespoints', title = 'Rp'), \
+               Gnuplot.Data(self.wls, self.Tp, with_ = 'linespoints', title = 'Tp'))
+        raw_input('press enter to close the graph...')
 
     def __str__(self):
         return 'ISOTROPIC TRANSFER MATRIX SOLVER\n\n%s\n\ntheta inc = %g' % \

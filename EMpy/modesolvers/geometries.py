@@ -8,7 +8,6 @@ import numpy
 import EMpy.utils
 import EMpy.modesolvers
 from EMpy.modesolvers.interface import *
-# import pylab
 
 def S2T(S):
     dim = S.shape[0] / 2.
@@ -216,14 +215,19 @@ class GenericDevice(object):
         self.T = T
         self.S = T2S(self.T)
         
-#     def plot(self, sumx=1, nxy=100, nz=100, z0=0):        
-#         z = z0
-#         for d in self.devlist:
-#             d.plot(sumx, nxy, nz, z0=z)
-#             z += d.length
-#         pylab.ylabel('z')
-#         if sumx is None:
-#             pylab.xlabel('y')
-#         else:
-#             pylab.xlabel('x')
-#         pylab.axis('tight')
+    def plot(self, sumx=1, nxy=100, nz=100, z0=0):
+        try:
+            import pylab
+        except ImportError:
+            print('no pylab installed')
+            return
+        z = z0
+        for d in self.devlist:
+            d.plot(sumx, nxy, nz, z0=z)
+            z += d.length
+        pylab.ylabel('z')
+        if sumx is None:
+            pylab.xlabel('y')
+        else:
+            pylab.xlabel('x')
+        pylab.axis('tight')

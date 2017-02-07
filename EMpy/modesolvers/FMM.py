@@ -25,7 +25,6 @@ import scipy.optimize
 import copy
 import EMpy.utils
 from EMpy.modesolvers.interface import *
-# import pylab
 
 class Message(object):
     def __init__(self, msg, verbosity=0):
@@ -219,13 +218,18 @@ class FMMMode1dy(FMMMode1d):
             f[idx] = sl * numpy.cos(k * yy) + al * sinxsux(k * yy) * yy
         return f
     
-#     def plot(self, y):
-#         f = self.eval(y)
-#         pylab.plot(y, numpy.real(f), y, numpy.imag(y))
-#         pylab.legend(('real', 'imag'))
-#         pylab.xlabel('y')
-#         pylab.ylabel('mode1d')
-#         pylab.show()
+    def plot(self, y):
+        try:
+            import pylab
+        except ImportError:
+            print('no pylab installed')
+            return
+        f = self.eval(y)
+        pylab.plot(y, numpy.real(f), y, numpy.imag(y))
+        pylab.legend(('real', 'imag'))
+        pylab.xlabel('y')
+        pylab.ylabel('mode1d')
+        pylab.show()
     
     def __str__(self):
         return 'sl = %s\nsr = %s\nal = %s\nar = %s\nk = %s\nkeff = %s\nzero = %s\nU = %s' % \
@@ -727,40 +731,46 @@ class FMMMode2d(Mode):
         
         return (Ex_FDTD, Ey_FDTD, Ez_FDTD, Hx_FDTD, Hy_FDTD, Hz_FDTD)    
 
-#     def plot(self, x_=None, y_=None):
-#         
-#         if x_ is None:
-#             x = self.get_x()
-#         else:
-#             x = numpy.atleast_1d(x_)
-#         if y_ is None:
-#             y = self.get_y()
-#         else:
-#             y = numpy.atleast_1d(y_)
-# 
-#         f = self.fields(x, y)
-# 
-#         # fields
-#         pylab.figure()
-#         titles = ['Ex', 'Ey', 'Ez', 'cBx', 'cBy', 'cBz']
-#         for i in range(6):
-#             subplot_id = 231 + i
-#             pylab.subplot(subplot_id)
-#             pylab.contour(x, y, numpy.abs(f[i]))
-#             pylab.xlabel('x')
-#             pylab.ylabel('y')
-#             pylab.title(titles[i])
-#             pylab.axis('image')
-#         pylab.show()
-#         
-#         # power
-#         pylab.figure()
-#         pylab.contour(x, y, numpy.abs(f[-1]))
-#         pylab.xlabel('x')
-#         pylab.ylabel('y')
-#         pylab.title('cSz')
-#         pylab.axis('image')
-#         pylab.show()
+    def plot(self, x_=None, y_=None):
+
+        try:
+            import pylab
+        except ImportError:
+            print('no pylab installed')
+            return
+
+        if x_ is None:
+            x = self.get_x()
+        else:
+            x = numpy.atleast_1d(x_)
+        if y_ is None:
+            y = self.get_y()
+        else:
+            y = numpy.atleast_1d(y_)
+
+        f = self.fields(x, y)
+
+        # fields
+        pylab.figure()
+        titles = ['Ex', 'Ey', 'Ez', 'cBx', 'cBy', 'cBz']
+        for i in range(6):
+            subplot_id = 231 + i
+            pylab.subplot(subplot_id)
+            pylab.contour(x, y, numpy.abs(f[i]))
+            pylab.xlabel('x')
+            pylab.ylabel('y')
+            pylab.title(titles[i])
+            pylab.axis('image')
+        pylab.show()
+        
+        # power
+        pylab.figure()
+        pylab.contour(x, y, numpy.abs(f[-1]))
+        pylab.xlabel('x')
+        pylab.ylabel('y')
+        pylab.title('cSz')
+        pylab.axis('image')
+        pylab.show()
     
     def __str__(self):
         return 'neff = %s' % (self.keff / (2 * numpy.pi / self.slicesx[0].wl))
