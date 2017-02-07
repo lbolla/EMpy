@@ -17,6 +17,7 @@ import scipy as S
 from scipy.linalg import inv
 from EMpy.utils import snell, norm
 from EMpy.constants import c, mu0
+# import Gnuplot
 
 class TransferMatrix(object):
 
@@ -134,7 +135,6 @@ class IsotropicTransferMatrix(TransferMatrix):
         self.Tp = Tp
         return self
 
-
 #     def plot(self):
 #         """Plot the solution."""
 #         g = Gnuplot.Gnuplot()
@@ -147,7 +147,6 @@ class IsotropicTransferMatrix(TransferMatrix):
 #                Gnuplot.Data(self.wls, self.Rp, with_ = 'linespoints', title = 'Rp'), \
 #                Gnuplot.Data(self.wls, self.Tp, with_ = 'linespoints', title = 'Tp'))
 #         raw_input('press enter to close the graph...')
-
 
     def __str__(self):
         return 'ISOTROPIC TRANSFER MATRIX SOLVER\n\n%s\n\ntheta inc = %g' % \

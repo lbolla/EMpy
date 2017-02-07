@@ -415,7 +415,6 @@ class IsotropicRCWA(RCWA):
     #                Gnuplot.Data(self.wls, self.DE3[self.n,:], with_ = 'linespoints', title = 'DE3'))
     #         raw_input('press enter to close the graph...')
 
-
     def __str__(self):
         return 'ISOTROPIC RCWA SOLVER\n\n%s\n\nLAMBDA = %g\nalpha = %g\ndelta = %g\npsi = %g\nphi = %g\nn = %d' % \
                (self.multilayer.__str__(),
