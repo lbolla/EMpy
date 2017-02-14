@@ -54,10 +54,10 @@ class RefractiveIndex(object):
     n0_smcoeffs (Sellmeier coefficients): 6-element list/tuple
         Set the rix dispersion function to the 6-parameter Sellmeier
         function as so:
-            n(wls) =  1. +
+            n(wls) =  sqrt(1. +
             B1 * wls ** 2 / (wls ** 2 - C1) +
             B2 * wls ** 2 / (wls ** 2 - C2) +
-            B3 * wls ** 2 / (wls ** 2 - C3)
+            B3 * wls ** 2 / (wls ** 2 - C3))
         Eg. >>> n0_smcoeffs = [B1, B2, B3, C1, C2, C3]    # six values total
 
     n0_func : function
