@@ -1191,14 +1191,14 @@ class FDMode(Mode):
         x_Ey_FDTD = x[1:-1]
         y_Ey_FDTD = EMpy.utils.centered1d(y)
         Ey_FDTD = EMpy.utils.interp2(x_Ey_FDTD, y_Ey_FDTD, x_Ey, y_Ey, self.Ey)
-        Ey = Field(x_Ex_FDTD, y_Ex_FDTD, Ex_FDTD)
+        Ey = Field(x_Ey_FDTD, y_Ey_FDTD, Ey_FDTD)
         # Ez: ignores x, y = 0, max
         x_Ez = EMpy.utils.centered1d(self.x)
         y_Ez = EMpy.utils.centered1d(self.y)
         x_Ez_FDTD = x[1:-1]
         y_Ez_FDTD = y[1:-1]
         Ez_FDTD = EMpy.utils.interp2(x_Ez_FDTD, y_Ez_FDTD, x_Ez, y_Ez, self.Ez)
-        Ex = Field(x_Ex_FDTD, y_Ex_FDTD, Ex_FDTD)
+        Ez = Field(x_Ez_FDTD, y_Ez_FDTD, Ez_FDTD)
         # Hx: ignores x = 0, max, /120pi, reverse direction
         x_Hx = self.x
         y_Hx = self.y
@@ -1214,7 +1214,7 @@ class FDMode(Mode):
         y_Hy_FDTD = y[1:-1]
         Hy_FDTD = EMpy.utils.interp2(
             x_Hy_FDTD, y_Hy_FDTD, x_Hy, y_Hy, self.Hy) / (-120. * numpy.pi)
-        Hx = Field(x_Hx_FDTD, y_Hx_FDTD, Hx_FDTD)
+        Hx = Field(x_Hy_FDTD, y_Hy_FDTD, Hy_FDTD)
         # Hz: /120pi, reverse direction
         x_Hz = self.x
         y_Hz = self.y
@@ -1222,7 +1222,7 @@ class FDMode(Mode):
         y_Hz_FDTD = EMpy.utils.centered1d(y)
         Hz_FDTD = EMpy.utils.interp2(
             x_Hz_FDTD, y_Hz_FDTD, x_Hz, y_Hz, self.Hz) / (-120. * numpy.pi)
-        Hx = Field(x_Hx_FDTD, y_Hx_FDTD, Hx_FDTD)
+        Hx = Field(x_Hz_FDTD, y_Hz_FDTD, Hz_FDTD)
 
         return (Ex, Ey, Ez, Hx, Hy, Hz)
 
