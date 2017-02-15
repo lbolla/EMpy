@@ -219,11 +219,7 @@ class FMMMode1dy(FMMMode1d):
         return f
     
     def plot(self, y):
-        try:
-            import pylab
-        except ImportError:
-            print('no pylab installed')
-            return
+        import pylab
         f = self.eval(y)
         pylab.plot(y, numpy.real(f), y, numpy.imag(y))
         pylab.legend(('real', 'imag'))
@@ -732,13 +728,7 @@ class FMMMode2d(Mode):
         return (Ex_FDTD, Ey_FDTD, Ez_FDTD, Hx_FDTD, Hy_FDTD, Hz_FDTD)    
 
     def plot(self, x_=None, y_=None):
-
-        try:
-            import pylab
-        except ImportError:
-            print('no pylab installed')
-            return
-
+        import pylab
         if x_ is None:
             x = self.get_x()
         else:

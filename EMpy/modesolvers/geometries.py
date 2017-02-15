@@ -73,11 +73,7 @@ class SWG(object):
         self.S = T2S(self.T)
         
     def plot(self, sumx=1, nxy=100, nz=100, z0=0):
-        try:
-            import pylab
-        except ImportError:
-            print('no pylab installed')
-            return
+        import pylab
         if sumx is None: # sum in y
             x = self.solver.modes[0].get_y(nxy)
             axis = 0
@@ -221,11 +217,7 @@ class GenericDevice(object):
         self.S = T2S(self.T)
         
     def plot(self, sumx=1, nxy=100, nz=100, z0=0):
-        try:
-            import pylab
-        except ImportError:
-            print('no pylab installed')
-            return
+        import pylab
         z = z0
         for d in self.devlist:
             d.plot(sumx, nxy, nz, z0=z)

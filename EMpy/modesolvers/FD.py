@@ -1177,7 +1177,7 @@ class FDMode(Mode):
             x = self.x
         if y is None:
             y = self.y
-            
+
         # Ex: ignores y = 0, max
         x_Ex = EMpy.utils.centered1d(self.x)
         y_Ex = EMpy.utils.centered1d(self.y)
