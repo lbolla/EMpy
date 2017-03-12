@@ -134,7 +134,7 @@ class RefractiveIndex(object):
     @staticmethod
     def __from_function(n0_func, wls):
         wls = numpy.atleast_1d(wls)
-        return n0_func(numpy.ones_like(wls))
+        return n0_func(wls) * numpy.ones_like(wls)
 
     @staticmethod
     def __from_known(n0_known, wls):
