@@ -992,6 +992,20 @@ def rix2losses(n, wl):
     return nr, ni, alpha, alpha_cm1, alpha_dBcm1
 
 
+def loss_cm2rix(n, alpha_cm1):
+    """Return complex refractive index, given real index (n) and absorption coefficient (alpha_cm1) in cm^-1."""
+    nr = n.real()
+    ni = 100* alpha_cm1 * wl /(numpy.pi * 4)
+    return (nr + 1j*ni)
+
+
+def loss_m2rix(n, alpha_m1):
+    """Return complex refractive index, given real index (n) and absorption coefficient (alpha_m1) in m^-1."""
+    nr = n.real()
+    ni = alpha_m1 * wl /(numpy.pi * 4)
+    return (nr + 1j*ni)
+
+
 def wl2f(wl0, dwl):
     """Convert a central wavelength and an interval in frequency."""
     wl1 = wl0 - dwl / 2.

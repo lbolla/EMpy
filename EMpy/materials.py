@@ -42,14 +42,16 @@ class RefractiveIndex(object):
     n0_const : float
         A single-value of refractive index, to be used regardless of
         the wavelength requested.
-        Eg. n0_const = 1.448 for SiO2
+        For example:
+            >>> n0_const = 1.448 for SiO2
 
     n0_poly : list/tuple
         Use a polynomial rix dispersion function: provide the
         polynomial coefficients to be evaluated by numpy.polyval.
          # sets the refractive index function as n = 9(wl**3) +
          # 5(wl**2) + 3(wl) + 1
-         Eg. >>> n0_poly = (9,5,3,1)
+         For example:
+            >>> n0_poly = (9,5,3,1)
 
     n0_smcoeffs (Sellmeier coefficients): 6-element list/tuple
         Set the rix dispersion function to the 6-parameter Sellmeier
@@ -58,34 +60,31 @@ class RefractiveIndex(object):
             B1 * wls ** 2 / (wls ** 2 - C1) +
             B2 * wls ** 2 / (wls ** 2 - C2) +
             B3 * wls ** 2 / (wls ** 2 - C3))
-        Eg. >>> n0_smcoeffs = [B1, B2, B3, C1, C2, C3]    # six values total
+        For example:
+            >>> n0_smcoeffs = [B1, B2, B3, C1, C2, C3]    # six values total
 
     n0_func : function
         Provide an arbitrary function to return the refractive index
         versus wavelength.
-        E.g.:
+        For example:
             >>> def SiN_func(wl):
-            >>>     x = wl * 1e6 # convert to microns
+            >>>     x = wl * 1e6   # convert to microns
             >>>     return 1.887 + 0.01929/x**2 + 1.6662e-4/x**4  # Cauchy func
             >>> SiN_rix = RefractiveIndex(n0_func=SiN_func)
         or
             >>> SiN_rix = RefractiveIndex(
                     n0_func=lambda wl: 1.887 + 0.01929/(wl*1e6)**2 +
                                        1.6662e-4/(wl*1e6)**4)
+        
         Your function should return a `numpy.array`, since it will be
         passed a `numpy.array` of the wavelengths requested.  This
         conversion to `array` happens automatically if your function
-        does math on the wavelength.  If you want to return a
-        constant, include the wavelength like so:
-
-            >>> rix_func = lambda wl:  0*wl + 1.448     # always returns 1.448
+        does math on the wavelength.
 
     n0_known : dictionary
-        Use if RefractiveIndex will only evaluated at a specific set of `wls`.
-        n0_known should be a dictionary of key:value == wavelength:rix pairs.
-        Eg.:
-
-            >>> n0_known = { 1599e-9: 1.998, 1550e-9: 1.997, 1600e-9: 1.996 }
+        Use if RefractiveIndex will only be evaluated at a specific set of `wls`.
+        n0_known should be a dictionary of `key:value` pairs corresponding to `wavelength:rix`, for example:
+            >>> n0_known = { 1500e-9:1.445, 1550e-9:1.446, 1600e-9:1.447 }
 
     """
 
@@ -108,7 +107,7 @@ class RefractiveIndex(object):
             self.get_rix = partial(self.__from_known, n0_known)
 
         else:
-            raise ValueError('Please provide at least one parameter')
+            raise ValueError('Please provide at least one parameter.')
 
     @staticmethod
     def __from_const(n0, wls):
