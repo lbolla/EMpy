@@ -6,9 +6,9 @@ This file, nk.py should be in same dir as script, or in the python path somewher
 All wavelengths are in MICRONS
 
 After importing,
-    call `help( n_k )` to see usage info.
-    call `dir( n_k )` to list defined materials
-    call `help( n_k.Si )` to see info on specific material model
+    call `help( nk )` to see usage info.
+    call `dir( nk )` to list defined materials
+    call `help( nk.Si )` to see info on specific material model
 
 
 
