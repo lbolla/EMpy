@@ -11,7 +11,9 @@ Simulate a laser etch monitor (aka. laser endpoint detection):
     For more info, see Oxford Plasma's page on the technique:
         http://www.oxfordplasma.de/technols/li.htm
     
-    Author: Demis D. John, March 2017
+    Requires file `nk.py` for wavelength-dependent refractive index/loss models.
+    
+    Author: Demis D. John, March 2017 (demis.john@gmail.com)
 """
 
 
@@ -70,7 +72,7 @@ def arg_inf(multilayer):
 ''' Define some materials '''
 ####################################
 
-''' Define RefraciveIndex funcitons, then Material objects. '''
+''' Define RefractiveIndex functions, then Material objects. '''
 n_air = 1.0     # constant vs. wavelength
 mat_air = EMpy.materials.IsotropicMaterial(
         'air', EMpy.materials.RefractiveIndex( n0_const = n_air )     )
@@ -99,7 +101,7 @@ d_AlGaAs_DBR = wl_center / n_AlGaAs95(wl_center).real / 4
 
 ''' Build the Multilayer stack '''
 ####################################
-# Build from top to bottom - ie. topmost layer (closest to laser monitor) first. Substrate last.
+# Build from top to bottom - ie. topmost layer (closest to laser monitor) first, substrate last.
 # Must include infinite-thickness layers on top & bottom for air & substrate, respectively.
 
 Layer = EMpy.utils.Layer    # shortcut
@@ -129,22 +131,19 @@ layers =  \
 layers = EMpy.utils.Multilayer( [copy(x) for x in layers] )   
 
 
-# get index to laser-monitor wavelength within `wls` array
-wlidx = arg_find_nearest(wls, wl_lasermon)
-
 # setup etching loop
 EtchStep_current = EtchStep     # how much left to etch in current loop iteration
 go = True                       # while loop switch
 i = -1                          # while loop counter
-etchedlayers = [ ]    # save stacks of etched layers
-solutions = [ ]       # IsotropicTransferMatrix object storing R/T solutions
-Rlaser = [ ]          # y-axis data - reflectivity
-EtchSteps = [ ]       # x-axis data
-RefrIdx = [ ]         # refractive index data
-
+etchedlayers = [ ]              # save stacks of etched layers
+solutions = [ ]                 # IsotropicTransferMatrix object storing R/T solutions
+EtchSteps = [ ]                 # x-axis data
+Rlaser = [ ]                    # y-axis data - reflectivity
+RefrIdx = [ ]                   # y-axis data - refractive index 
+wlidx = arg_find_nearest(wls, wl_lasermon) # get index to laser-monitor wavelength in `wls` array
 idxtemp = 0    # 0 if etching away from first layer in list, -1 if etching from last layer appended
-print("Etching...")
 
+print("Etching...")
 while go is True:
     ''' keep reducing thickness/removing layers until last layer is too thin.'''
     i=i+1;
@@ -155,26 +154,28 @@ while go is True:
         '''at least one infinite-thickness layer should still be left'''
 
         if i<=0:    
-            EtchStep_current = 0;   # analyze unetched structure first
+            # first iteration: analyze unetched structure
+            EtchStep_current = 0;   
             indexno = idxtemp
         else:
             # point to non-infinite layers for etching:
             while numpy.isinf(  layers[idxtemp].thickness  ):
-                idxtemp  = idxtemp + 1
+                idxtemp  = idxtemp + 1      # assumes etching from 1st layer in list
             #end while
             indexno = idxtemp
         #end if(i)
         
+        
         if layers[indexno].thickness <= EtchStep_current:
             ''' next layer is thinner than etch step'''
-            # Reduce etch step
+            # Reduce etch step + remove this layer:
             EtchStep_current = EtchStep_current - layers[indexno].thickness    
-            layers.pop( indexno )    # remove this layer
-            # "   removed one layer, %i layers left"%(len(iso_layers))
-
+            layers.pop( indexno )
+            #print( "-- removed one layer, %i layers left"%(len(iso_layers)) )
+        
         elif layers[indexno].thickness > EtchStep_current:
             '''etch increment ends within next layer'''
-            # reduce layer thickness
+            # reduce layer thickness & solve & save data points:
             layers[indexno].thickness = layers[indexno].thickness - EtchStep_current
             etchedlayers.append( deepcopy(layers) )      # add this layer stack to the list
             RefrIdx.append(  etchedlayers[-1][idxtemp].mat.n(wl_lasermon).real  )  # get RefrIndex in this layer
@@ -185,12 +186,11 @@ while go is True:
                 EtchSteps.append( EtchSteps[-1] + EtchStep )  # Add x-axis point
                 EtchStep_current = EtchStep     # reset EtchStep_current
             
-            # "** reached one EtchStep. %i EtchSteps saved. Solving..."%len(etchedlayers)
+            #print( "** reached one EtchStep. %i EtchSteps saved. Solving..."%len(etchedlayers) )
             
             # solve for reflectivity at laser monitor wavelength
             solutions.append(  
-                EMpy.transfer_matrix.IsotropicTransferMatrix(  etchedlayers[-1], theta_inc   ).solve(wls)  
-            )#append
+                EMpy.transfer_matrix.IsotropicTransferMatrix(  etchedlayers[-1], theta_inc  ).solve(wls)   )
             Rlaser.append( solutions[-1].Rs[wlidx] )
     else:
         '''No non-infinte layers left, end the loop'''
@@ -202,23 +202,23 @@ print('\n')
 
 
 ## Plots:
-fig2, [ax2,ax3] = pylab.subplots(nrows=2, ncols=1, sharex=True)
-ax2.set_title( 'Reflectivity at $\lambda = %0.1fnm$'%(wls[wlidx] * 1e9)  )
-
-# plot reflectivity vs. depth
-ax3.plot(    numpy.array( EtchSteps ) * 1e9, 
-             numpy.array( Rlaser ) * 100,
-             '-',    )
-ax3.set_xlabel( 'Etch Depth (nm)' )
-ax3.set_ylabel( 'Laser Reflectivity (%)' )
-ax3.grid(True)
+fig1, [ax1,ax2] = pylab.subplots(nrows=2, ncols=1, sharex=True)
+ax1.set_title( 'Reflectivity at $\lambda = %0.1fnm$'%(wls[wlidx] * 1e9)  )
 
 # plot refractive index vs. depth
-ax2.plot(   numpy.array( EtchSteps ) * 1e9, 
+ax1.plot(   numpy.array( EtchSteps ) * 1e9, 
             RefrIdx,
             '-g',   )
-ax2.set_ylabel( 'Refractive Index' )
+ax1.set_ylabel( 'Refractive Index' )
+ax1.grid(True)
+
+# plot reflectivity vs. depth
+ax2.plot(    numpy.array( EtchSteps ) * 1e9, 
+             numpy.array( Rlaser ) * 100,
+             '-',    )
+ax2.set_ylabel( 'Laser Reflectivity (%)' )
+ax2.set_xlabel( 'Etch Depth (nm)' )
 ax2.grid(True)
 
-fig2.show()
+fig1.show()
 
