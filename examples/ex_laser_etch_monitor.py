@@ -86,7 +86,7 @@ n_GaAs = lambda w: nk.GaAs_interp(w*1e6, k=True)  # Covert to microns, request l
 mat_GaAs = EMpy.materials.IsotropicMaterial(
         'GaAs', EMpy.materials.RefractiveIndex( n0_func = n_GaAs )    )
 
-n_AlGaAs95 = lambda w: nk.AlGaAs_interp(0.95, w*1e6)     # Function from file, AlGaAs with 95% Aluminum
+n_AlGaAs95 = lambda w: nk.AlGaAs_interp(0.95, w*1e6, k=True)     # Function from file, AlGaAs with 95% Aluminum
 mat_AlGaAs95 = EMpy.materials.IsotropicMaterial(
         'Al95Ga05As', EMpy.materials.RefractiveIndex( n0_func = n_AlGaAs95 )     )
 
