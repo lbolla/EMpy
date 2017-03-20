@@ -80,11 +80,11 @@ mat_SiN = EMpy.materials.IsotropicMaterial(
         'Si3N4', EMpy.materials.RefractiveIndex( n0_const = n_SiN )      )
 
 # RIX functions from file, taking wavelength in microns:
-n_GaAs = lambda x: nk.GaAs_interp(x*1e6, k=True)  # Covert to microns, request loss as complex refractive index
+n_GaAs = lambda w: nk.GaAs_interp(w*1e6, k=True)  # Covert to microns, request loss as complex refractive index
 mat_GaAs = EMpy.materials.IsotropicMaterial(
         'GaAs', EMpy.materials.RefractiveIndex( n0_func = n_GaAs )    )
 
-n_AlGaAs95 = lambda x: nk.AlGaAs(x*1e6, 0.95)     # Function from file, AlGaAs with 95% Aluminum
+n_AlGaAs95 = lambda w: nk.AlGaAs_interp(0.95, w*1e6)     # Function from file, AlGaAs with 95% Aluminum
 mat_AlGaAs95 = EMpy.materials.IsotropicMaterial(
         'Al95Ga05As', EMpy.materials.RefractiveIndex( n0_func = n_AlGaAs95 )     )
 
@@ -142,8 +142,8 @@ Rlaser = [ ]          # y-axis data - reflectivity
 EtchSteps = [ ]       # x-axis data
 RefrIdx = [ ]         # refractive index data
 
-
 idxtemp = 0    # 0 if etching away from first layer in list, -1 if etching from last layer appended
+print("Etching...")
 
 while go is True:
     ''' keep reducing thickness/removing layers until last layer is too thin.'''
