@@ -778,9 +778,9 @@ def AlGaAs_interp(x, wl, k=False):
     Returns complex value (including loss, k) if k==True.  
     Uses interpolated GaAs_interp() & AlAs_interp().
     
-    Valid for 0.970 - 2.2 um
-        AlAs_interp: 206-2480
-        GaAs_interp: 206-2066
+    Valid for wavelengths 0.206 - 2.066 um
+        AlAs_interp: 0.206-2.480nm
+        GaAs_interp: 0.206-2.066nm
         
     Calc'd by linear interpolation between AlAs() & GaAs().
     
@@ -790,7 +790,7 @@ def AlGaAs_interp(x, wl, k=False):
     Returns:
         Refractive index (float)
     Raises:
-        Warning for wavelength out of model range
+        Exception ValueError for wavelength out of model range
     '''
     check_wl(wl, 0.206, 2.066, 'AlGaAs_interp', fail=True)
     if k:
