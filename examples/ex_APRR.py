@@ -15,4 +15,3 @@ pylab.axis('tight')
 pylab.xlabel('wavelength /m')
 pylab.ylabel('phase')
 pylab.show()
-
