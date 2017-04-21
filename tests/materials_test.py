@@ -39,12 +39,19 @@ class RefractiveIndexTest(TestCase):
     def test_func(self):
         test_rix = 1.50
 
-        def test_func(x):
+        def test_func_const(x):
             # returns a const
             return 0.0 * x + test_rix
 
-        a = mat.RefractiveIndex(n0_func=test_func)
-        assert_almost_equal(a.get_rix([1.0, 1.5])[0], array([test_rix]))
+        a = mat.RefractiveIndex(n0_func=test_func_const)
+        assert_almost_equal(a.get_rix([1.0, 1.5]), array([1.5, 1.5]))
+
+        def test_func_var(x):
+            # returns a const
+            return 1.0 * x + test_rix
+
+        b = mat.RefractiveIndex(n0_func=test_func_var)
+        assert_almost_equal(b.get_rix([1.0, 1.5]), array([2.5, 3.0]))
 
     def test_known(self):
         test_rix = 1.50
