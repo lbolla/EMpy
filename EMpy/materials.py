@@ -75,7 +75,7 @@ class RefractiveIndex(object):
             >>> SiN_rix = RefractiveIndex(
                     n0_func=lambda wl: 1.887 + 0.01929/(wl*1e6)**2 +
                                        1.6662e-4/(wl*1e6)**4)
-        
+
         Your function should return a `numpy.array`, since it will be
         passed a `numpy.array` of the wavelengths requested.  This
         conversion to `array` happens automatically if your function
@@ -83,7 +83,8 @@ class RefractiveIndex(object):
 
     n0_known : dictionary
         Use if RefractiveIndex will only be evaluated at a specific set of `wls`.
-        n0_known should be a dictionary of `key:value` pairs corresponding to `wavelength:rix`, for example:
+        n0_known should be a dictionary of `key:value` pairs
+        corresponding to `wavelength:rix`, for example:
             >>> n0_known = { 1500e-9:1.445, 1550e-9:1.446, 1600e-9:1.447 }
 
     """
@@ -132,7 +133,8 @@ class RefractiveIndex(object):
 
     @staticmethod
     def __from_function(n0_func, wls):
-        wls = numpy.atleast_1d(wls) # ensure arg is array
+        # ensure wls is array
+        wls = numpy.atleast_1d(wls)
         return n0_func(wls) * numpy.ones_like(wls)
 
     @staticmethod
