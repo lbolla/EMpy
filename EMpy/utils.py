@@ -988,12 +988,32 @@ def rix2losses(n, wl):
     alpha = 4 * numpy.pi * ni / wl
     alpha_cm1 = alpha / 100.
     alpha_dBcm1 = 10 * numpy.log10(numpy.exp(1)) * alpha_cm1
-
     return nr, ni, alpha, alpha_cm1, alpha_dBcm1
 
 
+def loss_cm2rix(n_real, alpha_cm1, wl):
+    """Return complex refractive index, given real index (n_real), absorption coefficient (alpha_cm1) in cm^-1, and wavelength (wl) in meters.
+    Do not pass more than one argument as array, will return erroneous result."""
+    ni = 100 * alpha_cm1 * wl /(numpy.pi * 4)
+    return (n_real - 1j*ni)
+
+
+def loss_m2rix(n_real, alpha_m1, wl):
+    """Return complex refractive index, given real index (n_real), absorption coefficient (alpha_m1) in m^-1, and wavelength (wl) in meters.
+    Do not pass more than one argument as array, will return erroneous result."""
+    ni = alpha_m1 * wl /(numpy.pi * 4)
+    return (n_real - 1j*ni)
+
+
+def loss_dBcm2rix(n_real, alpha_dBcm1, wl):
+    """Return complex refractive index, given real index (n_real), absorption coefficient (alpha_dBcm1) in dB/cm, and wavelength (wl) in meters.
+    Do not pass more than one argument as array, will return erroneous result."""
+    ni = 10 * alpha_dBcm1 * wl / (numpy.log10(numpy.exp(1)) * 4 * numpy.pi)
+    return (n_real - 1j*ni)
+
+
 def wl2f(wl0, dwl):
-    """Convert a central wavelength and an interval in frequency."""
+    """Convert a central wavelength and an interval to frequency."""
     wl1 = wl0 - dwl / 2.
     wl2 = wl0 + dwl / 2.
     f1 = EMpy.constants.c / wl2
@@ -1004,7 +1024,7 @@ def wl2f(wl0, dwl):
 
 
 def f2wl(f0, df):
-    """Convert a central frequency and an interval in wavelength."""
+    """Convert a central frequency and an interval to wavelength."""
     return wl2f(f0, df)
 
 
