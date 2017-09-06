@@ -51,3 +51,20 @@ Release process
 2. `bumpversion major|minor|patch`
 3. `git push && git push --tags`
 4. Push to PyPi: `python setup.py release`
+
+Citation
+========
+
+If you find EMpy useful in your job, please consider adding a citation.
+
+As reference:
+
+.. code-block::
+
+   Bolla, L. (2017). EMpy [Computer software]. https://github.com/lbolla/EMpy/
+
+As text:
+
+.. code-block::
+
+   We used EMpy (version x.y.z) to complete our work.
