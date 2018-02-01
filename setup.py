@@ -1,7 +1,10 @@
-__author__ = 'Lorenzo Bolla'
-
 from setuptools import setup, find_packages
-from EMpy import __version__
+try:
+    from EMpy import __version__
+except ImportError:
+    __version__ = None
+
+__author__ = 'Lorenzo Bolla'
 
 with open('README.rst', 'r') as readme:
     long_description = readme.read()
