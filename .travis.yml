@@ -34,6 +34,7 @@ script: python setup.py test
 deploy:
   provider: pypi
   user: lbolla
+  python: 3.6
   password:
     secure: "aBHsueBZZtO3n+WfhbEfKlps+dHN+Y6tj7kJ1Nj6FFt75ats2SLzByuR07uwnHYr+HLgauExNxwJoxYvIIRvTMbbVJ3uBENpjSWwes8xGrNwOJ0ohcnp1xmW/4jV2+UJ0j/SmZQXk/BcxI7tvLyAlFNZ8CQHBllWlRUzOXGstuw="
   on:
