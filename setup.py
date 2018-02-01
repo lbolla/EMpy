@@ -19,7 +19,6 @@ setup(
     platforms=['Windows', 'Linux', 'Mac OS-X'],
     packages=find_packages(),
     install_requires=[
-        'distribute>=0.6.28',
         'future<1.0dev',
         'numpy<2.0dev',
         'scipy<1.0dev',
