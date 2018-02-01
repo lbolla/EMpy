@@ -1,9 +1,9 @@
 language: python
-python:
-  - "2.7"
-  - "3.6"
 
-# http://docs.travis-ci.com/user/caching/#pip-cache
+python:
+  - 2.7
+  - 3.6
+
 cache: pip
 
 notifications:
@@ -12,7 +12,6 @@ notifications:
 
 # TravisCI does not handle numpy/scipy well: https://gist.github.com/dan-blanchard/7045057
 
-# Setup anaconda
 before_install:
   - export PYMAJORVER=`python -c "import sys; print(sys.version_info.major)"`
   - wget http://repo.continuum.io/miniconda/Miniconda$PYMAJORVER-latest-Linux-x86_64.sh -O miniconda.sh
@@ -25,11 +24,18 @@ before_install:
   - sudo rm -rf /dev/shm
   - sudo ln -s /run/shm /dev/shm
 
-# Install packages
 install:
   # Make sure the versions here match what we have in requirements.txt
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION "numpy<2.0dev" "scipy<1.0dev" "matplotlib<2.0dev" "nose<2.0dev" "python-dateutil<3.0dev"
+  # - conda install --yes python=$TRAVIS_PYTHON_VERSION "numpy<2.0dev" "scipy<1.0dev" "matplotlib<2.0dev" "nose<2.0dev" "python-dateutil<3.0dev"
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - pip install -r requirements.txt
 
-# Run tests
 script: python setup.py test
+
+deploy:
+  provider: pypi
+  user: lbolla
+  password:
+    secure: "aBHsueBZZtO3n+WfhbEfKlps+dHN+Y6tj7kJ1Nj6FFt75ats2SLzByuR07uwnHYr+HLgauExNxwJoxYvIIRvTMbbVJ3uBENpjSWwes8xGrNwOJ0ohcnp1xmW/4jV2+UJ0j/SmZQXk/BcxI7tvLyAlFNZ8CQHBllWlRUzOXGstuw="
+  on:
+    tags: true
