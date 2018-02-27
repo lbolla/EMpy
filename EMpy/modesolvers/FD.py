@@ -1084,7 +1084,7 @@ class FDMode(Mode):
         if (x is None) and (y is None):
             return f
 
-        if centered:
+        if not centered:
             # magnetic fields are not centered
             x0 = self.x
             y0 = self.y

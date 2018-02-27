@@ -18,6 +18,7 @@ def epsfunc(x_, y_):
                        3.4757**2,
                        1.446**2)
 
+
 wl = 1.55e-6
 x = numpy.linspace(0, 2.48e-6, 125)
 y = numpy.linspace(0, 2.22e-6, 112)
@@ -30,13 +31,35 @@ solver = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, epsfunc, boundary).solve(
     neigs, tol)
 
 fig = pylab.figure()
+
 fig.add_subplot(1, 3, 1)
-pylab.contourf(abs(solver.modes[0].Ex), 50)
+Ex = numpy.transpose(solver.modes[0].get_field('Ex', x, y))
+pylab.contourf(x, y, abs(Ex), 50)
 pylab.title('Ex')
+
 fig.add_subplot(1, 3, 2)
-pylab.contourf(abs(solver.modes[0].Ey), 50)
+Ey = numpy.transpose(solver.modes[0].get_field('Ey', x, y))
+pylab.contourf(x, y, abs(Ey), 50)
 pylab.title('Ey')
+
 fig.add_subplot(1, 3, 3)
-pylab.contourf(abs(solver.modes[0].Ez), 50)
+Ez = numpy.transpose(solver.modes[0].get_field('Ez', x, y))
+pylab.contourf(x, y, abs(Ez), 50)
 pylab.title('Ez')
+
+fig.add_subplot(1, 3, 1)
+Hx = numpy.transpose(solver.modes[0].get_field('Hx', x, y))
+pylab.contourf(x, y, abs(Hx), 50)
+pylab.title('Hx')
+
+fig.add_subplot(1, 3, 2)
+Hy = numpy.transpose(solver.modes[0].get_field('Hy', x, y))
+pylab.contourf(x, y, abs(Hy), 50)
+pylab.title('Hy')
+
+fig.add_subplot(1, 3, 3)
+Hz = numpy.transpose(solver.modes[0].get_field('Hz', x, y))
+pylab.contourf(x, y, abs(Hz), 50)
+pylab.title('Hz')
+
 pylab.show()
