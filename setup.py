@@ -24,8 +24,8 @@ setup(
     install_requires=[
         'future<1.0dev',
         'numpy<2.0dev',
-        'scipy<1.0dev',
-        'matplotlib<2.0dev',
+        'scipy<2.0dev',
+        'matplotlib<3.0dev',
     ],
     provides=['EMpy'],
     test_suite='tests',
