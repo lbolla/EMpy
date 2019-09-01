@@ -22,10 +22,10 @@ setup(
     platforms=['Windows', 'Linux', 'Mac OS-X'],
     packages=find_packages(),
     install_requires=[
-        'future<1.0dev',
-        'numpy<2.0dev',
-        'scipy<1.0dev',
-        'matplotlib<2.0dev',
+        'future',
+        'numpy',
+        'scipy',
+        'matplotlib',
     ],
     provides=['EMpy'],
     test_suite='tests',
@@ -39,7 +39,7 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.6',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering :: Physics',
     ]
