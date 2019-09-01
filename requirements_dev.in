@@ -1,0 +1,5 @@
+ipython
+ipdb
+bump2version
+tox
+pip-tools
