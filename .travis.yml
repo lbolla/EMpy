@@ -19,10 +19,6 @@ before_install:
   - ./miniconda.sh -b
   - export PATH=/home/travis/miniconda$PYMAJORVER/bin:$PATH
   - conda update --yes conda
-  # The next couple lines fix a crash with multiprocessing on Travis
-  # and are not specific to using Miniconda
-  - sudo rm -rf /dev/shm
-  - sudo ln -s /run/shm /dev/shm
 
 install:
   # Make sure the versions here match what we have in requirements.txt
