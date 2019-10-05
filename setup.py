@@ -13,7 +13,7 @@ setup(
     name='ElectroMagneticPython',
     version=__version__,
     author='Lorenzo Bolla',
-    author_email='lbolla@gmail.com',
+    author_email='code@lbolla.info',
     description='EMpy - ElectroMagnetic Python',
     long_description=long_description,
     url='http://lbolla.github.io/EMpy/',

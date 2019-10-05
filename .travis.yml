@@ -8,7 +8,7 @@ cache: pip
 
 notifications:
   email:
-    - lbolla@gmail.com
+    - code@lbolla.info
 
 # TravisCI does not handle numpy/scipy well: https://gist.github.com/dan-blanchard/7045057
 
