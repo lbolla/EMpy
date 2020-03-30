@@ -12,13 +12,13 @@ from matplotlib import ticker
 
 """Define cross-section geometry of simulation
 each rectangular element tuple contains
-("label",refractive index,xmin,ymin,xmax,ymax)
+("label",xmin,ymin,xmax,ymax,refractive index)
 first element tuple defines simulation extent
 units should match units of wavelength wl
 """
-geom = (("base",1.0,-0.8,-0.8,0.8,1.0),
-        ("substrate",1.5,-0.8,-0.8,0.8,0.0),
-        ("core",3.4,-0.30,0.0,0.30,0.34))
+geom = (("base",-0.8,-0.8,0.8,1.0,1.0),
+        ("substrate",-0.8,-0.8,0.8,0.0,1.5),
+        ("core",-0.30,0.0,0.30,0.34,3.4))
 
 wl = 1.55
 nx, ny = 81, 91
@@ -31,18 +31,18 @@ def epsfunc(x_, y_):
     :return: 2d-matrix
     """
     #xx, yy = numpy.meshgrid(x_, y_)
-    working = geom[0][1]**2*numpy.ones((x_.size,y_.size))
+    working = geom[0][5]**2*numpy.ones((x_.size,y_.size))
     for i in range(1,len(geom)):
-        ixmin = numpy.searchsorted(x_,geom[i][2],side='left')
-        iymin = numpy.searchsorted(y_,geom[i][3],side='left')
-        ixmax = numpy.searchsorted(x_,geom[i][4],side='right')
-        iymax = numpy.searchsorted(y_,geom[i][5],side='right') 
-        working[ixmin:ixmax,iymin:iymax] = geom[i][1]**2
+        ixmin = numpy.searchsorted(x_,geom[i][1],side='left')
+        iymin = numpy.searchsorted(y_,geom[i][2],side='left')
+        ixmax = numpy.searchsorted(x_,geom[i][3],side='right')
+        iymax = numpy.searchsorted(y_,geom[i][4],side='right') 
+        working[ixmin:ixmax,iymin:iymax] = geom[i][5]**2
     
     return working
 
-x = numpy.linspace(geom[0][2], geom[0][4], nx)
-y = numpy.linspace(geom[0][3], geom[0][5], ny)
+x = numpy.linspace(geom[0][1], geom[0][3], nx)
+y = numpy.linspace(geom[0][2], geom[0][4], ny)
 
 neigs = 2
 tol = 1e-6
@@ -62,69 +62,69 @@ ax = fig.add_subplot(2, 3, 1)
 plt.contour(xe,ye,abs(solver.modes[0].Ex.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Ex')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 2)
 plt.contour(xe,ye,abs(solver.modes[0].Ey.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Ey')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 3)
 plt.contour(xe,ye,abs(solver.modes[0].Ez.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Ez')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 fmax=abs(solver.modes[0].Hy).max()
 ax = fig.add_subplot(2, 3, 4)
 plt.contour(x,y,abs(solver.modes[0].Hx.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Hx')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 5)
 plt.contour(x,y,abs(solver.modes[0].Hy.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Hy')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 6)
 plt.contour(x,y,abs(solver.modes[0].Hz.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Hz')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 plt.show()
 
 print(solver.modes[1].neff)
@@ -134,67 +134,67 @@ ax = fig.add_subplot(2, 3, 1)
 plt.contour(xe,ye,abs(solver.modes[1].Ex.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Ex')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 2)
 plt.contour(xe,ye,abs(solver.modes[1].Ey.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Ey')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 3)
 plt.contour(xe,ye,abs(solver.modes[1].Ez.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Ez')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 fmax=abs(solver.modes[1].Hx).max()
 ax = fig.add_subplot(2, 3, 4)
 plt.contour(x,y,abs(solver.modes[1].Hx.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Hx')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 5)
 plt.contour(x,y,abs(solver.modes[1].Hy.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Hy')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 ax = fig.add_subplot(2, 3, 6)
 plt.contour(x,y,abs(solver.modes[1].Hz.T), fmax*levls, 
             cmap='jet', locator=ticker.LogLocator())
 plt.title('Hz')
-ax.set_xlim(geom[0][2], geom[0][4])
-ax.set_ylim(geom[0][3], geom[0][5])
+ax.set_xlim(geom[0][1], geom[0][3])
+ax.set_ylim(geom[0][2], geom[0][4])
 for i in range(1,len(geom)):
-    plt.hlines(geom[i][3],geom[i][2],geom[i][4])
-    plt.hlines(geom[i][5],geom[i][2],geom[i][4])
-    plt.vlines(geom[i][2],geom[i][3],geom[i][5])
-    plt.vlines(geom[i][4],geom[i][3],geom[i][5])
+    plt.hlines(geom[i][2],geom[i][1],geom[i][3])
+    plt.hlines(geom[i][4],geom[i][1],geom[i][3])
+    plt.vlines(geom[i][1],geom[i][2],geom[i][4])
+    plt.vlines(geom[i][3],geom[i][2],geom[i][4])
 plt.show()
