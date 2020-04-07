@@ -1,6 +1,6 @@
 """Fully vectorial finite-difference mode solver example.
 
-Flexible mode solver example for fundamental modes
+Flexible mode solver example for fundamental modes for anisotropic media
 by David Hutchings, School of Engineering, University of Glasgow
 David.Hutchings@glasgow.ac.uk
 """
@@ -13,33 +13,43 @@ from scipy import signal
 
 """Define cross-section geometry of simulation
 each rectangular element tuple contains
-("label",xmin,ymin,xmax,ymax,eps=refractive index squared)
+("label",xmin,ymin,xmax,ymax,eps) for isotropic or
+("label",xmin,ymin,xmax,ymax,eps_xx, eps_xy, eps_yx, eps_yy, eps_zz) for anisotropic
 first element tuple defines simulation extent
 units should match units of wavelength wl
 """
-geom = (("base",-0.8,-0.8,0.8,1.0,1.0**2),
-        ("substrate",-0.8,-0.8,0.8,0.0,1.5**2),
-        ("core1",-0.30,0.0,0.0,0.34,3.4**2),
-        ("core2",0.0,0.0,0.30,0.145,3.4**2))
+geom = (("base",-0.6,-0.6,0.6,0.8,1.44**2),
+        ("core",-0.35,0.0,0.35,0.34,3.48**2),
+        ("clad",-0.35,0.34,0.35,0.44,2.19**2,-0.1j,0.1j,2.19**2,2.19**2))
 
 wl = 1.55
-nx, ny = 161, 181
+nx, ny = 121, 141
 
 def epsfunc(x_, y_):
     """Return a matrix describing a 2d material.
 
     :param x_: x values
     :param y_: y values
-    :return: 2d-matrix
+    :return: 2d-matrix *5
     """
-    #xx, yy = numpy.meshgrid(x_, y_)
-    working = geom[0][5]*numpy.ones((x_.size,y_.size))
+#assume base medium isisotropic
+    working = numpy.zeros((x_.size,y_.size,5),dtype='complex')
+    working[:,:,0] = geom[0][5]*numpy.ones((x_.size,y_.size))
+    working[:,:,3] = geom[0][5]*numpy.ones((x_.size,y_.size))
+    working[:,:,4] = geom[0][5]*numpy.ones((x_.size,y_.size))
     for i in range(1,len(geom)):
         ixmin = numpy.searchsorted(x_,geom[i][1],side='left')
         iymin = numpy.searchsorted(y_,geom[i][2],side='left')
         ixmax = numpy.searchsorted(x_,geom[i][3],side='right')
         iymax = numpy.searchsorted(y_,geom[i][4],side='right') 
-        working[ixmin:ixmax,iymin:iymax] = geom[i][5]
+        if (len(geom[i])==6):
+# isotropic            
+            working[ixmin:ixmax,iymin:iymax,:] = [geom[i][5],
+               0.0,0.0,geom[i][5],geom[i][5]]
+        else:
+# anisotropic
+            working[ixmin:ixmax,iymin:iymax,:] = [geom[i][5],
+               geom[i][6],geom[i][7],geom[i][8],geom[i][9]]
     
     return working
 
@@ -47,7 +57,7 @@ x = numpy.linspace(geom[0][1], geom[0][3], nx)
 y = numpy.linspace(geom[0][2], geom[0][4], ny)
 
 neigs = 2
-tol = 1e-8
+tol = 1e-6
 boundary = '0000'
 
 solver = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, epsfunc, boundary).solve(
@@ -58,7 +68,6 @@ levls2 = numpy.geomspace(1./1024.,1.,num=11)
 xe = signal.convolve(x,[0.5,0.5])[1:-1]
 ye = signal.convolve(y,[0.5,0.5])[1:-1]
 
-
 def geom_outline():
     ax.set_xlim(geom[0][1], geom[0][3])
     ax.set_ylim(geom[0][2], geom[0][4])
@@ -68,7 +77,7 @@ def geom_outline():
         plt.vlines(geom[i][1],geom[i][2],geom[i][4])
         plt.vlines(geom[i][3],geom[i][2],geom[i][4])
     return
-    
+
 print(solver.modes[0].neff)
 fmax=abs(solver.modes[0].Ex).max()
 fig = plt.figure()
@@ -224,4 +233,3 @@ plt.contour(x,y,abs(S3.T), fmax*levls2,
 plt.title('S3')
 geom_outline()
 plt.show()
-
