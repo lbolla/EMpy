@@ -18,12 +18,14 @@ each rectangular element tuple contains
 first element tuple defines simulation extent
 units should match units of wavelength wl
 """
-geom = (("base",-0.6,-0.6,0.6,0.8,1.44**2),
+geom = (("base",-0.7,-0.5,0.7,0.9,1.44**2),
         ("core",-0.35,0.0,0.35,0.34,3.48**2),
-        ("clad",-0.35,0.34,0.35,0.44,2.19**2,-0.1j,0.1j,2.19**2,2.19**2))
+        ("clad",-0.35,0.34,0.35,0.44,2.19**2,-0.006j,0.006j,2.19**2,2.19**2),
+        ("slot",-0.05,0.00,0.05,0.34,2.19**2,-0.006j,0.006j,2.19**2,2.19**2))
+#clad corresponds to Ce:TbIG with -3200deg/cm
 
 wl = 1.55
-nx, ny = 121, 141
+nx, ny = 141, 141
 
 def epsfunc(x_, y_):
     """Return a matrix describing a 2d material.
@@ -32,7 +34,7 @@ def epsfunc(x_, y_):
     :param y_: y values
     :return: 2d-matrix *5
     """
-#assume base medium isisotropic
+#assume base medium is isotropic
     working = numpy.zeros((x_.size,y_.size,5),dtype='complex')
     working[:,:,0] = geom[0][5]*numpy.ones((x_.size,y_.size))
     working[:,:,3] = geom[0][5]*numpy.ones((x_.size,y_.size))
