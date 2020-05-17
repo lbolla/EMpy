@@ -1366,7 +1366,7 @@ def stretchmesh(x, y, nlayers, factor, method='PPPP'):
     xx = x.astype(complex)
     yy = y.astype(complex)
 
-    nlayers *= numpy.ones(4)
+    nlayers *= numpy.ones(4, dtype=int)
     factor *= numpy.ones(4)
 
     for idx, (n, f, m) in enumerate(zip(nlayers, factor, method.upper())):
