@@ -7,7 +7,7 @@ import math
 from numpy import pi
 from numpy.testing import assert_almost_equal
 
-import EMpy.utils as U
+import EMpy_gpu.utils as U
 
 
 class UtilsTest(TestCase):

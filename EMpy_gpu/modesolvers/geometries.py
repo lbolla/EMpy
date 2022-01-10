@@ -5,9 +5,9 @@ from builtins import zip
 from builtins import object
 
 import numpy
-import EMpy.utils
-import EMpy.modesolvers
-from EMpy.modesolvers.interface import *
+import EMpy_gpu.utils
+import EMpy_gpu.modesolvers
+from EMpy_gpu.modesolvers.interface import *
 import pylab
 
 def S2T(S):

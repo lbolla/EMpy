@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 try:
-    from EMpy import __version__
+    from EMpy_gpu import __version__
 except ImportError:
     __version__ = None
 
@@ -10,7 +10,7 @@ with open('README.rst', 'r') as readme:
     long_description = readme.read()
 
 setup(
-    name='ElectroMagneticPython',
+    name='ElectroMagneticPythonGpu',
     version=__version__,
     author='Lorenzo Bolla',
     author_email='code@lbolla.info',

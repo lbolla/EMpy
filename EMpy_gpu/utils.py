@@ -11,8 +11,8 @@ from builtins import object
 __author__ = 'Lorenzo Bolla'
 
 import numpy
-import EMpy.constants
-import EMpy.materials
+import EMpy_gpu.constants
+import EMpy_gpu.materials
 import scipy.linalg
 import scipy.interpolate
 import scipy.optimize
@@ -53,7 +53,7 @@ class Layer(object):
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
             EPS[:, :, hmax] = numpy.squeeze(
-                self.mat.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             EPS1[:, :, hmax] = scipy.linalg.inv(EPS[:, :, hmax])
             return EPS, EPS1
 
@@ -61,7 +61,7 @@ class Layer(object):
         """Capacitance = eps0 * eps_r * area / thickness."""
 
         if self.isIsotropic():
-            eps = EMpy.constants.eps0 * numpy.real(self.mat.n(wl).item() ** 2)
+            eps = EMpy_gpu.constants.eps0 * numpy.real(self.mat.n(wl).item() ** 2)
         else:
             # suppose to compute the capacitance along the z-axis
             eps = self.mat.epsilonTensor(wl)[2, 2, 0]
@@ -110,9 +110,9 @@ class BinaryGrating(object):
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
             eps1 = numpy.squeeze(
-                self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat1.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             eps2 = numpy.squeeze(
-                self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat2.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             f = self.dc
             h = numpy.arange(-hmax, hmax + 1)
             for ih, hh in enumerate(h):
@@ -127,7 +127,7 @@ class BinaryGrating(object):
         """Capacitance = eps0 * eps_r * area / thickness."""
 
         if self.isIsotropic():
-            eps = EMpy.constants.eps0 * numpy.real(
+            eps = EMpy_gpu.constants.eps0 * numpy.real(
                 self.mat1.n(wl) ** 2 * self.dc + self.mat2.n(wl) ** 2
                 * (1 - self.dc))
         else:
@@ -200,11 +200,11 @@ class SymmetricDoubleGrating(object):
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
             eps1 = numpy.squeeze(
-                self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat1.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             eps2 = numpy.squeeze(
-                self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat2.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             eps3 = numpy.squeeze(
-                self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat3.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             f1 = self.dc1
             f2 = self.dc2
             h = numpy.arange(-hmax, hmax + 1)
@@ -234,7 +234,7 @@ class SymmetricDoubleGrating(object):
         """Capacitance = eps0 * eps_r * area / thickness."""
 
         if self.isIsotropic():
-            eps = EMpy.constants.eps0 * numpy.real(
+            eps = EMpy_gpu.constants.eps0 * numpy.real(
                 self.mat1.n(wl) ** 2 * self.dc1 + self.mat2.n(wl) ** 2
                 * self.dc2 + self.mat3.n(wl) ** 2 * (1 - self.dc1 - self.dc2))
         else:
@@ -302,11 +302,11 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
             EPS = numpy.zeros((3, 3, 2 * hmax + 1), dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
             eps1 = numpy.squeeze(
-                self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat1.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             eps2 = numpy.squeeze(
-                self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat2.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             eps3 = numpy.squeeze(
-                self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
+                self.mat3.epsilonTensor(wl)) / EMpy_gpu.constants.eps0
             f1 = self.dc1
             f2 = self.dc2
             fM = self.dcM
@@ -337,7 +337,7 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
         """Capacitance = eps0 * eps_r * area / thickness."""
 
         if self.isIsotropic():
-            eps = EMpy.constants.eps0 * numpy.real(
+            eps = EMpy_gpu.constants.eps0 * numpy.real(
                 self.mat1.n(wl) ** 2 * self.dc1 + self.mat2.n(wl) ** 2 *
                 self.dc2 + self.mat3.n(wl) ** 2 * (1 - self.dc1 - self.dc2))
         else:
@@ -445,7 +445,7 @@ class LiquidCrystalCell(object):
         epslow = self.lc.epslow
         deleps = self.lc.deleps
 
-        e0 = EMpy.constants.eps0
+        e0 = EMpy_gpu.constants.eps0
         K1122 = K11 - K22
         K3322 = K33 - K22
         costheta1 = numpy.cos(theta2)
@@ -534,8 +534,8 @@ class LiquidCrystalCell(object):
             z = self.bvp_solution.mesh
 
         data = self.bvp_solution(z)
-        theta = EMpy.utils.rad2deg(numpy.pi / 2. - data[:, 0])
-        phi = EMpy.utils.rad2deg(data[:, 2])
+        theta = EMpy_gpu.utils.rad2deg(numpy.pi / 2. - data[:, 0])
+        phi = EMpy_gpu.utils.rad2deg(data[:, 2])
         u = data[:, 4]
 
         return z, theta, phi, u
@@ -565,24 +565,24 @@ class LiquidCrystalCell(object):
         """Split the cell in nlayers homogeneous layers."""
 
         m = []
-        for a, t in zip(EMpy.utils.deg2rad(self.angles), self.tlc):
-            epsT = EMpy.materials.EpsilonTensor(
-                epsilon_tensor_const=EMpy.utils.euler_rotate(
+        for a, t in zip(EMpy_gpu.utils.deg2rad(self.angles), self.tlc):
+            epsT = EMpy_gpu.materials.EpsilonTensor(
+                epsilon_tensor_const=EMpy_gpu.utils.euler_rotate(
                     numpy.diag([self.lc.nE,
                                 self.lc.nO,
                                 self.lc.nO]) ** 2,
-                    0., numpy.pi / 2., numpy.pi / 2. - a) * EMpy.constants.eps0,
+                    0., numpy.pi / 2., numpy.pi / 2. - a) * EMpy_gpu.constants.eps0,
                 epsilon_tensor_known={
-                    0: EMpy.utils.euler_rotate(
+                    0: EMpy_gpu.utils.euler_rotate(
                         numpy.diag([self.lc.nE_electrical,
                                     self.lc.nO_electrical,
                                     self.lc.nO_electrical]) ** 2,
                         0., numpy.pi / 2.,
-                        numpy.pi / 2. - a) * EMpy.constants.eps0,
+                        numpy.pi / 2. - a) * EMpy_gpu.constants.eps0,
                 }
             )
             m.append(
-                Layer(EMpy.materials.AnisotropicMaterial(
+                Layer(EMpy_gpu.materials.AnisotropicMaterial(
                     'LC', epsilon_tensor=epsT), t))
 
         return Multilayer(m)
@@ -961,11 +961,11 @@ def group_delay_and_dispersion(wls, y):
     if wls.shape != y.shape:
         raise ValueError('wls and y must have the same shape.')
 
-    f = EMpy.constants.c / wls
+    f = EMpy_gpu.constants.c / wls
 
     df = numpy.diff(f)
     toPSNM = 1E12 / 1E9
-    cnmps = EMpy.constants.c / toPSNM
+    cnmps = EMpy_gpu.constants.c / toPSNM
 
     # phase
     phi = numpy.unwrap(4. * numpy.angle(y)) / 4.
@@ -1016,8 +1016,8 @@ def wl2f(wl0, dwl):
     """Convert a central wavelength and an interval to frequency."""
     wl1 = wl0 - dwl / 2.
     wl2 = wl0 + dwl / 2.
-    f1 = EMpy.constants.c / wl2
-    f2 = EMpy.constants.c / wl1
+    f1 = EMpy_gpu.constants.c / wl2
+    f2 = EMpy_gpu.constants.c / wl1
     f0 = (f1 + f2) / 2.
     df = (f2 - f1)
     return f0, df
@@ -1127,8 +1127,8 @@ def centered2d(x):
 
 
 def blackbody(f, T):
-    return 2 * EMpy.constants.h * f ** 3 / (EMpy.constants.c ** 2) * 1. / (
-        numpy.exp(EMpy.constants.h * f / (EMpy.constants.k * T)) - 1)
+    return 2 * EMpy_gpu.constants.h * f ** 3 / (EMpy_gpu.constants.c ** 2) * 1. / (
+        numpy.exp(EMpy_gpu.constants.h * f / (EMpy_gpu.constants.k * T)) - 1)
 
 
 def warning(s):

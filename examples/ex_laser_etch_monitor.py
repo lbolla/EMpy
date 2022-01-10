@@ -26,7 +26,7 @@ import sys
 import pylab
 import numpy
 
-import EMpy
+import EMpy_gpu
 # file of refractive indices, takes wavelengths in Microns!!
 import nk
 
@@ -38,7 +38,7 @@ wl_lasermon = 670e-9
 EtchStep = 10e-9
 
 wls = numpy.array([wl_lasermon - 1e-9, wl_lasermon, wl_lasermon + 1e-9])
-theta_inc = EMpy.utils.deg2rad(0)  # incidence angle
+theta_inc = EMpy_gpu.utils.deg2rad(0)  # incidence angle
 
 
 # Define some helper functions
@@ -78,23 +78,23 @@ def arg_inf(multilayer):
 
 # Define RefractiveIndex functions, then Material objects.
 n_air = 1.0     # constant vs. wavelength
-mat_air = EMpy.materials.IsotropicMaterial(
-    'air', EMpy.materials.RefractiveIndex(n0_const=n_air))
+mat_air = EMpy_gpu.materials.IsotropicMaterial(
+    'air', EMpy_gpu.materials.RefractiveIndex(n0_const=n_air))
 
 n_SiN = 1.997   # Silicon Nitride (Si3N4)
-mat_SiN = EMpy.materials.IsotropicMaterial(
-    'Si3N4', EMpy.materials.RefractiveIndex(n0_const=n_SiN))
+mat_SiN = EMpy_gpu.materials.IsotropicMaterial(
+    'Si3N4', EMpy_gpu.materials.RefractiveIndex(n0_const=n_SiN))
 
 # RIX functions from file, taking wavelength in microns:
 # Covert to microns, request loss as complex refractive index
 n_GaAs = lambda w: nk.GaAs_interp(w * 1e6, k=True)
-mat_GaAs = EMpy.materials.IsotropicMaterial(
-    'GaAs', EMpy.materials.RefractiveIndex(n0_func=n_GaAs))
+mat_GaAs = EMpy_gpu.materials.IsotropicMaterial(
+    'GaAs', EMpy_gpu.materials.RefractiveIndex(n0_func=n_GaAs))
 
 # Function from file, AlGaAs with 95% Aluminum
 n_AlGaAs95 = lambda w: nk.AlGaAs_interp(0.95, w * 1e6, k=True)
-mat_AlGaAs95 = EMpy.materials.IsotropicMaterial(
-    'Al95Ga05As', EMpy.materials.RefractiveIndex(n0_func=n_AlGaAs95))
+mat_AlGaAs95 = EMpy_gpu.materials.IsotropicMaterial(
+    'Al95Ga05As', EMpy_gpu.materials.RefractiveIndex(n0_func=n_AlGaAs95))
 
 
 # DBR mirror periods, at 1/4-wavelength thicknesses
@@ -108,7 +108,7 @@ d_AlGaAs_DBR = wl_center / n_AlGaAs95(wl_center).real / 4
 # monitor) first, substrate last.  Must include infinite-thickness
 # layers on top & bottom for air & substrate, respectively.
 
-Layer = EMpy.utils.Layer    # shortcut
+Layer = EMpy_gpu.utils.Layer    # shortcut
 
 # define the layers (material, thickness) we will use in the stack:
 air = Layer(mat_air, numpy.inf)
@@ -132,7 +132,7 @@ layers =  \
 # Create EMpy MultiLayer stack.
 #   Must dereference the lists from each other via copy(), otherwise altering
 #   one layer during etching also affects other repeated Layers
-layers = EMpy.utils.Multilayer([copy(l) for l in layers])
+layers = EMpy_gpu.utils.Multilayer([copy(l) for l in layers])
 
 
 # setup etching loop
@@ -196,7 +196,7 @@ while go is True:
 
             # solve for reflectivity at laser monitor wavelength
             solutions.append(
-                EMpy.transfer_matrix.IsotropicTransferMatrix(
+                EMpy_gpu.transfer_matrix.IsotropicTransferMatrix(
                     etchedlayers[-1], theta_inc).solve(wls))
             Rlaser.append(solutions[-1].Rs[wlidx])
     else:

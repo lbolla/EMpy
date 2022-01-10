@@ -3,23 +3,23 @@
 import numpy
 import pylab
 
-import EMpy
+import EMpy_gpu
 
 # define multilayer
 n = numpy.array([1., 1.38, 1.9044])
 d = numpy.array([numpy.inf, 387.5e-9 / 1.38, numpy.inf])
-iso_layers = EMpy.utils.Multilayer()
+iso_layers = EMpy_gpu.utils.Multilayer()
 for i in xrange(n.size):
-    n0 = EMpy.materials.RefractiveIndex(n[i])
+    n0 = EMpy_gpu.materials.RefractiveIndex(n[i])
     iso_layers.append(
-        EMpy.utils.Layer(EMpy.materials.IsotropicMaterial('mat', n0=n0), d[i]))
+        EMpy_gpu.utils.Layer(EMpy_gpu.materials.IsotropicMaterial('mat', n0=n0), d[i]))
 
 # define incident wave plane
-theta_inc = EMpy.utils.deg2rad(10.)
+theta_inc = EMpy_gpu.utils.deg2rad(10.)
 wls = numpy.linspace(0.85e-6, 2.25e-6, 300)
 
 # solve
-tm = EMpy.transfer_matrix.IsotropicTransferMatrix(iso_layers, theta_inc)
+tm = EMpy_gpu.transfer_matrix.IsotropicTransferMatrix(iso_layers, theta_inc)
 solution_iso = tm.solve(wls)
 
 # plot

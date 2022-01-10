@@ -4,7 +4,7 @@ from unittest import TestCase
 from numpy import array
 from numpy.testing import assert_almost_equal, assert_raises
 
-import EMpy.materials as mat
+import EMpy_gpu.materials as mat
 
 
 class RefractiveIndexTest(TestCase):

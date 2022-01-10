@@ -23,8 +23,8 @@ import numpy
 import scipy
 import scipy.optimize
 import copy
-import EMpy.utils
-from EMpy.modesolvers.interface import *
+import EMpy_gpu.utils
+from EMpy_gpu.modesolvers.interface import *
 import pylab
 
 class Message(object):
@@ -424,8 +424,8 @@ class FMMMode2d(Mode):
             y = numpy.atleast_1d(y_)
             
         Ex, Ey, Ez, cBx, cBy, cBz, cSz = self.fields(x, y)
-        cSTE = .5 * EMpy.utils.trapz2(Ex * numpy.conj(cBy), y, x)
-        cSTM = .5 * EMpy.utils.trapz2(-Ey * numpy.conj(cBx), y, x)
+        cSTE = .5 * EMpy_gpu.utils.trapz2(Ex * numpy.conj(cBy), y, x)
+        cSTM = .5 * EMpy_gpu.utils.trapz2(-Ey * numpy.conj(cBx), y, x)
         return numpy.abs(cSTE) / (numpy.abs(cSTE) + numpy.abs(cSTM))
     
     def TEfrac(self):
@@ -446,11 +446,11 @@ class FMMMode2d(Mode):
             
         Ex, Ey, Ez, cBx, cBy, cBz = self.fields(x, y)
         cSz = self.intensity(x, y)
-        norm = scipy.sqrt(EMpy.utils.trapz2(cSz, y, x))
+        norm = scipy.sqrt(EMpy_gpu.utils.trapz2(cSz, y, x))
         Ex1, Ey1, Ez1, cBx1, cBy1, cBz1 = m.fields(x, y)
         cSz1 = m.intensity(x, y)
-        norm1 = scipy.sqrt(EMpy.utils.trapz2(cSz1, y, x))
-        return .5 * EMpy.utils.trapz2(Ex/norm * numpy.conj(cBy1/norm1) - Ey/norm * numpy.conj(cBx1/norm1), y, x)        
+        norm1 = scipy.sqrt(EMpy_gpu.utils.trapz2(cSz1, y, x))
+        return .5 * EMpy_gpu.utils.trapz2(Ex/norm * numpy.conj(cBy1/norm1) - Ey/norm * numpy.conj(cBx1/norm1), y, x)        
 
     def __overlap_old(self, mode):
             
@@ -701,29 +701,29 @@ class FMMMode2d(Mode):
         Ex, Ey, Ez, cBx, cBy, cBz = self.fields(x0, y0)
         
         # Ex: ignores y = 0, max
-        x_Ex_FDTD = EMpy.utils.centered1d(x)
+        x_Ex_FDTD = EMpy_gpu.utils.centered1d(x)
         y_Ex_FDTD = y[1:-1]
-        Ex_FDTD = EMpy.utils.interp2(x_Ex_FDTD, y_Ex_FDTD, x0, y0, Ex)
+        Ex_FDTD = EMpy_gpu.utils.interp2(x_Ex_FDTD, y_Ex_FDTD, x0, y0, Ex)
         # Ey: ignores x = 0, max
         x_Ey_FDTD = x[1:-1]
-        y_Ey_FDTD = EMpy.utils.centered1d(y)
-        Ey_FDTD = EMpy.utils.interp2(x_Ey_FDTD, y_Ey_FDTD, x0, y0, Ey)
+        y_Ey_FDTD = EMpy_gpu.utils.centered1d(y)
+        Ey_FDTD = EMpy_gpu.utils.interp2(x_Ey_FDTD, y_Ey_FDTD, x0, y0, Ey)
         # Ez: ignores x, y = 0, max
         x_Ez_FDTD = x[1:-1]
         y_Ez_FDTD = y[1:-1]
-        Ez_FDTD = EMpy.utils.interp2(x_Ez_FDTD, y_Ez_FDTD, x0, y0, Ez)
+        Ez_FDTD = EMpy_gpu.utils.interp2(x_Ez_FDTD, y_Ez_FDTD, x0, y0, Ez)
         # Hx: ignores x = 0, max, /120pi, reverse direction
         x_Hx_FDTD = x[1:-1]
-        y_Hx_FDTD = EMpy.utils.centered1d(y)
-        Hx_FDTD = EMpy.utils.interp2(x_Hx_FDTD, y_Hx_FDTD, x0, y0, cBx) / (-120. * numpy.pi) # OKKIO!
+        y_Hx_FDTD = EMpy_gpu.utils.centered1d(y)
+        Hx_FDTD = EMpy_gpu.utils.interp2(x_Hx_FDTD, y_Hx_FDTD, x0, y0, cBx) / (-120. * numpy.pi) # OKKIO!
         # Hy: ignores y = 0, max, /120pi, reverse direction
-        x_Hy_FDTD = EMpy.utils.centered1d(x)
+        x_Hy_FDTD = EMpy_gpu.utils.centered1d(x)
         y_Hy_FDTD = y[1:-1]
-        Hy_FDTD = EMpy.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x0, y0, Hy) / (-120. * numpy.pi)
+        Hy_FDTD = EMpy_gpu.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x0, y0, Hy) / (-120. * numpy.pi)
         # Hz: /120pi, reverse direction
-        x_Hz_FDTD = EMpy.utils.centered1d(x)
-        y_Hz_FDTD = EMpy.utils.centered1d(y)
-        Hz_FDTD = EMpy.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x0, y0, Hz) / (-120. * numpy.pi)
+        x_Hz_FDTD = EMpy_gpu.utils.centered1d(x)
+        y_Hz_FDTD = EMpy_gpu.utils.centered1d(y)
+        Hz_FDTD = EMpy_gpu.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x0, y0, Hz) / (-120. * numpy.pi)
         
         return (Ex_FDTD, Ey_FDTD, Ez_FDTD, Hx_FDTD, Hy_FDTD, Hz_FDTD)    
 

@@ -8,7 +8,7 @@ from builtins import object
 
 import os
 import numpy
-import EMpy.utils
+import EMpy_gpu.utils
 import pylab
 
 __author__ = "Lorenzo Bolla"
@@ -500,11 +500,11 @@ def overlap_f(sensors, solver, nwl):
 ##                        numpy.trapz(numpy.trapz(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
 ##                        numpy.trapz(numpy.trapz(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
             vu[isens, imode] = 0.5 * (
-                        EMpy.utils.trapz2(sens.E1[:,1:-1,nwl] * Hy, dx=sens.dx1*1e-6, dy=sens.dx2*1e-6) -
-                        EMpy.utils.trapz2(sens.E2[1:-1,:,nwl] * Hx, dx=sens.dx1*1e-6, dy=sens.dx2*1e-6))
+                        EMpy_gpu.utils.trapz2(sens.E1[:,1:-1,nwl] * Hy, dx=sens.dx1*1e-6, dy=sens.dx2*1e-6) -
+                        EMpy_gpu.utils.trapz2(sens.E2[1:-1,:,nwl] * Hx, dx=sens.dx1*1e-6, dy=sens.dx2*1e-6))
             ju[isens, imode] = 0.5 * (
-                        EMpy.utils.trapz2(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx1*1e-6, dy=sens.dx1*1e-6) -
-                        EMpy.utils.trapz2(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx1*1e-6, dy=sens.dx1*1e-6))
+                        EMpy_gpu.utils.trapz2(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx1*1e-6, dy=sens.dx1*1e-6) -
+                        EMpy_gpu.utils.trapz2(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx1*1e-6, dy=sens.dx1*1e-6))
     A = (vu + ju) / 2.
     B = (vu - ju) / 2.
     Pm = numpy.abs(A)**2 - numpy.abs(B)**2

@@ -15,8 +15,8 @@ __author__ = 'Lorenzo Bolla'
 
 import scipy as S
 from scipy.linalg import inv
-from EMpy.utils import snell, norm
-from EMpy.constants import c, mu0
+from EMpy_gpu.utils import snell, norm
+from EMpy_gpu.constants import c, mu0
 # import Gnuplot
 
 

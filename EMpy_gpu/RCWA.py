@@ -21,7 +21,7 @@ import scipy as S
 from scipy.linalg import toeplitz, inv, eig, solve as linsolve
 from numpy import pi
 
-from EMpy.utils import cond, warning, BinaryGrating, SymmetricDoubleGrating, AsymmetricDoubleGrating
+from EMpy_gpu.utils import cond, warning, BinaryGrating, SymmetricDoubleGrating, AsymmetricDoubleGrating
 
 
 def dispersion_relation_ordinary(kx, ky, k, nO):

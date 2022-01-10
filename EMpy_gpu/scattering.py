@@ -1,7 +1,7 @@
 from builtins import object
 #-*- coding: UTF-8 -*-
 import numpy
-import EMpy
+import EMpy_gpu
 
 __author__ = 'Julien Hillairet'
 
@@ -143,12 +143,12 @@ def currentsScatteringKottler(P,J,M,Q,dS,f,epsr=1):
      numpy.size(Q,axis=0)!=3 or \
      numpy.size(J,axis=0)!=3 or \
      numpy.size(M,axis=0)!=3:
-    EMpy.utils.warning('Bad parameters size : number of rows must be 3 for vectors P,Q,J,M')
+    EMpy_gpu.utils.warning('Bad parameters size : number of rows must be 3 for vectors P,Q,J,M')
   
   if not numpy.size(Q,axis=1)==numpy.size(J,axis=1)==numpy.size(M,axis=1)==numpy.size(dS,axis=1):
-    EMpy.utils.warning('Bad parameters size : number of columns between Q,J,M and dS must be equal')
+    EMpy_gpu.utils.warning('Bad parameters size : number of columns between Q,J,M and dS must be equal')
   
-  lambda0 = EMpy.constants.c/f  
+  lambda0 = EMpy_gpu.constants.c/f  
   lambdam = lambda0/numpy.sqrt(epsr)
   #k0 = 2*numpy.pi/lambda0
   km = 2*numpy.pi/lambdam 

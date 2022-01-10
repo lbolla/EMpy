@@ -38,7 +38,7 @@ from builtins import object
 __author__ = 'Lorenzo Bolla'
 
 import numpy
-import EMpy.utils
+import EMpy_gpu.utils
 from functools import reduce
 
 
@@ -1336,7 +1336,7 @@ class Etalon(Device):
         self.FSRwl = self.wl0 ** 2 / \
             (2 * n * l * numpy.cos(self.theta) + self.wl0)
 
-        (self.f0, self.FSR) = EMpy.utils.wl2f(self.wl0, self.FSRwl)
+        (self.f0, self.FSR) = EMpy_gpu.utils.wl2f(self.wl0, self.FSRwl)
 
         self.FINESSE = numpy.pi / (2 * numpy.arcsin(1. / numpy.sqrt(self.F)))
         # self.FINESSE = numpy.pi * numpy.sqrt(self.F) / 2.

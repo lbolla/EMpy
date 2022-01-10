@@ -1,7 +1,7 @@
 """Semi-vectorial finite-difference mode solver example."""
 
 import numpy
-import EMpy
+import EMpy_gpu
 import pylab
 
 
@@ -26,7 +26,7 @@ neigs = 2
 tol = 1e-8
 boundary = '0000'
 
-solver = EMpy.modesolvers.FD.SVFDModeSolver(wl, x, y, epsfunc, boundary).solve(
+solver = EMpy_gpu.modesolvers.FD.SVFDModeSolver(wl, x, y, epsfunc, boundary).solve(
     neigs, tol)
 
 fig = pylab.figure()

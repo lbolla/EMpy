@@ -7,14 +7,14 @@ binary gratings", JOSA A, 12(5), 1995
 import numpy
 import pylab
 
-import EMpy
-from EMpy.materials import IsotropicMaterial, RefractiveIndex
+import EMpy_gpu
+from EMpy_gpu.materials import IsotropicMaterial, RefractiveIndex
 
 
-alpha = EMpy.utils.deg2rad(10.)
-delta = EMpy.utils.deg2rad(0.)
-psi = EMpy.utils.deg2rad(0.)  # TE
-phi = EMpy.utils.deg2rad(90.)
+alpha = EMpy_gpu.utils.deg2rad(10.)
+delta = EMpy_gpu.utils.deg2rad(0.)
+psi = EMpy_gpu.utils.deg2rad(0.)  # TE
+phi = EMpy_gpu.utils.deg2rad(90.)
 
 wl = numpy.array([1.55e-6])
 ds = numpy.linspace(0., 5., 100) * wl
@@ -27,13 +27,13 @@ Bottom = IsotropicMaterial('Bottom', n0=RefractiveIndex(n0_const=2.04))
 
 solutions = []
 for d in ds:
-    multilayer = EMpy.utils.Multilayer([
-        EMpy.utils.Layer(Top, numpy.inf),
-        EMpy.utils.BinaryGrating(Top, Bottom, .3, LAMBDA, d),
-        EMpy.utils.Layer(Bottom, numpy.inf),
+    multilayer = EMpy_gpu.utils.Multilayer([
+        EMpy_gpu.utils.Layer(Top, numpy.inf),
+        EMpy_gpu.utils.BinaryGrating(Top, Bottom, .3, LAMBDA, d),
+        EMpy_gpu.utils.Layer(Bottom, numpy.inf),
     ])
 
-    solution = EMpy.RCWA.IsotropicRCWA(multilayer, alpha, delta, psi, phi, n).solve(wl)
+    solution = EMpy_gpu.RCWA.IsotropicRCWA(multilayer, alpha, delta, psi, phi, n).solve(wl)
     solutions.append(solution)
 
 DE1 = numpy.zeros(len(solutions))
