@@ -1,5 +1,5 @@
-EMpy - ElectroMagnetic Python
-*****************************
+EMpy_gpu - ElectroMagnetic Python forked For GPU Use for EMEPy (Eigenmode Expansion Python)    
+*****************************   
 
 .. image:: https://travis-ci.org/lbolla/EMpy.svg?branch=master
     :target: https://travis-ci.org/lbolla/EMpy
