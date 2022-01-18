@@ -976,7 +976,6 @@ class VFDModeSolver(ModeSolver):
         """
 
         from scipy.sparse.linalg import eigen 
-        from skcuda.linalg import eig
 
         self.nmodes = neigs
         self.tol = tol
