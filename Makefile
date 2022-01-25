@@ -9,17 +9,11 @@ REQUIREMENTS = requirements.txt requirements_dev.txt
 help:  ## Print this help
 	@grep -E '^[a-zA-Z][a-zA-Z0-9_-]*:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-develop: upgrade-setuptools upgrade-pip upgrade-pip-tools requirements-install  ## Install project for development
+develop: upgrade-dev requirements-install  ## Install project for development
 	pip install -e .
 
-upgrade-setuptools:  ## Upgrade setuptools
-	pip install -U setuptools
-
-upgrade-pip:  ## Upgrade pip
-	pip install -U pip
-
-upgrade-pip-tools:  ## Upgrade pip-tools
-	pip install -U pip-tools
+upgrade-dev:  ## Upgrade packages for development
+	pip install -U setuptools pip pip-tools tox
 
 test: tox lint  ## Run tests
 
@@ -50,7 +44,7 @@ requirements-sync: requirements  ## Synchronize requirements
 	pip install -e .
 
 requirements-install: requirements  ## Install requirements
-	$(foreach req, ${REQUIREMENTS}, pip install -r $(req);)
+	$(foreach req, ${REQUIREMENTS}, pip install --no-binary :all: -r $(req);)
 
 clean-repo:
 	git diff --quiet HEAD  # no pending commits
