@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 try:
-    from EMpy import __version__
+    __version__ = open('EMpy/version.py').read().split("'")[1]
 except ImportError:
     __version__ = None
 
