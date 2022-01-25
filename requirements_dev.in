@@ -1,4 +1,7 @@
 ipython
 bump2version
-tox
-pip-tools
+tox>=3.24
+pip-tools>=6.4
+
+packaging>=20
+pyparsing>=3

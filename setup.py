@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 try:
-    from EMpy import __version__
+    __version__ = open('EMpy/version.py').read().split("'")[1]
 except ImportError:
     __version__ = None
 
@@ -23,9 +23,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         'future',
-        'numpy',
-        'scipy',
-        'matplotlib',
+        'numpy>=1.18',
+        'scipy>=1.7',
+        'matplotlib>=3.1',
     ],
     provides=['EMpy'],
     test_suite='tests',
@@ -33,12 +33,12 @@ setup(
         'nose<2.0dev',
     ],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering :: Physics',
     ]

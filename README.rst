@@ -1,16 +1,13 @@
 EMpy - ElectroMagnetic Python
 *****************************
 
-.. image:: https://travis-ci.org/lbolla/EMpy.svg?branch=master
-    :target: https://travis-ci.org/lbolla/EMpy
+.. image:: https://github.com/lbolla/EMpy/actions/workflows/python-app.yml/badge.svg
+    :target: https://github.com/lbolla/EMpy/actions/workflows/python-app.yml
 
-.. image:: https://api.codacy.com/project/badge/Grade/25215dbf146d47818023159ee64fc563
-    :target: https://www.codacy.com/app/lbolla/EMpy?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=lbolla/EMpy&amp;utm_campaign=Badge_Grade
+.. image:: https://badge.fury.io/py/ElectroMagneticPython.svg
+    :target: https://badge.fury.io/py/ElectroMagneticPython
 
-.. image:: https://badge.fury.io/py/ElectromagneticPython.svg
-    :target: https://badge.fury.io/py/ElectromagneticPython
-
-`EMpy - Electromagnetic Python` is a suite of algorithms widely known
+`EMpy - ElectroMagnetic Python` is a suite of algorithms widely known
 and used in electromagnetic problems and optics: the transfer matrix
 algorithm, the rigorous coupled wave analysis algorithm and more.
 
@@ -40,7 +37,7 @@ First, download the source code from https://github.com/lbolla/EMpy. Then, from 
 
     $> pip install -r requirements_dev.txt
     $> python setup.py develop
-    
+
 Run tests with:
 
 .. code-block:: bash
@@ -53,7 +50,6 @@ Release process
 1. Edit CHANGES
 2. `bumpversion major|minor|patch`
 3. `git push && git push --tags`
-4. Push to PyPi: `python setup.py release`
 
 Citation
 ========
