@@ -23,9 +23,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         'future',
-        'numpy',
-        'scipy',
-        'matplotlib',
+        'numpy>=1.18',
+        'scipy>=1.7',
+        'matplotlib>=3.1',
     ],
     provides=['EMpy'],
     test_suite='tests',
