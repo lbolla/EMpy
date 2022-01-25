@@ -9,7 +9,7 @@ REQUIREMENTS = requirements.txt requirements_dev.txt
 help:  ## Print this help
 	@grep -E '^[a-zA-Z][a-zA-Z0-9_-]*:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-develop: upgrade-setuptools upgrade-pip requirements-install  ## Install project for development
+develop: upgrade-setuptools upgrade-pip upgrade-pip-tools requirements-install  ## Install project for development
 	pip install -e .
 
 upgrade-setuptools:  ## Upgrade setuptools
@@ -17,6 +17,9 @@ upgrade-setuptools:  ## Upgrade setuptools
 
 upgrade-pip:  ## Upgrade pip
 	pip install -U pip
+
+upgrade-pip-tools:  ## Upgrade pip-tools
+	pip install -U pip-tools
 
 test: tox lint  ## Run tests
 
@@ -34,10 +37,10 @@ mypy:  ## Run mypy linter
 requirements: ${REQUIREMENTS}  ## Create requirements files
 
 requirements.txt: setup.py
-	pip-compile ${PIP_COMPILE_ARGS} --output-file requirements.txt setup.py
+	pip-compile -v ${PIP_COMPILE_ARGS} --output-file requirements.txt setup.py
 
 %.txt: %.in
-	pip-compile ${PIP_COMPILE_ARGS} --output-file $@ $<
+	pip-compile -v ${PIP_COMPILE_ARGS} --output-file $@ $<
 
 requirements-upgrade: PIP_COMPILE_ARGS += --upgrade
 requirements-upgrade: requirements  ## Upgrade requirements
