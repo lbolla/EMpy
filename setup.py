@@ -33,12 +33,12 @@ setup(
         'nose<2.0dev',
     ],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering :: Physics',
     ]
