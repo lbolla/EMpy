@@ -9,7 +9,7 @@ Modesolvers:
 """
 from __future__ import absolute_import
 
-__all__ = ['FD', 'FMM', 'geometries']
-__author__ = 'Lorenzo Bolla'
+__all__ = ["FD", "FMM", "geometries"]
+__author__ = "Lorenzo Bolla"
 
 from . import FD, FMM, geometries

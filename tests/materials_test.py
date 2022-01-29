@@ -8,7 +8,6 @@ import EMpy.materials as mat
 
 
 class RefractiveIndexTest(TestCase):
-
     def test_all_nones(self):
         with assert_raises(ValueError):
             mat.RefractiveIndex()
@@ -26,12 +25,12 @@ class RefractiveIndexTest(TestCase):
 
     def test_smcoeffs(self):
         test_poly = [1] * 6
-        ''' 6-coeffs:
+        """ 6-coeffs:
             n(wls) =  1. +
             B1 * wls ** 2 / (wls ** 2 - C1) +
             B2 * wls ** 2 / (wls ** 2 - C2) +
             B3 * wls ** 2 / (wls ** 2 - C3)
-        '''
+        """
         test_rix = 1.0536712127723509e-08
         a = mat.RefractiveIndex(n0_smcoeffs=test_poly)
         assert_almost_equal(a.get_rix(0.5)[0], array([test_rix]))
@@ -56,8 +55,6 @@ class RefractiveIndexTest(TestCase):
     def test_known(self):
         test_rix = 1.50
         test_wl = 1.0
-        n0_known = {
-            test_wl: test_rix
-        }
+        n0_known = {test_wl: test_rix}
         a = mat.RefractiveIndex(n0_known=n0_known)
         self.assertEqual(a.get_rix(test_wl)[0], array([test_rix]))

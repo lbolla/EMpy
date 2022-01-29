@@ -18,8 +18,10 @@ Simulate a laser etch monitor (aka. laser endpoint detection):
 """
 
 from __future__ import print_function
+
 # to make copies of Layer objects, instead of mutable references
 from copy import copy, deepcopy
+
 # for progress bar (sys.stdout)
 import sys
 
@@ -27,6 +29,7 @@ import pylab
 import numpy
 
 import EMpy
+
 # file of refractive indices, takes wavelengths in Microns!!
 import nk
 
@@ -43,23 +46,24 @@ theta_inc = EMpy.utils.deg2rad(0)  # incidence angle
 
 # Define some helper functions
 
+
 def find_nearest(a, a0):
-    '''Return element in ndArray `a` that has value closest to the
-    scalar value `a0`.'''
+    """Return element in ndArray `a` that has value closest to the
+    scalar value `a0`."""
     idx = numpy.abs(a - a0).argmin()
     return a.flat[idx]
 
 
 def arg_find_nearest(a, a0):
-    '''Return index to element in ndArray `a` that has value closest
-    to the scalar value `a0`.'''
+    """Return index to element in ndArray `a` that has value closest
+    to the scalar value `a0`."""
     idx = numpy.abs(a - a0).argmin()
     return idx
 
 
 def count_noninf(multilayer):
-    '''Return number of non-infinite layers in an EMpy Multilayer
-    object.'''
+    """Return number of non-infinite layers in an EMpy Multilayer
+    object."""
     out = 0
     for x in multilayer:
         out = out + 0 if numpy.isinf(x.thickness) else out + 1
@@ -67,34 +71,47 @@ def count_noninf(multilayer):
 
 
 def arg_inf(multilayer):
-    '''Return index to layers with infinite-thickness in an EMpy Multilayer object.'''
+    """Return index to layers with infinite-thickness in an EMpy Multilayer object."""
     out = []
     for ix, x in enumerate(multilayer):
         if numpy.isinf(x.thickness):
             out.append(ix)
     return out
 
+
 # Define some materials
 
 # Define RefractiveIndex functions, then Material objects.
-n_air = 1.0     # constant vs. wavelength
+n_air = 1.0  # constant vs. wavelength
 mat_air = EMpy.materials.IsotropicMaterial(
-    'air', EMpy.materials.RefractiveIndex(n0_const=n_air))
+    "air", EMpy.materials.RefractiveIndex(n0_const=n_air)
+)
 
-n_SiN = 1.997   # Silicon Nitride (Si3N4)
+n_SiN = 1.997  # Silicon Nitride (Si3N4)
 mat_SiN = EMpy.materials.IsotropicMaterial(
-    'Si3N4', EMpy.materials.RefractiveIndex(n0_const=n_SiN))
+    "Si3N4", EMpy.materials.RefractiveIndex(n0_const=n_SiN)
+)
+
 
 # RIX functions from file, taking wavelength in microns:
 # Covert to microns, request loss as complex refractive index
-n_GaAs = lambda w: nk.GaAs_interp(w * 1e6, k=True)
+def n_GaAs(w):
+    return nk.GaAs_interp(w * 1e6, k=True)
+
+
 mat_GaAs = EMpy.materials.IsotropicMaterial(
-    'GaAs', EMpy.materials.RefractiveIndex(n0_func=n_GaAs))
+    "GaAs", EMpy.materials.RefractiveIndex(n0_func=n_GaAs)
+)
+
 
 # Function from file, AlGaAs with 95% Aluminum
-n_AlGaAs95 = lambda w: nk.AlGaAs_interp(0.95, w * 1e6, k=True)
+def n_AlGaAs95(w):
+    return nk.AlGaAs_interp(0.95, w * 1e6, k=True)
+
+
 mat_AlGaAs95 = EMpy.materials.IsotropicMaterial(
-    'Al95Ga05As', EMpy.materials.RefractiveIndex(n0_func=n_AlGaAs95))
+    "Al95Ga05As", EMpy.materials.RefractiveIndex(n0_func=n_AlGaAs95)
+)
 
 
 # DBR mirror periods, at 1/4-wavelength thicknesses
@@ -108,7 +125,7 @@ d_AlGaAs_DBR = wl_center / n_AlGaAs95(wl_center).real / 4
 # monitor) first, substrate last.  Must include infinite-thickness
 # layers on top & bottom for air & substrate, respectively.
 
-Layer = EMpy.utils.Layer    # shortcut
+Layer = EMpy.utils.Layer  # shortcut
 
 # define the layers (material, thickness) we will use in the stack:
 air = Layer(mat_air, numpy.inf)
@@ -122,28 +139,32 @@ GaAs_substrate = Layer(mat_GaAs, numpy.inf)
 
 # Use lists to enable periodic structures etc.
 #   Make sure to include infinite-thickness layers on ends
-layers =  \
-    [air] + [SiN] + \
-    5 * [GaAs_DBR, AlGaAs_DBR] + \
-    [GaAs_core] + \
-    5 * [AlGaAs_DBR, GaAs_DBR] + \
-    [AlGaAs_spacer] + [GaAs_spacer] + [GaAs_substrate]
+layers_ = (
+    [air]
+    + [SiN]
+    + 5 * [GaAs_DBR, AlGaAs_DBR]
+    + [GaAs_core]
+    + 5 * [AlGaAs_DBR, GaAs_DBR]
+    + [AlGaAs_spacer]
+    + [GaAs_spacer]
+    + [GaAs_substrate]
+)
 
 # Create EMpy MultiLayer stack.
 #   Must dereference the lists from each other via copy(), otherwise altering
 #   one layer during etching also affects other repeated Layers
-layers = EMpy.utils.Multilayer([copy(l) for l in layers])
+layers = EMpy.utils.Multilayer([copy(l) for l in layers_])
 
 
 # setup etching loop
 EtchStep_current = EtchStep  # how much left to etch in current loop iteration
-go = True                    # while loop switch
-i = -1                       # while loop counter
-etchedlayers = []            # save stacks of etched layers
-solutions = []               # IsotropicTransferMatrix object storing R/T solutions
-EtchSteps = []               # x-axis data
-Rlaser = []                  # y-axis data - reflectivity
-RefrIdx = []                 # y-axis data - refractive index
+go = True  # while loop switch
+i = -1  # while loop counter
+etchedlayers = []  # save stacks of etched layers
+solutions = []  # IsotropicTransferMatrix object storing R/T solutions
+EtchSteps = []  # x-axis data
+Rlaser = []  # y-axis data - reflectivity
+RefrIdx = []  # y-axis data - refractive index
 # get index to laser-monitor wavelength in `wls` array
 wlidx = arg_find_nearest(wls, wl_lasermon)
 # 0 if etching away from first layer in list, -1 if etching from last
@@ -156,7 +177,7 @@ while go is True:
     i = i + 1
 
     # print a small progress bar
-    sys.stdout.write('.')
+    sys.stdout.write(".")
     sys.stdout.flush()
 
     if count_noninf(layers) > 0:
@@ -181,8 +202,7 @@ while go is True:
         elif layers[indexno].thickness > EtchStep_current:
             # etch increment ends within next layer
             # reduce layer thickness & solve & save data points:
-            layers[indexno].thickness = (
-                layers[indexno].thickness - EtchStep_current)
+            layers[indexno].thickness = layers[indexno].thickness - EtchStep_current
             # add this layer stack to the list
             etchedlayers.append(deepcopy(layers))
             # get RefrIndex in this layer
@@ -192,33 +212,35 @@ while go is True:
                 EtchSteps.append(0.0)
             else:
                 EtchSteps.append(EtchSteps[-1] + EtchStep)  # Add x-axis point
-                EtchStep_current = EtchStep     # reset EtchStep_current
+                EtchStep_current = EtchStep  # reset EtchStep_current
 
             # solve for reflectivity at laser monitor wavelength
             solutions.append(
                 EMpy.transfer_matrix.IsotropicTransferMatrix(
-                    etchedlayers[-1], theta_inc).solve(wls))
+                    etchedlayers[-1], theta_inc
+                ).solve(wls)
+            )
             Rlaser.append(solutions[-1].Rs[wlidx])
     else:
         # No non-infinte layers left, end the loop
         go = False
 
-print('\n')
+print("\n")
 
 
 # Plots:
 fig1, [ax1, ax2] = pylab.subplots(nrows=2, ncols=1, sharex=True)
-ax1.set_title(r'Reflectivity at $\lambda = %0.1fnm$' % (wls[wlidx] * 1e9))
+ax1.set_title(r"Reflectivity at $\lambda = %0.1fnm$" % (wls[wlidx] * 1e9))
 
 # plot refractive index vs. depth
-ax1.plot(numpy.array(EtchSteps) * 1e9, RefrIdx, '-g')
-ax1.set_ylabel('Refractive Index')
+ax1.plot(numpy.array(EtchSteps) * 1e9, RefrIdx, "-g")
+ax1.set_ylabel("Refractive Index")
 ax1.grid(True)
 
 # plot reflectivity vs. depth
-ax2.plot(numpy.array(EtchSteps) * 1e9, numpy.array(Rlaser) * 100, '-')
-ax2.set_ylabel('Laser Reflectivity (%)')
-ax2.set_xlabel('Etch Depth (nm)')
+ax2.plot(numpy.array(EtchSteps) * 1e9, numpy.array(Rlaser) * 100, "-")
+ax2.set_ylabel("Laser Reflectivity (%)")
+ax2.set_xlabel("Etch Depth (nm)")
 ax2.grid(True)
 
 fig1.show()
