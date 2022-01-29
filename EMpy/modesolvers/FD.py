@@ -18,8 +18,9 @@ from builtins import range
 import numpy
 import scipy
 import scipy.optimize
+
 import EMpy.utils
-from EMpy.modesolvers.interface import *
+from EMpy.modesolvers.interface import Mode, ModeSolver
 
 
 class SVFDModeSolver(ModeSolver):

@@ -29,7 +29,11 @@ ny_points_per_region = (20, 20, 20)
 
 (X, Y) = d.grid(nx_points_per_region, ny_points_per_region)
 eps = d.epsfunc(X, Y, 1.55e-6)
-epsfunc = lambda x, y: d.epsfunc(x, y, wl)
+
+
+def epsfunc(x, y):
+    return d.epsfunc(x, y, wl)
+
 
 wl = 1.55e-6
 

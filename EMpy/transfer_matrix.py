@@ -290,11 +290,11 @@ class AnisotropicTransferMatrix(TransferMatrix):
 
             for i, g in enumerate(gamma):
 
-                H = K + [
-                    [-beta2 - g ** 2, alpha * beta, alpha * g],
-                    [alpha * beta, -alpha2 - g ** 2, beta * g],
-                    [alpha * g, beta * g, -alpha2 - beta2],
-                ]
+                # H = K + [
+                #     [-beta2 - g ** 2, alpha * beta, alpha * g],
+                #     [alpha * beta, -alpha2 - g ** 2, beta * g],
+                #     [alpha * g, beta * g, -alpha2 - beta2],
+                # ]
                 v[i, :] = [
                     (K[1, 1] - alpha2 - g ** 2) * (K[2, 2] - alpha2 - beta2)
                     - (K[1, 2] + beta * g) ** 2,
@@ -338,7 +338,7 @@ class AnisotropicTransferMatrix(TransferMatrix):
             ky = 2 * S.pi / wl * S.sin(theta_inc_y)
             x = S.array([1, 0, 0], dtype=float)
             y = S.array([0, 1, 0], dtype=float)
-            z = S.array([0, 0, 1], dtype=float)
+            # z = S.array([0, 0, 1], dtype=float)
             k = S.zeros((4, 3, nlayers), dtype=complex)
             p = S.zeros((4, 3, nlayers), dtype=complex)
             q = S.zeros((4, 3, nlayers), dtype=complex)

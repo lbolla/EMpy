@@ -5,10 +5,9 @@ from builtins import zip
 from builtins import object
 
 import numpy
-import EMpy.utils
-import EMpy.modesolvers
-from EMpy.modesolvers.interface import *
 import pylab
+
+from EMpy.modesolvers.interface import interface_matrix
 
 
 def S2T(S):
@@ -43,9 +42,9 @@ def T2S(T):
 
 class SWG(object):
 
-    ##    def __init__(self, cs, solver, length, inputLHS=None, inputRHS=None):
+    #    def __init__(self, cs, solver, length, inputLHS=None, inputRHS=None):
     def __init__(self, solver, length, inputLHS=None, inputRHS=None):
-        ##        self.cs = cs
+        #        self.cs = cs
         self.solver = solver
         self.length = length
         self.build_matrix()
@@ -88,7 +87,7 @@ class SWG(object):
         f = numpy.zeros((len(x), len(z)), dtype=complex)
         for im, (coeffLHS, coeffRHS) in enumerate(zip(self.inputLHS, self.inputRHS)):
             m = self.solver.modes[im]
-            beta = 2 * numpy.pi / self.solver.wl * m.neff
+            # beta = 2 * numpy.pi / self.solver.wl * m.neff
             tmp = numpy.sum(m.intensity(x, x), axis=axis)
             f += (
                 numpy.abs(coeffLHS) ** 2 * tmp[:, numpy.newaxis] * const_z
@@ -100,11 +99,11 @@ class SWG(object):
 
 class SimpleJoint(object):
 
-    ##    def __init__(self, cs1, cs2, solver1, solver2, inputLHS=None, inputRHS=None):
+    #    def __init__(self, cs1, cs2, solver1, solver2, inputLHS=None, inputRHS=None):
     def __init__(self, solver1, solver2, inputLHS=None, inputRHS=None):
-        ##        self.cs1 = cs1
+        #        self.cs1 = cs1
         self.solver1 = solver1
-        ##        self.cs2 = cs2
+        #        self.cs2 = cs2
         self.solver2 = solver2
         self.length = 0.0
         self.build_matrix()
@@ -135,25 +134,25 @@ class SimpleJoint(object):
         BetaA = numpy.diag(betaA)
         BetaB = numpy.diag(betaB)
 
-        ##        MRA1 = numpy.dot(O12, BetaA + BetaB)
-        ##        MRA2 = numpy.dot(O12, BetaA - BetaB)
-        ##        MRA = numpy.dot(numpy.linalg.inv(MRA1), MRA2)
-        ##        S11 = MRA
-        ##
-        ##        MRB1 = numpy.dot(O21, BetaA + BetaB)
-        ##        MRB2 = numpy.dot(O21, BetaB - BetaA)
-        ##        MRB = numpy.dot(numpy.linalg.inv(MRB1), MRB2)
-        ##        S22 = MRB
-        ##
-        ##        MTAB1 = numpy.dot(O22, BetaA + BetaB)
-        ##        MTAB2 = numpy.dot(O12, 2. * BetaA)
-        ##        MTAB = numpy.dot(numpy.linalg.inv(MTAB1), MTAB2)
-        ##        S12 = MTAB
-        ##
-        ##        MTBA1 = numpy.dot(O11, BetaA + BetaB)
-        ##        MTBA2 = numpy.dot(O21, 2. * BetaB)
-        ##        MTBA = numpy.dot(numpy.linalg.inv(MTBA1), MTBA2)
-        ##        S21 = MTBA
+        #        MRA1 = numpy.dot(O12, BetaA + BetaB)
+        #        MRA2 = numpy.dot(O12, BetaA - BetaB)
+        #        MRA = numpy.dot(numpy.linalg.inv(MRA1), MRA2)
+        #        S11 = MRA
+        #
+        #        MRB1 = numpy.dot(O21, BetaA + BetaB)
+        #        MRB2 = numpy.dot(O21, BetaB - BetaA)
+        #        MRB = numpy.dot(numpy.linalg.inv(MRB1), MRB2)
+        #        S22 = MRB
+        #
+        #        MTAB1 = numpy.dot(O22, BetaA + BetaB)
+        #        MTAB2 = numpy.dot(O12, 2. * BetaA)
+        #        MTAB = numpy.dot(numpy.linalg.inv(MTAB1), MTAB2)
+        #        S12 = MTAB
+        #
+        #        MTBA1 = numpy.dot(O11, BetaA + BetaB)
+        #        MTBA2 = numpy.dot(O21, 2. * BetaB)
+        #        MTBA = numpy.dot(numpy.linalg.inv(MTBA1), MTBA2)
+        #        S21 = MTBA
 
         SUM = numpy.dot(BetaA, O21) + numpy.dot(O21, BetaB)
         DIF = numpy.dot(BetaA, O21) - numpy.dot(O21, BetaB)

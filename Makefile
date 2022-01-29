@@ -2,6 +2,7 @@
 .PHONY: help
 
 SRC = EMpy
+SRC_TEST = tests
 REQUIREMENTS = requirements.txt requirements_dev.txt
 
 # Self-documenting Makefile
@@ -15,18 +16,25 @@ develop: upgrade-dev requirements-install  ## Install project for development
 upgrade-dev:  ## Upgrade packages for development
 	pip install -U setuptools pip pip-tools tox
 
-test: tox lint  ## Run tests
+test: lint  ## Run tests
+	python setup.py test
 
 tox:  ## Run Python tests
 	tox
 
-lint: flake8 mypy  ## Run linters
+black:  ## Run formatter
+	black .
+
+lint: flake8 pyflakes mypy  ## Run linters
 
 flake8:  ## Run flake8 linter
-	flake8 ${SRC}
+	flake8 ${SRC} tests examples scripts
+
+pyflakes:  ## Run pyflake linter
+	pyflakes ${SRC} tests examples scripts
 
 mypy:  ## Run mypy linter
-	mypy ${SRC}
+	mypy ${SRC} tests examples scripts
 
 requirements: ${REQUIREMENTS}  ## Create requirements files
 

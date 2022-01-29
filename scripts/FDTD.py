@@ -306,7 +306,7 @@ class FDTD(object):
         directory = fixdir(directory_)
         try:
             f = open(directory + filename)
-        except:
+        except Exception:
             print("ERROR: input file")
             return
         inp = Input(filename)
@@ -314,7 +314,6 @@ class FDTD(object):
         (inp.dx, inp.dy, inp.dz, inp.cfl) = numpy.fromstring(
             strip_comment(f.readline()), sep=" "
         )
-        ##OKKIO
         tmp = strip_comment(f.readline())
         tmp_idx = tmp.find("P")
         if tmp_idx > 0:
@@ -364,7 +363,7 @@ class FDTD(object):
         # sources
         nsources = numpy.fromstring(strip_comment(f.readline()), dtype=int, sep=" ")
         inp.sources = []
-        ##        (inp.time_dependence, inp.wls, inp.pwidth, inp.shift) = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
+        #        (inp.time_dependence, inp.wls, inp.pwidth, inp.shift) = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         for i in range(nsources):
             inp.sources.append(
                 (
@@ -409,7 +408,7 @@ class FDTD(object):
         param = Param()
         try:
             data = numpy.fromfile(directory + filename, sep=" ")
-        except:
+        except Exception:
             print("ERROR: param file")
             return
         param.dx, param.dy, param.dz, param.dt = data[0:4]
@@ -466,7 +465,7 @@ class FDTD(object):
             tmp.H1 = load_fortran_unformatted(directory + "H1_%02d" % (iflux + 1))
             tmp.E2 = load_fortran_unformatted(directory + "E2_%02d" % (iflux + 1))
             tmp.H2 = load_fortran_unformatted(directory + "H2_%02d" % (iflux + 1))
-            ##            [tmp.E1, tmp.H1, tmp.E2, tmp.H2] = map(lambda x: x[0::2] + 1j * x[1::2], [tmp.E1, tmp.H1, tmp.E2, tmp.H2])
+            # [tmp.E1, tmp.H1, tmp.E2, tmp.H2] = map(lambda x: x[0::2] + 1j * x[1::2], [tmp.E1, tmp.H1, tmp.E2, tmp.H2])
             # more memory efficient!
             tmp.E1 = tmp.E1[0::2] + 1j * tmp.E1[1::2]
             tmp.H1 = tmp.H1[0::2] + 1j * tmp.H1[1::2]
@@ -556,13 +555,13 @@ class FDTD(object):
 
     def memory(self):
         """Estimate the memory occupation."""
-        size_of_char = 1
-        size_of_int = 4
+        # size_of_char = 1
+        # size_of_int = 4
         size_of_real = 4
-        size_of_complex = 2 * size_of_real
-        size_of_dielobj = size_of_int + 31 * size_of_real + 2 * 16 * size_of_char
-        size_of_source = 9 * size_of_int + 5 * size_of_real + 6 * 16 * size_of_char
-        size_of_monitor = (6 + 2) * 6 * size_of_int
+        # size_of_complex = 2 * size_of_real
+        # size_of_dielobj = size_of_int + 31 * size_of_real + 2 * 16 * size_of_char
+        # size_of_source = 9 * size_of_int + 5 * size_of_real + 6 * 16 * size_of_char
+        # size_of_monitor = (6 + 2) * 6 * size_of_int
 
         Gb = 1024 ** 3
         max_available_RAM = 32 * Gb
@@ -632,8 +631,8 @@ class FDTD(object):
     ):
         """Run the simulation, possibly in remote."""
         directory = fixdir(directory_)
-        ##        os.environ['OMP_NUM_THREAD'] = str(ncpu)
-        ##        cmd = 'dplace -x6 ' + exe_file + ' > ' + output_file
+        #        os.environ['OMP_NUM_THREAD'] = str(ncpu)
+        #        cmd = 'dplace -x6 ' + exe_file + ' > ' + output_file
         cmd = (
             "cd"
             + directory
@@ -663,7 +662,7 @@ def load_fortran_unformatted(filename):
     """Load data from an unformatted fortran binary file."""
     try:
         f = open(filename, "rb")
-    except:
+    except Exception:
         print("ERROR")
         return
     nbytes = numpy.fromfile(f, dtype=numpy.int32, count=1)
@@ -689,23 +688,23 @@ def fixdir(str, sep="/"):
     return tmp
 
 
-##def overlap_f(simul, solver, nwl):
-##    vu = numpy.zeros((len(simul.sensors), len(solver.modes)), dtype=complex)
-##    ju = numpy.zeros((len(simul.sensors), len(solver.modes)), dtype=complex)
-##    for isens, sens in enumerate(simul.sensors):
-##        for imode, mode in enumerate(solver.modes):
-##            Ex, Ey, Ez, Hx, Hy, Hz = mode.get_fields_for_FDTD()
-##            vu[isens, imode] = 0.5 * (
-##                        numpy.trapz(numpy.trapz(sens.E1[:,1:-1,nwl] * Hy, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
-##                        numpy.trapz(numpy.trapz(sens.E2[1:-1,:,nwl] * Hx, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
-##            ju[isens, imode] = 0.5 * (
-##                        numpy.trapz(numpy.trapz(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
-##                        numpy.trapz(numpy.trapz(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
-##    A = (vu + ju) / 2.
-##    B = (vu - ju) / 2.
-##    Pm = numpy.abs(A)**2 - numpy.abs(B)**2
-##    P = Pm.sum(axis=1)
-##    return (vu, ju, A, B, Pm, P)
+# def overlap_f(simul, solver, nwl):
+#     vu = numpy.zeros((len(simul.sensors), len(solver.modes)), dtype=complex)
+#     ju = numpy.zeros((len(simul.sensors), len(solver.modes)), dtype=complex)
+#     for isens, sens in enumerate(simul.sensors):
+#         for imode, mode in enumerate(solver.modes):
+#             Ex, Ey, Ez, Hx, Hy, Hz = mode.get_fields_for_FDTD()
+#             vu[isens, imode] = 0.5 * (
+#                         numpy.trapz(numpy.trapz(sens.E1[:,1:-1,nwl] * Hy, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
+#                         numpy.trapz(numpy.trapz(sens.E2[1:-1,:,nwl] * Hx, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
+#             ju[isens, imode] = 0.5 * (
+#                         numpy.trapz(numpy.trapz(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
+#                         numpy.trapz(numpy.trapz(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
+#     A = (vu + ju) / 2.
+#     B = (vu - ju) / 2.
+#     Pm = numpy.abs(A)**2 - numpy.abs(B)**2
+#     P = Pm.sum(axis=1)
+#     return (vu, ju, A, B, Pm, P)
 
 
 def overlap_f(sensors, solver, nwl):
@@ -717,12 +716,12 @@ def overlap_f(sensors, solver, nwl):
         for imode, mode in enumerate(solver.modes):
             # resample the mode to the sensor's grid
             Ex, Ey, Ez, Hx, Hy, Hz = mode.get_fields_for_FDTD(x, y)
-            ##            vu[isens, imode] = 0.5 * (
-            ##                        numpy.trapz(numpy.trapz(sens.E1[:,1:-1,nwl] * Hy, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
-            ##                        numpy.trapz(numpy.trapz(sens.E2[1:-1,:,nwl] * Hx, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
-            ##            ju[isens, imode] = 0.5 * (
-            ##                        numpy.trapz(numpy.trapz(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
-            ##                        numpy.trapz(numpy.trapz(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
+            #            vu[isens, imode] = 0.5 * (
+            #                        numpy.trapz(numpy.trapz(sens.E1[:,1:-1,nwl] * Hy, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
+            #                        numpy.trapz(numpy.trapz(sens.E2[1:-1,:,nwl] * Hx, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
+            #            ju[isens, imode] = 0.5 * (
+            #                        numpy.trapz(numpy.trapz(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
+            #                        numpy.trapz(numpy.trapz(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
             vu[isens, imode] = 0.5 * (
                 EMpy.utils.trapz2(
                     sens.E1[:, 1:-1, nwl] * Hy, dx=sens.dx1 * 1e-6, dy=sens.dx2 * 1e-6

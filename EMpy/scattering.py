@@ -1,6 +1,5 @@
 from builtins import object
 
-# -*- coding: UTF-8 -*-
 import numpy
 import EMpy
 
@@ -31,7 +30,7 @@ class Field(object):
         self.r = r
 
 
-""" 
+"""
 ##############################################################
 utils functions for field manipulations
 ##############################################################
@@ -111,9 +110,9 @@ def matlab_dot(a, b):
 
 
 """
-########################################## 
+##########################################
 Common functions for calculating EM fields
-########################################## 
+##########################################
 """
 
 

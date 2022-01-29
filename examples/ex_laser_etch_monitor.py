@@ -92,15 +92,23 @@ mat_SiN = EMpy.materials.IsotropicMaterial(
     "Si3N4", EMpy.materials.RefractiveIndex(n0_const=n_SiN)
 )
 
+
 # RIX functions from file, taking wavelength in microns:
 # Covert to microns, request loss as complex refractive index
-n_GaAs = lambda w: nk.GaAs_interp(w * 1e6, k=True)
+def n_GaAs(w):
+    return nk.GaAs_interp(w * 1e6, k=True)
+
+
 mat_GaAs = EMpy.materials.IsotropicMaterial(
     "GaAs", EMpy.materials.RefractiveIndex(n0_func=n_GaAs)
 )
 
+
 # Function from file, AlGaAs with 95% Aluminum
-n_AlGaAs95 = lambda w: nk.AlGaAs_interp(0.95, w * 1e6, k=True)
+def n_AlGaAs95(w):
+    return nk.AlGaAs_interp(0.95, w * 1e6, k=True)
+
+
 mat_AlGaAs95 = EMpy.materials.IsotropicMaterial(
     "Al95Ga05As", EMpy.materials.RefractiveIndex(n0_func=n_AlGaAs95)
 )
@@ -131,7 +139,7 @@ GaAs_substrate = Layer(mat_GaAs, numpy.inf)
 
 # Use lists to enable periodic structures etc.
 #   Make sure to include infinite-thickness layers on ends
-layers = (
+layers_ = (
     [air]
     + [SiN]
     + 5 * [GaAs_DBR, AlGaAs_DBR]
@@ -145,7 +153,7 @@ layers = (
 # Create EMpy MultiLayer stack.
 #   Must dereference the lists from each other via copy(), otherwise altering
 #   one layer during etching also affects other repeated Layers
-layers = EMpy.utils.Multilayer([copy(l) for l in layers])
+layers = EMpy.utils.Multilayer([copy(l) for l in layers_])
 
 
 # setup etching loop

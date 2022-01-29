@@ -2,8 +2,10 @@
 
 Implementation of the Film Mode Matching (FMM) algorithm, as described in:
 
- - Sudbo, "Film mode matching a versatile numerical method for vector mode field calculations in dielectric waveguides", Pure App. Optics, 2 (1993), 211-233
- - Sudbo, "Improved formulation of the film mode matching method for mode field calculations in dielectric waveguides", Pure App. Optics, 3 (1994), 381-388
+ - Sudbo, "Film mode matching a versatile numerical method for vector mode field calculations in dielectric waveguides",
+   Pure App. Optics, 2 (1993), 211-233
+ - Sudbo, "Improved formulation of the film mode matching method for mode field calculations in dielectric waveguides",
+   Pure App. Optics, 3 (1994), 381-388
 
 Examples
 ========
@@ -15,6 +17,7 @@ from __future__ import print_function
 from builtins import zip
 from builtins import range
 from builtins import object
+import copy
 from functools import reduce
 
 __author__ = "Luca Gamberale & Lorenzo Bolla"
@@ -22,10 +25,10 @@ __author__ = "Luca Gamberale & Lorenzo Bolla"
 import numpy
 import scipy
 import scipy.optimize
-import copy
-import EMpy.utils
-from EMpy.modesolvers.interface import *
 import pylab
+
+import EMpy.utils
+from EMpy.modesolvers.interface import Mode, ModeSolver
 
 
 class Message(object):
@@ -559,7 +562,7 @@ class FMMMode2d(Mode):
             for n1 in range(nmodi):
 
                 phi_n1 = slice.modih[n1]
-                phidot_n1 = dot(phi_n1)
+                # phidot_n1 = dot(phi_n1)
 
                 psi_n1 = slice.modie[n1]
                 psisueps_n1 = sueps(psi_n1)
@@ -574,7 +577,7 @@ class FMMMode2d(Mode):
                 uh_n1.sr = numpy.atleast_1d(uh_n1.sr[mx] * (k0 / kfh_n1) ** 2)
                 uh_n1.ar = numpy.atleast_1d(uh_n1.ar[mx])
                 uh_n1.U = numpy.atleast_1d(uh_n1.U[mx : mx + 2])
-                uhdot_n1 = dot(uh_n1)
+                # uhdot_n1 = dot(uh_n1)
 
                 ue_n1 = copy.deepcopy(self.modie[n1])
                 # reduce to a single slice
@@ -593,8 +596,8 @@ class FMMMode2d(Mode):
                     phidot_n2 = dot(phi_n2)
 
                     psi_n2 = mode.slicesx[mx].modie[n2]
-                    psisueps_n2 = sueps(psi_n2)
-                    psidotsueps_n2 = sueps(dot(psi_n2))
+                    # psisueps_n2 = sueps(psi_n2)
+                    # psidotsueps_n2 = sueps(dot(psi_n2))
 
                     uh_n2 = copy.deepcopy(mode.modih[n2])
                     # reduce to a single slice
@@ -616,7 +619,7 @@ class FMMMode2d(Mode):
                     ue_n2.sr = numpy.atleast_1d(ue_n2.sr[mx] * (k0 / kfe_n2) ** 2)
                     ue_n2.ar = numpy.atleast_1d(ue_n2.ar[mx])
                     ue_n2.U = numpy.atleast_1d(ue_n2.U[mx : mx + 2])
-                    uedot_n2 = dot(ue_n2)
+                    # uedot_n2 = dot(ue_n2)
 
                     Sx += kz * kfh_n2 ** 2 / k0 ** 3 * scalarprod(
                         uh_n1, uh_n2
@@ -742,7 +745,7 @@ class FMMMode2d(Mode):
                 ue_n2.ar = numpy.atleast_1d(ue_n2.ar[mx])
                 ue_n2.U = numpy.atleast_1d(ue_n2.U[mx : mx + 2])
                 ue_n2s.append(ue_n2)
-                uedot_n2.append(dot(ue_n2))
+                uedot_n2s.append(dot(ue_n2))
 
             for n1 in range(nmodi):
 
@@ -838,13 +841,13 @@ class FMMMode2d(Mode):
         # Hy: ignores y = 0, max, /120pi, reverse direction
         x_Hy_FDTD = EMpy.utils.centered1d(x)
         y_Hy_FDTD = y[1:-1]
-        Hy_FDTD = EMpy.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x0, y0, Hy) / (
+        Hy_FDTD = EMpy.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x0, y0, cBy) / (
             -120.0 * numpy.pi
         )
         # Hz: /120pi, reverse direction
         x_Hz_FDTD = EMpy.utils.centered1d(x)
         y_Hz_FDTD = EMpy.utils.centered1d(y)
-        Hz_FDTD = EMpy.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x0, y0, Hz) / (
+        Hz_FDTD = EMpy.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x0, y0, cBz) / (
             -120.0 * numpy.pi
         )
 
@@ -1130,7 +1133,7 @@ def FMMshootingTM(kz_, FMMpars):
         raise ValueError("unrecognized right boundary condition")
 
     # ciclo sui layer
-    maxbetay = numpy.max(numpy.real(betay))
+    # maxbetay = numpy.max(numpy.real(betay))
     n1 = numpy.argmax(numpy.real(betay)) + 1
     if n1 == Nregions:
         n1 = Nregions - 1
@@ -1237,7 +1240,7 @@ def FMMshooting(kz_, FMMpars):
         raise ValueError("unrecognized right boundary condition")
 
     # ciclo sui layer
-    maxbetay = numpy.max(numpy.real(betay))
+    # maxbetay = numpy.max(numpy.real(betay))
     n1 = numpy.argmax(numpy.real(betay)) + 1
     if n1 == Nregions:
         n1 = Nregions - 1
@@ -1275,47 +1278,47 @@ def FMMshooting(kz_, FMMpars):
             # *******************
         Delta[m] = sr[n1 - 1] * al[n2 - 1] - ar[n1 - 1] * sl[n2 - 1]
 
-    ##    len_kz = len(kz)
-    ##    k = k_[0,:]
-    ##    sinkdsuk = sinkdsuk_[0,:][0]
-    ##    coskd = coskd_[0,:][0]
-    ##    sinkdk = sinkdk_[0,:][0]
-    ##    code = """
-    ##            for (int m = 0; m < len_kz; ++m) {
-    ##                //k = k_(m,:);
-    ##                //sinkdsuk = sinkdsuk_(0,:);
-    ##                //coskd = coskd_(0,:);
-    ##                //sinkdk = sinkdk_(0,:);
-    ##                int nn1 = int(n1);
-    ##                for (int idx = 0; idx < nn1; ++idx) {
-    ##                    sr(idx) = sl(idx) * coskd(idx) + al(idx) * sinkdsuk(idx);
-    ##                    ar(idx) = al(idx) * coskd(idx) - sl(idx) * sinkdk(idx);
-    ##                    if (idx < nn1 - 1) {
-    ##                        sl(idx + 1) = sr(idx);
-    ##                        al(idx + 1) = ar(idx);
-    ##                    }
-    ##                }
-    ##                int nn2 = int(n2);
-    ##                for (int idx1 = Nregions - 1; idx1 > nn2 - 2; --idx1) {
-    ##                    sl(idx1) = sr(idx1) * coskd(idx1) - ar(idx1) * sinkdsuk(idx1);
-    ##                    al(idx1) = ar(idx1) * coskd(idx1) + sr(idx1) * sinkdk(idx1);
-    ##                    if (idx1 > nn2) {
-    ##                        sr(idx1 - 1) = sl(idx1);
-    ##                        ar(idx1 - 1) = al(idx1);
-    ##                    }
-    ##                }
-    ##                //Delta(m) = std::complex<double>(1) * (sr(nn1-1) * al(nn2-1) - ar(nn1-1) * sl(nn2-1));
-    ##            }
-    ##            """
-    ##
-    ##    from scipy import weave
-    ##    from scipy.weave import converters
-    ##    weave.inline(code,
-    ##                 ['n1', 'n2', 'Nregions', 'sl', 'sr', 'al', 'ar', 'len_kz', 'Delta',
-    ##                  'k', 'sinkdsuk', 'sinkdk', 'coskd',
-    ##                  'k_', 'sinkdsuk_', 'sinkdk_', 'coskd_'],
-    ##                 type_converters = converters.blitz,
-    ##                 compiler = 'gcc')
+    #    len_kz = len(kz)
+    #    k = k_[0,:]
+    #    sinkdsuk = sinkdsuk_[0,:][0]
+    #    coskd = coskd_[0,:][0]
+    #    sinkdk = sinkdk_[0,:][0]
+    #    code = """
+    #            for (int m = 0; m < len_kz; ++m) {
+    #                //k = k_(m,:);
+    #                //sinkdsuk = sinkdsuk_(0,:);
+    #                //coskd = coskd_(0,:);
+    #                //sinkdk = sinkdk_(0,:);
+    #                int nn1 = int(n1);
+    #                for (int idx = 0; idx < nn1; ++idx) {
+    #                    sr(idx) = sl(idx) * coskd(idx) + al(idx) * sinkdsuk(idx);
+    #                    ar(idx) = al(idx) * coskd(idx) - sl(idx) * sinkdk(idx);
+    #                    if (idx < nn1 - 1) {
+    #                        sl(idx + 1) = sr(idx);
+    #                        al(idx + 1) = ar(idx);
+    #                    }
+    #                }
+    #                int nn2 = int(n2);
+    #                for (int idx1 = Nregions - 1; idx1 > nn2 - 2; --idx1) {
+    #                    sl(idx1) = sr(idx1) * coskd(idx1) - ar(idx1) * sinkdsuk(idx1);
+    #                    al(idx1) = ar(idx1) * coskd(idx1) + sr(idx1) * sinkdk(idx1);
+    #                    if (idx1 > nn2) {
+    #                        sr(idx1 - 1) = sl(idx1);
+    #                        ar(idx1 - 1) = al(idx1);
+    #                    }
+    #                }
+    #                //Delta(m) = std::complex<double>(1) * (sr(nn1-1) * al(nn2-1) - ar(nn1-1) * sl(nn2-1));
+    #            }
+    #            """
+    #
+    #    from scipy import weave
+    #    from scipy.weave import converters
+    #    weave.inline(code,
+    #                 ['n1', 'n2', 'Nregions', 'sl', 'sr', 'al', 'ar', 'len_kz', 'Delta',
+    #                  'k', 'sinkdsuk', 'sinkdk', 'coskd',
+    #                  'k_', 'sinkdsuk_', 'sinkdk_', 'coskd_'],
+    #                 type_converters = converters.blitz,
+    #                 compiler = 'gcc')
 
     if len(kz) < 2:
 
@@ -1524,7 +1527,7 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
     Nstepskz = 1543
     searchinterval = max(50.0 / Nstepskz, numpy.abs(numpy.min(numpy.imag(2.0 * betay))))
     imsearchinterval = 10 * k0
-    ypointsperregion = 5000
+    # ypointsperregion = 5000
 
     FMMpars = {"epsilon": ny ** 2, "beta": betay, "boundary": boundaryRL, "Uy": Uy}
 
@@ -1533,7 +1536,7 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
         Message("Uniform slice found: using analytical solution.", 2).show(verbosity)
         return analyticalsolution(nmodi, TETM, FMMpars)
 
-    ##rekz = numpy.linspace(numpy.max(numpy.real(betay)) + searchinterval, 0., Nstepskz)
+    # rekz = numpy.linspace(numpy.max(numpy.real(betay)) + searchinterval, 0., Nstepskz)
     rekz2 = numpy.linspace(
         (numpy.max(numpy.real(betay)) + searchinterval) ** 2, 0.0, Nstepskz
     )
@@ -1545,9 +1548,9 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
         Message("Shooting TE.", 3).show(verbosity)
         matchingre, modotmp = FMMshooting(rekz, FMMpars)
 
-    nre = rekz / k0
+    # nre = rekz / k0
     nre2 = rekz2 / k0 ** 2
-    ##zerire, z1, z2 = findzerosnew(nre, numpy.abs(matchingre), searchinterval / k0)
+    # zerire, z1, z2 = findzerosnew(nre, numpy.abs(matchingre), searchinterval / k0)
     zerire2, z12, z22 = findzerosnew(
         nre2, numpy.abs(matchingre), (searchinterval / k0) ** 2
     )
@@ -1564,16 +1567,16 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
         while len(kz1) < nmodi:
             imkza = imkza + numpy.max(numpy.real(betay))
             imkzb = imkzb + numpy.max(numpy.real(betay))
-            ##imkz = numpy.linspace(imkza, imkzb, Nstepskz)
+            # imkz = numpy.linspace(imkza, imkzb, Nstepskz)
             imkz2 = numpy.linspace(imkza ** 2, imkzb ** 2, Nstepskz)
             imkz = scipy.sqrt(imkz2)
             if TETM == "TM":
                 matchingim, modotmp = FMMshootingTM(1j * imkz, FMMpars)
             else:
                 matchingim, modotmp = FMMshooting(1j * imkz, FMMpars)
-            nim = imkz * wl / 2.0 / numpy.pi
+            # nim = imkz * wl / 2.0 / numpy.pi
             nim2 = imkz2 * (wl / 2.0 / numpy.pi) ** 2
-            ##zeriim, z1, z2 = findzerosnew(nim, numpy.abs(matchingim), searchinterval / k0)
+            # zeriim, z1, z2 = findzerosnew(nim, numpy.abs(matchingim), searchinterval / k0)
             zeriim2, z12, z22 = findzerosnew(
                 nim2, numpy.abs(matchingim), (searchinterval / k0) ** 2
             )
@@ -1791,7 +1794,7 @@ def method_of_component(kz_, slices, Rot, uscelto=None, icomp=None):
 
     kz = numpy.atleast_1d(kz_)
     abscomp = numpy.zeros(len(kz))
-    ##    tmp = 500 # OKKIO: perche' 500?
+    #    tmp = 500 # OKKIO: perche' 500?
     tmp = (
         100 * len(slices[0].modie) * (len(slices) - 1)
     )  # OKKIO: dimension of Mvec * 50. enough?
@@ -2147,7 +2150,7 @@ def creacoeffx3(kz, solution, slices, R):
 
     Te, Th, Se, Sh, Teleft, Teright, Thleft, Thright = creaTeThSeSh(kz, slices)
 
-    ##sl2end = numpy.reshape(solution, (nmodi, 2 * (Nslices - 1)))
+    # sl2end = numpy.reshape(solution, (nmodi, 2 * (Nslices - 1)))
     sl2end = numpy.reshape(solution, (2 * (Nslices - 1), nmodi)).T
     idxslices = 2 * numpy.arange((Nslices - 1))
     sle2end = sl2end[:, idxslices]
@@ -2330,7 +2333,7 @@ def FMM1d_x_component(slices, nmodi, verbosity=0):
     TolnullEig = 1e-1
     searchinterval = 6e-3
 
-    Ux = slices[0].Ux
+    # Ux = slices[0].Ux
     lambda0 = slices[0].wl
     k0 = 2.0 * numpy.pi / lambda0
 
@@ -2350,12 +2353,12 @@ def FMM1d_x_component(slices, nmodi, verbosity=0):
             minrekz = minrekz0
 
     # only guided modes
-    ##    rekz = numpy.linspace(maxrekz + searchinterval, minrekz - searchinterval, numpy.floor(3. / searchinterval))
+    #    rekz = numpy.linspace(maxrekz + searchinterval, minrekz - searchinterval, numpy.floor(3. / searchinterval))
     # also radiative modes
     # increase 10./searchinterval if not enough candidate zeros are found
-    ##    rekz = numpy.linspace(maxrekz + searchinterval, 0.,
-    ##                          numpy.floor(6. / searchinterval *
-    ##                                      (1 + (minrekz - searchinterval) / (maxrekz - minrekz + 2 * searchinterval))))
+    #    rekz = numpy.linspace(maxrekz + searchinterval, 0.,
+    #                          numpy.floor(6. / searchinterval *
+    #                                      (1 + (minrekz - searchinterval) / (maxrekz - minrekz + 2 * searchinterval))))
     # make rekz[1]-rekz[0] <= searchinterval
     # OKKIO: forse mettere 3x punti??
     rekz = numpy.linspace(

@@ -9,7 +9,7 @@ import EMpy
 n = numpy.array([1.0, 1.38, 1.9044])
 d = numpy.array([numpy.inf, 387.5e-9 / 1.38, numpy.inf])
 iso_layers = EMpy.utils.Multilayer()
-for i in xrange(n.size):
+for i in range(n.size):
     n0 = EMpy.materials.RefractiveIndex(n[i])
     iso_layers.append(
         EMpy.utils.Layer(EMpy.materials.IsotropicMaterial("mat", n0=n0), d[i])
