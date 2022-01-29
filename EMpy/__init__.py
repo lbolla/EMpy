@@ -12,9 +12,17 @@ It is based on U{numpy<http://numpy.scipy.org>} and U{scipy<http://www.scipy.org
 """
 from __future__ import absolute_import
 
-__all__ = ['constants', 'devices', 'materials', 'modesolvers', 'RCWA', 'scattering', 'transfer_matrix',
-           'utils']
-__author__ = 'Lorenzo Bolla'
+__all__ = [
+    "constants",
+    "devices",
+    "materials",
+    "modesolvers",
+    "RCWA",
+    "scattering",
+    "transfer_matrix",
+    "utils",
+]
+__author__ = "Lorenzo Bolla"
 
 from numpy.testing import Tester
 

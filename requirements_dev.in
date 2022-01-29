@@ -1,7 +1,10 @@
-ipython
+black
 bump2version
-tox>=3.24
+flake8
+ipython
 pip-tools>=6.4
+pyflakes
+tox>=3.24
 
 packaging>=20
 pyparsing>=3

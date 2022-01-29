@@ -11,7 +11,6 @@ import EMpy.utils as U
 
 
 class UtilsTest(TestCase):
-
     def test_deg2rad(self):
         # TODO use hypothesis
         x = -2 * pi + 4 * pi * random.random()

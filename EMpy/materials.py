@@ -13,7 +13,7 @@ import numpy
 from scipy.integrate import quad
 from EMpy.constants import eps0
 
-__author__ = 'Lorenzo Bolla'
+__author__ = "Lorenzo Bolla"
 
 
 class Material(object):
@@ -24,7 +24,7 @@ class Material(object):
     anisotropic materials.
     """
 
-    def __init__(self, name=''):
+    def __init__(self, name=""):
         """Set material name."""
         self.name = name
 
@@ -89,8 +89,9 @@ class RefractiveIndex(object):
 
     """
 
-    def __init__(self, n0_const=None, n0_poly=None, n0_smcoeffs=None,
-                 n0_known=None, n0_func=None):
+    def __init__(
+        self, n0_const=None, n0_poly=None, n0_smcoeffs=None, n0_known=None, n0_func=None
+    ):
 
         if n0_const is not None:
             self.get_rix = partial(self.__from_const, n0_const)
@@ -108,7 +109,7 @@ class RefractiveIndex(object):
             self.get_rix = partial(self.__from_known, n0_known)
 
         else:
-            raise ValueError('Please provide at least one parameter.')
+            raise ValueError("Please provide at least one parameter.")
 
     @staticmethod
     def __from_const(n0, wls):
@@ -125,10 +126,10 @@ class RefractiveIndex(object):
         wls = numpy.atleast_1d(wls)
         B1, B2, B3, C1, C2, C3 = n0_smcoeffs
         return numpy.sqrt(
-            1. +
-            B1 * wls ** 2 / (wls ** 2 - C1) +
-            B2 * wls ** 2 / (wls ** 2 - C2) +
-            B3 * wls ** 2 / (wls ** 2 - C3)
+            1.0
+            + B1 * wls ** 2 / (wls ** 2 - C1)
+            + B2 * wls ** 2 / (wls ** 2 - C2)
+            + B3 * wls ** 2 / (wls ** 2 - C3)
         ) * numpy.ones_like(wls)
 
     @staticmethod
@@ -177,8 +178,9 @@ class IsotropicMaterial(Material):
     In all the member functions, wls must be an ndarray.
     """
 
-    def __init__(self, name='', n0=RefractiveIndex(n0_const=1.),
-                 toc=ThermalOpticCoefficient()):
+    def __init__(
+        self, name="", n0=RefractiveIndex(n0_const=1.0), toc=ThermalOpticCoefficient()
+    ):
         """Set name, default temperature, refractive index and TOC
         (thermal optic coefficient)."""
         Material.__init__(self, name)
@@ -211,13 +213,13 @@ class IsotropicMaterial(Material):
 
     def __str__(self):
         """Return material name."""
-        return self.name + ', isotropic'
+        return self.name + ", isotropic"
 
 
 class EpsilonTensor(object):
-
-    def __init__(self, epsilon_tensor_const=eps0 * numpy.eye(3),
-                 epsilon_tensor_known=None):
+    def __init__(
+        self, epsilon_tensor_const=eps0 * numpy.eye(3), epsilon_tensor_known=None
+    ):
         if epsilon_tensor_known is None:
             epsilon_tensor_known = {}
         self.epsilon_tensor_const = epsilon_tensor_const
@@ -228,10 +230,8 @@ class EpsilonTensor(object):
         wls = numpy.atleast_1d(wls)
         if wls.size == 1:
             if wls.item() in self.epsilon_tensor_known:
-                return self.epsilon_tensor_known[
-                    wls.item()][:, :, numpy.newaxis]
-        return self.epsilon_tensor_const[
-            :, :, numpy.newaxis] * numpy.ones_like(wls)
+                return self.epsilon_tensor_known[wls.item()][:, :, numpy.newaxis]
+        return self.epsilon_tensor_const[:, :, numpy.newaxis] * numpy.ones_like(wls)
 
 
 class AnisotropicMaterial(Material):
@@ -243,7 +243,7 @@ class AnisotropicMaterial(Material):
 
     """
 
-    def __init__(self, name='', epsilon_tensor=EpsilonTensor()):
+    def __init__(self, name="", epsilon_tensor=EpsilonTensor()):
         """Set name and default epsilon tensor."""
         Material.__init__(self, name)
         self.epsilonTensor = epsilon_tensor
@@ -255,33 +255,43 @@ class AnisotropicMaterial(Material):
 
     def __str__(self):
         """Return material name."""
-        return self.name + ', anisotropic'
+        return self.name + ", anisotropic"
+
 
 # Vacuum
-Vacuum = IsotropicMaterial(name='Vacuum')
+Vacuum = IsotropicMaterial(name="Vacuum")
 
 # Air
-Air = IsotropicMaterial(name='Air')
+Air = IsotropicMaterial(name="Air")
 
 # Silicon
 Si = IsotropicMaterial(
-    name='Silicon',
-    n0=RefractiveIndex(
-        n0_poly=(0.076006e12, -0.31547e6, 3.783)),
-    toc=ThermalOpticCoefficient((-1.49e-10, 3.47e-7, 9.48e-5)))
+    name="Silicon",
+    n0=RefractiveIndex(n0_poly=(0.076006e12, -0.31547e6, 3.783)),
+    toc=ThermalOpticCoefficient((-1.49e-10, 3.47e-7, 9.48e-5)),
+)
 
 # SiO2
 SiO2 = IsotropicMaterial(
-    name='Silica',
+    name="Silica",
     n0=RefractiveIndex(n0_const=1.446),
-    toc=ThermalOpticCoefficient((1.1e-4,)))
+    toc=ThermalOpticCoefficient((1.1e-4,)),
+)
 
 # BK7 glass (see http://en.wikipedia.org/wiki/Sellmeier_equation)
 BK7 = IsotropicMaterial(
-    name='Borosilicate crown glass',
-    n0=RefractiveIndex(n0_smcoeffs=(
-        1.03961212, 2.31792344e-1, 1.01046945, 6.00069867e-15, 2.00179144e-14,
-        1.03560653e-10)))
+    name="Borosilicate crown glass",
+    n0=RefractiveIndex(
+        n0_smcoeffs=(
+            1.03961212,
+            2.31792344e-1,
+            1.01046945,
+            6.00069867e-15,
+            2.00179144e-14,
+            1.03560653e-10,
+        )
+    ),
+)
 
 
 class LiquidCrystal(Material):
@@ -303,8 +313,18 @@ class LiquidCrystal(Material):
 
     """
 
-    def __init__(self, name='', nO=1., nE=1., nO_electrical=1.,
-                 nE_electrical=1., K11=0.0, K22=0.0, K33=0.0, q0=0.0):
+    def __init__(
+        self,
+        name="",
+        nO=1.0,
+        nE=1.0,
+        nO_electrical=1.0,
+        nE_electrical=1.0,
+        K11=0.0,
+        K22=0.0,
+        K33=0.0,
+        q0=0.0,
+    ):
         """Set name, the refractive indices, the elastic constants and
         the chirality."""
 
@@ -335,12 +355,19 @@ def get_10400_000_100(conc000):
     K33 = 20e-12  # elastic constant [N] (bend)
     q0 = 0  # chirality 2*pi/pitch
 
-    nO_electrical_ = numpy.interp(conc000, conc, epsO_electrical) ** .5
-    nE_electrical_ = numpy.interp(conc000, conc, epsE_electrical) ** .5
-    nO_ = numpy.interp(conc000, conc, epsO) ** .5
-    nE_ = numpy.interp(conc000, conc, epsE) ** .5
+    nO_electrical_ = numpy.interp(conc000, conc, epsO_electrical) ** 0.5
+    nE_electrical_ = numpy.interp(conc000, conc, epsE_electrical) ** 0.5
+    nO_ = numpy.interp(conc000, conc, epsO) ** 0.5
+    nE_ = numpy.interp(conc000, conc, epsE) ** 0.5
 
     return LiquidCrystal(
-        '10400_000_100_' + str(conc000) + '_' + str(100 - conc000),
-        nO_, nE_, nO_electrical_, nE_electrical_,
-        K11, K22, K33, q0)
+        "10400_000_100_" + str(conc000) + "_" + str(100 - conc000),
+        nO_,
+        nE_,
+        nO_electrical_,
+        nE_electrical_,
+        K11,
+        K22,
+        K33,
+        q0,
+    )

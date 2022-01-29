@@ -9,7 +9,9 @@ asttokens==2.0.5
 backcall==0.2.0
     # via ipython
 black==21.12b0
-    # via ipython
+    # via
+    #   -r requirements_dev.in
+    #   ipython
 bump2version==1.0.1
     # via -r requirements_dev.in
 click==8.0.3
@@ -26,12 +28,16 @@ filelock==3.4.2
     # via
     #   tox
     #   virtualenv
+flake8==4.0.1
+    # via -r requirements_dev.in
 ipython==8.0.1
     # via -r requirements_dev.in
 jedi==0.18.1
     # via ipython
 matplotlib-inline==0.1.3
     # via ipython
+mccabe==0.6.1
+    # via flake8
 mypy-extensions==0.4.3
     # via black
 packaging==21.3
@@ -64,6 +70,12 @@ pure-eval==0.2.2
     # via stack-data
 py==1.11.0
     # via tox
+pycodestyle==2.8.0
+    # via flake8
+pyflakes==2.4.0
+    # via
+    #   -r requirements_dev.in
+    #   flake8
 pygments==2.11.2
     # via ipython
 pyparsing==3.0.7
