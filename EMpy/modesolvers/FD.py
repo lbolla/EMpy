@@ -273,11 +273,11 @@ class SVFDModeSolver(ModeSolver):
 
         A = self.build_matrix()
 
-        [eigvals, eigvecs] = eigen.eigs(
+        eigvals, eigvecs = eigen.eigs(  # type: ignore
             A, k=neigs, which="LR", tol=tol, ncv=10 * neigs, return_eigenvectors=True
         )
 
-        neff = self.wl * scipy.sqrt(eigvals) / (2 * numpy.pi)
+        neff = self.wl * numpy.sqrt(eigvals) / (2 * numpy.pi)
         phi = []
         for ieig in range(neigs):
             tmp = eigvecs[:, ieig].reshape(self.nx, self.ny)
@@ -2105,7 +2105,7 @@ class VFDModeSolver(ModeSolver):
             sigma=shift,
         )
 
-        neffs = self.wl * scipy.sqrt(eigvals) / (2 * numpy.pi)
+        neffs = self.wl * numpy.sqrt(eigvals) / (2 * numpy.pi)
         Hxs = []
         Hys = []
         nx = self.nx
@@ -2186,7 +2186,7 @@ class FDMode(Mode):
         elif fname == "Hy":
             f = self.Hy
             centered = False
-        elif fname == "Hz":
+        else:  # if fname == "Hz"
             f = self.Hz
             centered = False
 
@@ -2237,7 +2237,7 @@ class FDMode(Mode):
     def norm(self):
         x = EMpy.utils.centered1d(self.x)
         y = EMpy.utils.centered1d(self.y)
-        return scipy.sqrt(EMpy.utils.trapz2(self.intensity(), x=x, y=y))
+        return numpy.sqrt(EMpy.utils.trapz2(self.intensity(), x=x, y=y))
 
     def normalize(self):
         n = self.norm()
@@ -2505,7 +2505,7 @@ def stretchmesh(x, y, nlayers, factor, method="PPPP"):
                 z = xx
                 q1 = z[-1 - n]
                 q2 = z[-1]
-            elif idx == 3:
+            else:  # if idx == 3
                 # west boundary
                 kv = numpy.arange(0, n)
                 z = xx
