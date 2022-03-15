@@ -586,13 +586,9 @@ class LiquidCrystalCell(object):
     def __apply_tension(self):
         """Inspiration from:
         U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
-
-        try:
-            from scikits.bvp1lg import colnew
-        except ImportError:
-            warning("bvp module not found.")
-            raise
-
+       
+        from scikits.bvp1lg import colnew  # type: ignore
+        
         boundary_points = numpy.array([0, 0, 0, 1, 1, 1])
         tol = 1e-6 * numpy.ones_like(boundary_points)
         degrees = numpy.array([2, 2, 2])
