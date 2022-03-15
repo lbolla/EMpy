@@ -3,6 +3,7 @@
 *.egg
 .eggs/
 .tox/
+.vscode/
 dist
 build
 .idea
