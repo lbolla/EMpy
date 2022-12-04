@@ -1,5 +1,5 @@
 .EXPORT_ALL_VARIABLES:
-.PHONY: help
+.PHONY: help requirements-dev-upgrade
 
 SRC = EMpy
 SRC_TEST = tests
