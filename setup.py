@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 try:
     __version__ = open("EMpy/version.py").read().split('"')[1]
 except ImportError:
-    __version__ = None
+    __version__ = ""
 
 __author__ = "Lorenzo Bolla"
 
@@ -30,9 +30,6 @@ setup(
     ],
     provides=["EMpy"],
     test_suite="tests",
-    tests_require=[
-        "nose<2.0dev",
-    ],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
