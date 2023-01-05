@@ -95,7 +95,7 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
     return kz
 
 
-class RCWA(object):
+class RCWA():
 
     """Class to handle the RCWA solvers.
 

@@ -4,7 +4,7 @@ import EMpy
 __author__ = "Julien Hillairet"
 
 
-class Field(object):
+class Field:
     """Class to describe an electromagnetic field.
 
     A EM field is a vector field which is the combination of an electric field E and a magnetic field H.

@@ -38,7 +38,7 @@ import EMpy.utils
 from functools import reduce
 
 
-class DeviceMatrix(object):
+class DeviceMatrix:
 
     """Device Matrix.
 
@@ -288,7 +288,7 @@ def composeCMlist(CMlist):
     return reduce(composeCM, CMlist)
 
 
-class Device(object):
+class Device:
 
     """Generic device.
 

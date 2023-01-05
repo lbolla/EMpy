@@ -14,7 +14,7 @@ from EMpy.constants import eps0
 __author__ = "Lorenzo Bolla"
 
 
-class Material(object):
+class Material:
 
     """Generic class to handle materials.
 
@@ -27,7 +27,7 @@ class Material(object):
         self.name = name
 
 
-class RefractiveIndex(object):
+class RefractiveIndex:
 
     """Refractive Index.
 
@@ -146,7 +146,7 @@ class RefractiveIndex(object):
         return self.get_rix(wls)
 
 
-class ThermalOpticCoefficient(object):
+class ThermalOpticCoefficient:
 
     """Thermal Optic Coefficient."""
 
@@ -214,7 +214,7 @@ class IsotropicMaterial(Material):
         return self.name + ", isotropic"
 
 
-class EpsilonTensor(object):
+class EpsilonTensor:
     def __init__(
         self, epsilon_tensor_const=eps0 * numpy.eye(3), epsilon_tensor_known=None
     ):

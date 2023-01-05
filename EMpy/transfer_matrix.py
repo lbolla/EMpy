@@ -17,7 +17,7 @@ from EMpy.constants import c, mu0
 # import Gnuplot
 
 
-class TransferMatrix(object):
+class TransferMatrix:
 
     """Class to handle the transfer matrix solvers."""
 

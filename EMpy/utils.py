@@ -14,7 +14,7 @@ import time
 import sys
 
 
-class Layer(object):
+class Layer:
 
     """A layer is defined by a material (iso or aniso) and a thickness."""
 
@@ -69,7 +69,7 @@ class Layer(object):
         return "%s, thickness: %g" % (self.mat, self.thickness)
 
 
-class BinaryGrating(object):
+class BinaryGrating:
     """A Binary Grating is defined by two materials (iso or aniso), a
     duty cycle, a pitch and a thickness."""
 
@@ -142,7 +142,7 @@ class BinaryGrating(object):
         )
 
 
-class SymmetricDoubleGrating(object):
+class SymmetricDoubleGrating:
     """A Symmetric Double Grating is defined by three materials (iso
     or aniso), two duty cycles, a pitch and a thickness.
 
@@ -404,7 +404,7 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
         )
 
 
-class LiquidCrystalCell(object):
+class LiquidCrystalCell:
     """Liquid Crystal Cell.
 
     A liquid crystal cell is determined by a liquid crystal, a voltage
@@ -696,7 +696,7 @@ class LiquidCrystalCell(object):
         )
 
 
-class Multilayer(object):
+class Multilayer:
 
     """A Multilayer is a list of layers with some more methods."""
 
@@ -936,7 +936,7 @@ class CrossSection(list):
         pylab.axis("image")
 
 
-class Peak(object):
+class Peak:
     def __init__(self, x, y, idx, x0, y0, xFWHM_1, xFWHM_2):
         self.x = x
         self.y = y
@@ -1256,7 +1256,7 @@ def warning(s):
     print("WARNING --- {}".format(s))
 
 
-class ProgressBar(object):
+class ProgressBar:
 
     """Creates a text-based progress bar. Call the object with the `print'
     command to see the progress bar, which looks something like this:

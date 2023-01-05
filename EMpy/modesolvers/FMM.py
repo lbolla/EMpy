@@ -27,7 +27,7 @@ import EMpy.utils
 from EMpy.modesolvers.interface import Mode, ModeSolver
 
 
-class Message(object):
+class Message:
     def __init__(self, msg, verbosity=0):
         self.msg = msg
         self.verbosity = verbosity
@@ -37,13 +37,13 @@ class Message(object):
             print((self.verbosity - 1) * "\t" + self.msg)
 
 
-class Struct(object):
+class Struct:
     """Empty class to fill with whatever I want. Maybe a dictionary would do?"""
 
     pass
 
 
-class Boundary(object):
+class Boundary:
     """Boundary conditions.
 
     Electric and Magnetic boundary conditions are translated to Symmetric
@@ -140,7 +140,7 @@ class Boundary(object):
         )
 
 
-class Slice(object):
+class Slice:
     """One dimensional arrangement of layers and 1d modes.
 
     A slice is made of a stack of layers, i.e. refractive indeces with a thickness,
