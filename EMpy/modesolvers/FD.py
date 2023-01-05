@@ -10,11 +10,6 @@
 @see: http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=12734&objectType=FILE
 
 """
-from __future__ import print_function
-from builtins import zip
-from builtins import str
-from builtins import range
-
 import numpy
 import scipy
 import scipy.optimize

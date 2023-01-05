@@ -23,7 +23,6 @@ setup(
     platforms=["Windows", "Linux", "Mac OS-X"],
     packages=find_packages(),
     install_requires=[
-        "future",
         "numpy>=1.18",
         "scipy>=1.7",
         "matplotlib>=3.1",

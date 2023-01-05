@@ -12,9 +12,6 @@ for every diffraction order and layer thickness, and an anisotropic
 one, only stable for low diffraction orders and thin layers.
 
 """
-from builtins import range
-from builtins import object
-
 __author__ = "Lorenzo Bolla"
 
 import scipy as S

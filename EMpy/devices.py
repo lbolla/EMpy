@@ -31,10 +31,6 @@ devices, new ones can be studied.
     isnumber=8367>}
 
 """
-from builtins import zip
-from builtins import range
-from builtins import object
-
 __author__ = "Lorenzo Bolla"
 
 import numpy

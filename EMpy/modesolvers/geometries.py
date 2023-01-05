@@ -1,9 +1,6 @@
 """Geometries.
 
 """
-from builtins import zip
-from builtins import object
-
 import numpy
 import pylab
 

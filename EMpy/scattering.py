@@ -1,5 +1,3 @@
-from builtins import object
-
 import numpy
 import EMpy
 

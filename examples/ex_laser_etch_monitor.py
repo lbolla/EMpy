@@ -17,8 +17,6 @@ Simulate a laser etch monitor (aka. laser endpoint detection):
     Author: Demis D. John, March 2017 (demis.john@gmail.com)
 """
 
-from __future__ import print_function
-
 # to make copies of Layer objects, instead of mutable references
 from copy import copy, deepcopy
 

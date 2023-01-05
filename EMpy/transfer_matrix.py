@@ -7,10 +7,6 @@ any thickness.
 Two versions of the algorithm are present: an isotropic one and an
 anisotropic one.
 """
-from builtins import zip
-from builtins import range
-from builtins import object
-
 __author__ = "Lorenzo Bolla"
 
 import scipy as S
