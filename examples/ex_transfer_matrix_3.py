@@ -4,11 +4,11 @@ import pylab
 
 # define the multilayer
 epsilon = [
-    1.0 ** 2 * EMpy.constants.eps0 * numpy.eye(3),
+    1.0**2 * EMpy.constants.eps0 * numpy.eye(3),
     EMpy.constants.eps0 * numpy.diag([2.1, 2.0, 1.9]),
-    2.3 ** 2 * EMpy.constants.eps0 * numpy.eye(3),
-    4.3 ** 2 * EMpy.constants.eps0 * numpy.eye(3),
-    3.0 ** 2 * EMpy.constants.eps0 * numpy.eye(3),
+    2.3**2 * EMpy.constants.eps0 * numpy.eye(3),
+    4.3**2 * EMpy.constants.eps0 * numpy.eye(3),
+    3.0**2 * EMpy.constants.eps0 * numpy.eye(3),
 ]
 
 d = numpy.array([numpy.inf, 1e-6, 2.3e-6, 0.1e-6, numpy.inf])

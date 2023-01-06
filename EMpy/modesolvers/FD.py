@@ -145,9 +145,9 @@ class SVFDModeSolver(ModeSolver):
                 * ee
                 / (
                     (p * (ep - ee) + 2 * e * ee)
-                    * (p ** 2 * (ep - ew) + 4 * w ** 2 * ew)
+                    * (p**2 * (ep - ew) + 4 * w**2 * ew)
                     + (p * (ep - ew) + 2 * w * ew)
-                    * (p ** 2 * (ep - ee) + 4 * e ** 2 * ee)
+                    * (p**2 * (ep - ee) + 4 * e**2 * ee)
                 )
             )
             Aw = (
@@ -156,12 +156,12 @@ class SVFDModeSolver(ModeSolver):
                 * ew
                 / (
                     (p * (ep - ee) + 2 * e * ee)
-                    * (p ** 2 * (ep - ew) + 4 * w ** 2 * ew)
+                    * (p**2 * (ep - ew) + 4 * w**2 * ew)
                     + (p * (ep - ew) + 2 * w * ew)
-                    * (p ** 2 * (ep - ee) + 4 * e ** 2 * ee)
+                    * (p**2 * (ep - ee) + 4 * e**2 * ee)
                 )
             )
-            Ap = ep * k ** 2 - An - As - Ae * ep / ee - Aw * ep / ew
+            Ap = ep * k**2 - An - As - Ae * ep / ee - Aw * ep / ew
 
         elif method == "Ey":
 
@@ -173,9 +173,9 @@ class SVFDModeSolver(ModeSolver):
                 * en
                 / (
                     (q * (ep - en) + 2 * n * en)
-                    * (q ** 2 * (ep - es) + 4 * s ** 2 * es)
+                    * (q**2 * (ep - es) + 4 * s**2 * es)
                     + (q * (ep - es) + 2 * s * es)
-                    * (q ** 2 * (ep - en) + 4 * n ** 2 * en)
+                    * (q**2 * (ep - en) + 4 * n**2 * en)
                 )
             )
             As = (
@@ -184,14 +184,14 @@ class SVFDModeSolver(ModeSolver):
                 * es
                 / (
                     (q * (ep - en) + 2 * n * en)
-                    * (q ** 2 * (ep - es) + 4 * s ** 2 * es)
+                    * (q**2 * (ep - es) + 4 * s**2 * es)
                     + (q * (ep - es) + 2 * s * es)
-                    * (q ** 2 * (ep - en) + 4 * n ** 2 * en)
+                    * (q**2 * (ep - en) + 4 * n**2 * en)
                 )
             )
             Ae = 2 / e / (e + w)
             Aw = 2 / w / (e + w)
-            Ap = ep * k ** 2 - An * ep / en - As * ep / es - Ae - Aw
+            Ap = ep * k**2 - An * ep / en - As * ep / es - Ae - Aw
 
         elif method == "scalar":
 
@@ -201,7 +201,7 @@ class SVFDModeSolver(ModeSolver):
             As = 2 / s / (n + s)
             Ae = 2 / e / (e + w)
             Aw = 2 / w / (e + w)
-            Ap = ep * k ** 2 - An - As - Ae - Aw
+            Ap = ep * k**2 - An - As - Ae - Aw
 
         else:
 
@@ -525,7 +525,7 @@ class VFDModeSolver(ModeSolver):
             - axxse
             - axxnw
             - axxsw
-            + k ** 2
+            + k**2
             * (n + s)
             * (eyy4 * eyy3 * e / ns34 + eyy1 * eyy2 * w / ns21)
             / (e + w)
@@ -539,7 +539,7 @@ class VFDModeSolver(ModeSolver):
             - ayyse
             - ayynw
             - ayysw
-            + k ** 2
+            + k**2
             * (e + w)
             * (exx1 * exx4 * n / ew14 + exx2 * exx3 * s / ew23)
             / (n + s)
@@ -572,7 +572,7 @@ class VFDModeSolver(ModeSolver):
             + 2 * eyx2 * eyy1 / ezz2 * s * w / ns21
             + 2 * eyx4 * eyy3 / ezz4 * n * e / ns34
             + 2 * eyx3 * eyy4 / ezz3 * s * e / ns34
-            + 2 * eyy1 * eyy2 * (1.0 / ezz1 - 1.0 / ezz2) * w ** 2 / ns21
+            + 2 * eyy1 * eyy2 * (1.0 / ezz1 - 1.0 / ezz2) * w**2 / ns21
         ) / e / (
             e + w
         ) ** 2
@@ -584,7 +584,7 @@ class VFDModeSolver(ModeSolver):
             + 2 * eyx2 * eyy1 / ezz2 * s * e / ns21
             + 2 * eyx4 * eyy3 / ezz4 * n * w / ns34
             + 2 * eyx3 * eyy4 / ezz3 * s * w / ns34
-            + 2 * eyy3 * eyy4 * (1.0 / ezz3 - 1.0 / ezz4) * e ** 2 / ns34
+            + 2 * eyy3 * eyy4 * (1.0 / ezz3 - 1.0 / ezz4) * e**2 / ns34
         ) / w / (
             e + w
         ) ** 2
@@ -596,7 +596,7 @@ class VFDModeSolver(ModeSolver):
             + 2 * exy2 * exx3 / ezz2 * w * n / ew23
             + 2 * exy4 * exx1 / ezz4 * e * s / ew14
             + 2 * exy1 * exx4 / ezz1 * w * n / ew14
-            + 2 * exx3 * exx2 * (1.0 / ezz3 - 1.0 / ezz2) * s ** 2 / ew23
+            + 2 * exx3 * exx2 * (1.0 / ezz3 - 1.0 / ezz2) * s**2 / ew23
         ) / n / (
             n + s
         ) ** 2
@@ -608,7 +608,7 @@ class VFDModeSolver(ModeSolver):
             + 2 * exy2 * exx3 / ezz2 * w * n / ew23
             + 2 * exy4 * exx1 / ezz4 * e * s / ew14
             + 2 * exy1 * exx4 / ezz1 * w * s / ew14
-            + 2 * exx1 * exx4 * (1.0 / ezz1 - 1.0 / ezz4) * n ** 2 / ew14
+            + 2 * exx1 * exx4 * (1.0 / ezz1 - 1.0 / ezz4) * n**2 / ew14
         ) / s / (
             n + s
         ) ** 2
@@ -623,11 +623,11 @@ class VFDModeSolver(ModeSolver):
         ayxnw = -exx4 * (1 - exx1 / ezz1) / (n + s) / ew14
         ayxsw = +exx3 * (1 - exx2 / ezz2) / (n + s) / ew23
 
-        axyp = -(axyn + axys + axye + axyw + axyne + axyse + axynw + axysw) - k ** 2 * (
+        axyp = -(axyn + axys + axye + axyw + axyne + axyse + axynw + axysw) - k**2 * (
             w * (n * eyx1 * eyy2 + s * eyx2 * eyy1) / ns21
             + e * (s * eyx3 * eyy4 + n * eyx4 * eyy3) / ns34
         ) / (e + w)
-        ayxp = -(ayxn + ayxs + ayxe + ayxw + ayxne + ayxse + ayxnw + ayxsw) - k ** 2 * (
+        ayxp = -(ayxn + ayxs + ayxe + ayxw + ayxne + ayxse + ayxnw + ayxsw) - k**2 * (
             n * (w * exy1 * exx4 + e * exy4 * exx1) / ew14
             + s * (w * exy2 * exx3 + e * exy3 * exx2) / ew23
         ) / (n + s)
@@ -998,14 +998,14 @@ class VFDModeSolver(ModeSolver):
                     * ezz1
                     * ezz2
                     / eyy1
-                    * (2 * eyy1 / ezz1 / n ** 2 + eyx1 / ezz1 / n / w)
+                    * (2 * eyy1 / ezz1 / n**2 + eyx1 / ezz1 / n / w)
                     + 0.5
                     * (n * ezz1 * ezz2 / eyy1 + s * ezz2 * ezz1 / eyy2)
                     * n
                     * ezz4
                     * ezz3
                     / eyy4
-                    * (2 * eyy4 / ezz4 / n ** 2 - eyx4 / ezz4 / n / e)
+                    * (2 * eyy4 / ezz4 / n**2 - eyx4 / ezz4 / n / e)
                 )
                 / ezz4
                 / ezz3
@@ -1027,7 +1027,7 @@ class VFDModeSolver(ModeSolver):
                         * ezz4
                         * (
                             (1 - exx1 / ezz1) / n / w
-                            - exy1 / ezz1 * (2.0 / n ** 2 - 2 / n ** 2 * s / (n + s))
+                            - exy1 / ezz1 * (2.0 / n**2 - 2 / n**2 * s / (n + s))
                         )
                         / exx1
                         * ezz1
@@ -1037,7 +1037,7 @@ class VFDModeSolver(ModeSolver):
                         * ezz1
                         * (
                             -(1 - exx4 / ezz4) / n / e
-                            - exy4 / ezz4 * (2.0 / n ** 2 - 2 / n ** 2 * s / (n + s))
+                            - exy4 / ezz4 * (2.0 / n**2 - 2 / n**2 * s / (n + s))
                         )
                         / exx4
                         * ezz4
@@ -1073,14 +1073,14 @@ class VFDModeSolver(ModeSolver):
                     * ezz2
                     * ezz1
                     / eyy2
-                    * (2 * eyy2 / ezz2 / s ** 2 - eyx2 / ezz2 / s / w)
+                    * (2 * eyy2 / ezz2 / s**2 - eyx2 / ezz2 / s / w)
                     + 0.5
                     * (n * ezz1 * ezz2 / eyy1 + s * ezz2 * ezz1 / eyy2)
                     * s
                     * ezz3
                     * ezz4
                     / eyy3
-                    * (2 * eyy3 / ezz3 / s ** 2 + eyx3 / ezz3 / s / e)
+                    * (2 * eyy3 / ezz3 / s**2 + eyx3 / ezz3 / s / e)
                 )
                 / ezz4
                 / ezz3
@@ -1108,7 +1108,7 @@ class VFDModeSolver(ModeSolver):
                         * ezz3
                         * (
                             -(1 - exx2 / ezz2) / s / w
-                            - exy2 / ezz2 * (2.0 / s ** 2 - 2 / s ** 2 * n / (n + s))
+                            - exy2 / ezz2 * (2.0 / s**2 - 2 / s**2 * n / (n + s))
                         )
                         / exx2
                         * ezz2
@@ -1118,7 +1118,7 @@ class VFDModeSolver(ModeSolver):
                         * ezz2
                         * (
                             (1 - exx3 / ezz3) / s / e
-                            - exy3 / ezz3 * (2.0 / s ** 2 - 2 / s ** 2 * n / (n + s))
+                            - exy3 / ezz3 * (2.0 / s**2 - 2 / s**2 * n / (n + s))
                         )
                         / exx3
                         * ezz3
@@ -1143,13 +1143,13 @@ class VFDModeSolver(ModeSolver):
             bzxe = (
                 (n * ezz1 * ezz2 / eyy1 + s * ezz2 * ezz1 / eyy2)
                 * (
-                    0.5 * n * ezz4 * ezz3 / eyy4 * (2.0 / e ** 2 - eyx4 / ezz4 / n / e)
+                    0.5 * n * ezz4 * ezz3 / eyy4 * (2.0 / e**2 - eyx4 / ezz4 / n / e)
                     + 0.5
                     * s
                     * ezz3
                     * ezz4
                     / eyy3
-                    * (2.0 / e ** 2 + eyx3 / ezz3 / s / e)
+                    * (2.0 / e**2 + eyx3 / ezz3 / s / e)
                 )
                 / ezz4
                 / ezz3
@@ -1198,13 +1198,13 @@ class VFDModeSolver(ModeSolver):
             bzxw = (
                 (-n * ezz4 * ezz3 / eyy4 - s * ezz3 * ezz4 / eyy3)
                 * (
-                    0.5 * n * ezz1 * ezz2 / eyy1 * (2.0 / w ** 2 + eyx1 / ezz1 / n / w)
+                    0.5 * n * ezz1 * ezz2 / eyy1 * (2.0 / w**2 + eyx1 / ezz1 / n / w)
                     + 0.5
                     * s
                     * ezz2
                     * ezz1
                     / eyy2
-                    * (2.0 / w ** 2 - eyx2 / ezz2 / s / w)
+                    * (2.0 / w**2 - eyx2 / ezz2 / s / w)
                 )
                 / ezz4
                 / ezz3
@@ -1260,9 +1260,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz2
                         / eyy1
                         * (
-                            -2.0 / w ** 2
-                            - 2 * eyy1 / ezz1 / n ** 2
-                            + k ** 2 * eyy1
+                            -2.0 / w**2
+                            - 2 * eyy1 / ezz1 / n**2
+                            + k**2 * eyy1
                             - eyx1 / ezz1 / n / w
                         )
                         + 0.5
@@ -1271,9 +1271,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz1
                         / eyy2
                         * (
-                            -2.0 / w ** 2
-                            - 2 * eyy2 / ezz2 / s ** 2
-                            + k ** 2 * eyy2
+                            -2.0 / w**2
+                            - 2 * eyy2 / ezz2 / s**2
+                            + k**2 * eyy2
                             + eyx2 / ezz2 / s / w
                         )
                     )
@@ -1285,9 +1285,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz3
                         / eyy4
                         * (
-                            -2.0 / e ** 2
-                            - 2 * eyy4 / ezz4 / n ** 2
-                            + k ** 2 * eyy4
+                            -2.0 / e**2
+                            - 2 * eyy4 / ezz4 / n**2
+                            + k**2 * eyy4
                             + eyx4 / ezz4 / n / e
                         )
                         + 0.5
@@ -1296,9 +1296,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz4
                         / eyy3
                         * (
-                            -2.0 / e ** 2
-                            - 2 * eyy3 / ezz3 / s ** 2
-                            + k ** 2 * eyy3
+                            -2.0 / e**2
+                            - 2 * eyy3 / ezz3 / s**2
+                            + k**2 * eyy3
                             - eyx3 / ezz3 / s / e
                         )
                     )
@@ -1322,9 +1322,9 @@ class VFDModeSolver(ModeSolver):
                         0.5
                         * ezz4
                         * (
-                            -(k ** 2) * exy1
+                            -(k**2) * exy1
                             - (1 - exx1 / ezz1) / n / w
-                            - exy1 / ezz1 * (-2.0 / n ** 2 - 2 / n ** 2 * (n - s) / s)
+                            - exy1 / ezz1 * (-2.0 / n**2 - 2 / n**2 * (n - s) / s)
                         )
                         / exx1
                         * ezz1
@@ -1333,9 +1333,9 @@ class VFDModeSolver(ModeSolver):
                         + 0.5
                         * ezz1
                         * (
-                            -(k ** 2) * exy4
+                            -(k**2) * exy4
                             + (1 - exx4 / ezz4) / n / e
-                            - exy4 / ezz4 * (-2.0 / n ** 2 - 2 / n ** 2 * (n - s) / s)
+                            - exy4 / ezz4 * (-2.0 / n**2 - 2 / n**2 * (n - s) / s)
                         )
                         / exx4
                         * ezz4
@@ -1346,9 +1346,9 @@ class VFDModeSolver(ModeSolver):
                         0.5
                         * ezz3
                         * (
-                            -(k ** 2) * exy2
+                            -(k**2) * exy2
                             + (1 - exx2 / ezz2) / s / w
-                            - exy2 / ezz2 * (-2.0 / s ** 2 + 2 / s ** 2 * (n - s) / n)
+                            - exy2 / ezz2 * (-2.0 / s**2 + 2 / s**2 * (n - s) / n)
                         )
                         / exx2
                         * ezz2
@@ -1357,9 +1357,9 @@ class VFDModeSolver(ModeSolver):
                         + 0.5
                         * ezz2
                         * (
-                            -(k ** 2) * exy3
+                            -(k**2) * exy3
                             - (1 - exx3 / ezz3) / s / e
-                            - exy3 / ezz3 * (-2.0 / s ** 2 + 2 / s ** 2 * (n - s) / n)
+                            - exy3 / ezz3 * (-2.0 / s**2 + 2 / s**2 * (n - s) / n)
                         )
                         / exx3
                         * ezz3
@@ -1525,10 +1525,10 @@ class VFDModeSolver(ModeSolver):
                 * e
                 + (ezz3 / exx2 * ezz2 * w + ezz2 / exx3 * ezz3 * e)
                 * (
-                    0.5 * ezz4 * (2.0 / n ** 2 + exy1 / ezz1 / n / w) / exx1 * ezz1 * w
+                    0.5 * ezz4 * (2.0 / n**2 + exy1 / ezz1 / n / w) / exx1 * ezz1 * w
                     + 0.5
                     * ezz1
-                    * (2.0 / n ** 2 - exy4 / ezz4 / n / e)
+                    * (2.0 / n**2 - exy4 / ezz4 / n / e)
                     / exx4
                     * ezz4
                     * e
@@ -1580,10 +1580,10 @@ class VFDModeSolver(ModeSolver):
                 * e
                 - (ezz4 / exx1 * ezz1 * w + ezz1 / exx4 * ezz4 * e)
                 * (
-                    0.5 * ezz3 * (2.0 / s ** 2 - exy2 / ezz2 / s / w) / exx2 * ezz2 * w
+                    0.5 * ezz3 * (2.0 / s**2 - exy2 / ezz2 / s / w) / exx2 * ezz2 * w
                     + 0.5
                     * ezz2
-                    * (2.0 / s ** 2 + exy3 / ezz3 / s / e)
+                    * (2.0 / s**2 + exy3 / ezz3 / s / e)
                     / exx3
                     * ezz3
                     * e
@@ -1620,7 +1620,7 @@ class VFDModeSolver(ModeSolver):
                         / eyy4
                         * (
                             -(1 - eyy4 / ezz4) / n / e
-                            - eyx4 / ezz4 * (2.0 / e ** 2 - 2 / e ** 2 * w / (e + w))
+                            - eyx4 / ezz4 * (2.0 / e**2 - 2 / e**2 * w / (e + w))
                         )
                         + 0.5
                         * s
@@ -1629,7 +1629,7 @@ class VFDModeSolver(ModeSolver):
                         / eyy3
                         * (
                             (1 - eyy3 / ezz3) / s / e
-                            - eyx3 / ezz3 * (2.0 / e ** 2 - 2 / e ** 2 * w / (e + w))
+                            - eyx3 / ezz3 * (2.0 / e**2 - 2 / e**2 * w / (e + w))
                         )
                         + (ezz4 - ezz3) * w / e / (e + w)
                     )
@@ -1651,14 +1651,14 @@ class VFDModeSolver(ModeSolver):
                     0.5
                     * (ezz3 / exx2 * ezz2 * w + ezz2 / exx3 * ezz3 * e)
                     * ezz1
-                    * (2 * exx4 / ezz4 / e ** 2 - exy4 / ezz4 / n / e)
+                    * (2 * exx4 / ezz4 / e**2 - exy4 / ezz4 / n / e)
                     / exx4
                     * ezz4
                     * e
                     - 0.5
                     * (ezz4 / exx1 * ezz1 * w + ezz1 / exx4 * ezz4 * e)
                     * ezz2
-                    * (2 * exx3 / ezz3 / e ** 2 + exy3 / ezz3 / s / e)
+                    * (2 * exx3 / ezz3 / e**2 + exy3 / ezz3 / s / e)
                     / exx3
                     * ezz3
                     * e
@@ -1689,7 +1689,7 @@ class VFDModeSolver(ModeSolver):
                         / eyy1
                         * (
                             (1 - eyy1 / ezz1) / n / w
-                            - eyx1 / ezz1 * (2.0 / w ** 2 - 2 / w ** 2 * e / (e + w))
+                            - eyx1 / ezz1 * (2.0 / w**2 - 2 / w**2 * e / (e + w))
                         )
                         - (ezz1 - ezz2) * e / w / (e + w)
                         + 0.5
@@ -1699,7 +1699,7 @@ class VFDModeSolver(ModeSolver):
                         / eyy2
                         * (
                             -(1 - eyy2 / ezz2) / s / w
-                            - eyx2 / ezz2 * (2.0 / w ** 2 - 2 / w ** 2 * e / (e + w))
+                            - eyx2 / ezz2 * (2.0 / w**2 - 2 / w**2 * e / (e + w))
                         )
                     )
                     + (n * ezz1 * ezz2 / eyy1 + s * ezz2 * ezz1 / eyy2)
@@ -1726,14 +1726,14 @@ class VFDModeSolver(ModeSolver):
                     0.5
                     * (ezz3 / exx2 * ezz2 * w + ezz2 / exx3 * ezz3 * e)
                     * ezz4
-                    * (2 * exx1 / ezz1 / w ** 2 + exy1 / ezz1 / n / w)
+                    * (2 * exx1 / ezz1 / w**2 + exy1 / ezz1 / n / w)
                     / exx1
                     * ezz1
                     * w
                     - 0.5
                     * (ezz4 / exx1 * ezz1 * w + ezz1 / exx4 * ezz4 * e)
                     * ezz3
-                    * (2 * exx2 / ezz2 / w ** 2 - exy2 / ezz2 / s / w)
+                    * (2 * exx2 / ezz2 / w**2 - exy2 / ezz2 / s / w)
                     / exx2
                     * ezz2
                     * w
@@ -1763,9 +1763,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz2
                         / eyy1
                         * (
-                            -(k ** 2) * eyx1
+                            -(k**2) * eyx1
                             - (1 - eyy1 / ezz1) / n / w
-                            - eyx1 / ezz1 * (-2.0 / w ** 2 + 2 / w ** 2 * (e - w) / e)
+                            - eyx1 / ezz1 * (-2.0 / w**2 + 2 / w**2 * (e - w) / e)
                         )
                         + (ezz1 - ezz2) * (e - w) / e / w
                         + 0.5
@@ -1774,9 +1774,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz1
                         / eyy2
                         * (
-                            -(k ** 2) * eyx2
+                            -(k**2) * eyx2
                             + (1 - eyy2 / ezz2) / s / w
-                            - eyx2 / ezz2 * (-2.0 / w ** 2 + 2 / w ** 2 * (e - w) / e)
+                            - eyx2 / ezz2 * (-2.0 / w**2 + 2 / w**2 * (e - w) / e)
                         )
                     )
                     + (n * ezz1 * ezz2 / eyy1 + s * ezz2 * ezz1 / eyy2)
@@ -1787,9 +1787,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz3
                         / eyy4
                         * (
-                            -(k ** 2) * eyx4
+                            -(k**2) * eyx4
                             + (1 - eyy4 / ezz4) / n / e
-                            - eyx4 / ezz4 * (-2.0 / e ** 2 - 2 / e ** 2 * (e - w) / w)
+                            - eyx4 / ezz4 * (-2.0 / e**2 - 2 / e**2 * (e - w) / w)
                         )
                         + 0.5
                         * s
@@ -1797,9 +1797,9 @@ class VFDModeSolver(ModeSolver):
                         * ezz4
                         / eyy3
                         * (
-                            -(k ** 2) * eyx3
+                            -(k**2) * eyx3
                             - (1 - eyy3 / ezz3) / s / e
-                            - eyx3 / ezz3 * (-2.0 / e ** 2 - 2 / e ** 2 * (e - w) / w)
+                            - eyx3 / ezz3 * (-2.0 / e**2 - 2 / e**2 * (e - w) / w)
                         )
                         + (ezz4 - ezz3) * (e - w) / e / w
                     )
@@ -1823,9 +1823,9 @@ class VFDModeSolver(ModeSolver):
                         0.5
                         * ezz4
                         * (
-                            -2.0 / n ** 2
-                            - 2 * exx1 / ezz1 / w ** 2
-                            + k ** 2 * exx1
+                            -2.0 / n**2
+                            - 2 * exx1 / ezz1 / w**2
+                            + k**2 * exx1
                             - exy1 / ezz1 / n / w
                         )
                         / exx1
@@ -1834,9 +1834,9 @@ class VFDModeSolver(ModeSolver):
                         + 0.5
                         * ezz1
                         * (
-                            -2.0 / n ** 2
-                            - 2 * exx4 / ezz4 / e ** 2
-                            + k ** 2 * exx4
+                            -2.0 / n**2
+                            - 2 * exx4 / ezz4 / e**2
+                            + k**2 * exx4
                             + exy4 / ezz4 / n / e
                         )
                         / exx4
@@ -1848,9 +1848,9 @@ class VFDModeSolver(ModeSolver):
                         0.5
                         * ezz3
                         * (
-                            -2.0 / s ** 2
-                            - 2 * exx2 / ezz2 / w ** 2
-                            + k ** 2 * exx2
+                            -2.0 / s**2
+                            - 2 * exx2 / ezz2 / w**2
+                            + k**2 * exx2
                             + exy2 / ezz2 / s / w
                         )
                         / exx2
@@ -1859,9 +1859,9 @@ class VFDModeSolver(ModeSolver):
                         + 0.5
                         * ezz2
                         * (
-                            -2.0 / s ** 2
-                            - 2 * exx3 / ezz3 / e ** 2
-                            + k ** 2 * exx3
+                            -2.0 / s**2
+                            - 2 * exx3 / ezz3 / e**2
+                            + k**2 * exx3
                             - exy3 / ezz3 / s / e
                         )
                         / exx3
@@ -2515,7 +2515,7 @@ def stretchmesh(x, y, nlayers, factor, method="PPPP"):
             elif m == "L":
                 c = (f - 1) / (q2 - q1)
                 b = 1 - 2 * c * q1
-                a = q1 - b * q1 - c * q1 ** 2
+                a = q1 - b * q1 - c * q1**2
                 z[kv] = a + b * z[kv] + c * z[kv] ** 2
             elif m == "P":
                 z[kv] = z[kv] + (f - 1) * (z[kv] - q1) ** 3 / (q2 - q1) ** 2

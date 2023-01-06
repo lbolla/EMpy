@@ -15,8 +15,8 @@ def epsfunc(x_, y_):
     xx, yy = numpy.meshgrid(x_, y_)
     return numpy.where(
         (numpy.abs(xx.T - 1.24e-6) <= 0.24e-6) * (numpy.abs(yy.T - 1.11e-6) <= 0.11e-6),
-        3.4757 ** 2,
-        1.446 ** 2,
+        3.4757**2,
+        1.446**2,
     )
 
 

@@ -369,7 +369,7 @@ class Coupler(Device):
     def solve(self):
         """Compute the THRU and DROP."""
 
-        Kbar = numpy.sqrt(1.0 - self.K ** 2)
+        Kbar = numpy.sqrt(1.0 - self.K**2)
         self.THRU = self.q * Kbar
         self.DROP = self.q * 1j * self.K
 
@@ -414,7 +414,7 @@ class Coupler(Device):
         else:
             raise ValueError("wl must be scalar")
 
-        Kbar = numpy.sqrt(1 - K ** 2)
+        Kbar = numpy.sqrt(1 - K**2)
         return TransferMatrix([[q * Kbar, q * 1j * K], [q * 1j * K, q * Kbar]])
 
     def CM(self, wl=None):
@@ -629,8 +629,8 @@ class MZ(Device):
 
         K1 = self.coupler1.K
         K2 = self.coupler2.K
-        K1bar = numpy.sqrt(1.0 - K1 ** 2)
-        K2bar = numpy.sqrt(1.0 - K2 ** 2)
+        K1bar = numpy.sqrt(1.0 - K1**2)
+        K2bar = numpy.sqrt(1.0 - K2**2)
         q1 = self.coupler1.q
         q2 = self.coupler2.q
 
@@ -737,7 +737,7 @@ class APRR(Device):
         K = self.coupler.K
         q = self.coupler.q
 
-        Kbar = numpy.sqrt(1.0 - K ** 2)
+        Kbar = numpy.sqrt(1.0 - K**2)
         beta = 2.0 * numpy.pi * self.neff / self.wl
         t = numpy.exp(-1j * beta * self.l)
         self.THRU = q * (Kbar - q * t) / (1.0 - q * Kbar * t)
@@ -819,8 +819,8 @@ class SRR(Device):
 
         K1 = self.coupler1.K
         K2 = self.coupler2.K
-        K1bar = numpy.sqrt(1.0 - K1 ** 2)
-        K2bar = numpy.sqrt(1.0 - K2 ** 2)
+        K1bar = numpy.sqrt(1.0 - K1**2)
+        K2bar = numpy.sqrt(1.0 - K2**2)
         q1 = self.coupler1.q
         q2 = self.coupler2.q
         l1 = self.line1.l2
@@ -1047,7 +1047,7 @@ class T_TCRR(Device):
             K[1] = K[0]
             K[2] = 2.0 * K[0] * numpy.sqrt(1 - K[0] ** 2)
 
-        Kbar = numpy.sqrt(1.0 - K ** 2)
+        Kbar = numpy.sqrt(1.0 - K**2)
         beta = 2.0 * numpy.pi * neff / wls
 
         t1 = numpy.exp(-1j * beta * l[0])
@@ -1056,15 +1056,15 @@ class T_TCRR(Device):
         t4 = numpy.exp(-1j * beta * l[3])
 
         denom = (
-            q ** 3 * Kbar[2] * t3 * t4 * (Kbar[0] * Kbar[1] * t1 - K[0] * K[1] * t2)
+            q**3 * Kbar[2] * t3 * t4 * (Kbar[0] * Kbar[1] * t1 - K[0] * K[1] * t2)
             - 1.0
         )
         self.DROP = (
-            q ** 3 * K[2] * t3 * (K[0] * Kbar[1] * t1 + Kbar[0] * K[1] * t2) / denom
+            q**3 * K[2] * t3 * (K[0] * Kbar[1] * t1 + Kbar[0] * K[1] * t2) / denom
         )
         self.THRU = (
-            q ** 2 * (K[0] * K[1] * t1 - Kbar[0] * Kbar[1] * t2)
-            + q ** 5 * Kbar[2] * t1 * t2 * t3 * t4
+            q**2 * (K[0] * K[1] * t1 - Kbar[0] * Kbar[1] * t2)
+            + q**5 * Kbar[2] * t1 * t2 * t3 * t4
         ) / denom
 
         return self
@@ -1112,7 +1112,7 @@ class T_CRTCRR(Device):
         if wls.shape != neff.shape:
             raise ValueError("wrong wls and neff shape.")
 
-        Kbar = numpy.sqrt(1.0 - K ** 2)
+        Kbar = numpy.sqrt(1.0 - K**2)
         beta = 2.0 * numpy.pi * neff / wls
 
         t1 = numpy.exp(-1j * beta * l[0])
@@ -1125,29 +1125,29 @@ class T_CRTCRR(Device):
 
         denom = (
             1
-            - q ** 3 * t1 ** 2 * N1 * Kbar[2]
-            - q ** 2 * Kbar[1] * t2 ** 2 * (Kbar[2] - q ** 3 * t1 ** 2 * N1)
+            - q**3 * t1**2 * N1 * Kbar[2]
+            - q**2 * Kbar[1] * t2**2 * (Kbar[2] - q**3 * t1**2 * N1)
         )
         self.DROP = (
             1j
-            * q ** 4
+            * q**4
             * K[0]
             * K[1]
             * K[2]
             * Kbar[0]
-            * t1 ** 1.5
+            * t1**1.5
             * t2
             * (1 + t31)
             / denom
         )
         self.THRU = (
-            q ** 2
+            q**2
             * t1
             * (
                 N1bar
-                - q ** 2 * Kbar[1] * Kbar[2] * t2 ** 2 * N1bar
-                + q ** 3 * Kbar[2] * t1 * t3
-                - q ** 5 * Kbar[1] * t1 * t2 ** 2 * t3
+                - q**2 * Kbar[1] * Kbar[2] * t2**2 * N1bar
+                + q**3 * Kbar[2] * t1 * t3
+                - q**5 * Kbar[1] * t1 * t2**2 * t3
             )
             / denom
         )
@@ -1214,7 +1214,7 @@ class T_CTCRR(Device):
                 / (K[0] ** 2 + K[1] ** 2 - 2 * K[0] ** 2 * K[1] ** 2 - 1)
             )
 
-        Kbar = numpy.sqrt(1.0 - K ** 2)
+        Kbar = numpy.sqrt(1.0 - K**2)
         beta = 2.0 * numpy.pi * neff / wls
 
         t1 = numpy.exp(-1j * beta * l[0])
@@ -1230,26 +1230,26 @@ class T_CTCRR(Device):
 
         denom = (
             1.0
-            - q ** 3 * t1 ** 2 * N1 * Kbar[2]
-            - q ** 3 * t2 ** 2 * N2 * (Kbar[2] - q ** 3 * t1 ** 2 * N1)
+            - q**3 * t1**2 * N1 * Kbar[2]
+            - q**3 * t2**2 * N2 * (Kbar[2] - q**3 * t1**2 * N1)
         )
         self.DROP = (
             1j
-            * q ** 5
+            * q**5
             * K[0]
             * K[1]
             * K[2]
             * Kbar[0]
             * Kbar[1]
-            * t1 ** 1.5
-            * t2 ** 1.5
+            * t1**1.5
+            * t2**1.5
             * (1 + t31)
             * (1 + t42)
             / denom
         )
         self.THRU = (
-            q ** 5 * t1 ** 2 * t3 * (q ** 3 * t2 ** 2 * N2 - Kbar[2])
-            + q ** 2 * t1 * N1bar * (q ** 3 * t2 ** 2 * N2 * Kbar[2] - 1.0)
+            q**5 * t1**2 * t3 * (q**3 * t2**2 * N2 - Kbar[2])
+            + q**2 * t1 * N1bar * (q**3 * t2**2 * N2 * Kbar[2] - 1.0)
         ) / denom
 
         return self
@@ -1401,7 +1401,7 @@ class Etalon(Device):
         self.Rmax = 1.0 - 1.0 / (1.0 + self.F)
 
         self.wl0 = numpy.mean(wls)
-        self.FSRwl = self.wl0 ** 2 / (2 * n * l * numpy.cos(self.theta) + self.wl0)
+        self.FSRwl = self.wl0**2 / (2 * n * l * numpy.cos(self.theta) + self.wl0)
 
         (self.f0, self.FSR) = EMpy.utils.wl2f(self.wl0, self.FSRwl)
 

@@ -558,7 +558,7 @@ class FDTD:
         # size_of_source = 9 * size_of_int + 5 * size_of_real + 6 * 16 * size_of_char
         # size_of_monitor = (6 + 2) * 6 * size_of_int
 
-        Gb = 1024 ** 3
+        Gb = 1024**3
         max_available_RAM = 32 * Gb
 
         dynamic_alloc_memory = 0

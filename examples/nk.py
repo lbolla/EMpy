@@ -84,23 +84,23 @@ lorentzian = (
 )
 lorentzian.__doc__ = """ A Lorentzian on a linear background -- provides a much better fit than polynomial!"""
 
-cauchy = lambda p, x: p[0] + p[1] / x ** 2 + p[2] / x ** 4
+cauchy = lambda p, x: p[0] + p[1] / x**2 + p[2] / x**4
 cauchy.__doc__ = """ 3-parameter lossless Cauchy fit, as used on the J.A.Woolam WVase Ellipsometer:"""
 
 
 cauchy5 = (
-    lambda p, x: p[0] + p[1] / x ** 2 + p[2] / x ** 4 + p[3] / x ** 6 + p[4] / x ** 8
+    lambda p, x: p[0] + p[1] / x**2 + p[2] / x**4 + p[3] / x**6 + p[4] / x**8
 )
 cauchy5.__doc__ = """ 5-parameter Cauchy fit  """
 
 
-cauchy2offset = lambda p, x: p[0] + p[1] / x ** 2 + p[2]
+cauchy2offset = lambda p, x: p[0] + p[1] / x**2 + p[2]
 cauchy2offset.__doc__ = """ LiONiX (SiN): Cauchy model with birefringent offset
    A + B/lambda^2 + C   """
 
 
 sellmeier = lambda p, x: np.sqrt(
-    p[0] + ((p[1] * x ** 2) / (x ** 2 - p[2] ** 2)) - p[3] * x ** 2
+    p[0] + ((p[1] * x**2) / (x**2 - p[2] ** 2)) - p[3] * x**2
 )
 sellmeier.__doc__ = """ Sellmeier according to [1]
     n^2 = offset + ((a*lambda^2)/(lambda^2 - b^2)) - c*lambda^2
@@ -119,8 +119,8 @@ def sellmeier1(p, x):
 
 sellmeier5 = lambda p, x: np.sqrt(
     p[0]
-    + (p[1] * x ** 2 / (x ** 2 - p[2] ** 2))
-    + (p[3] * x ** 2 / (x ** 2 - p[4] ** 2))
+    + (p[1] * x**2 / (x**2 - p[2] ** 2))
+    + (p[3] * x**2 / (x**2 - p[4] ** 2))
 )
 sellmeier5.__doc__ = """ Sellmeier with 5 params -
 #### CHECK THIS - maybe not good model - curvature doesn't look right
@@ -130,27 +130,29 @@ sellmeier5.__doc__ = """ Sellmeier with 5 params -
 sellmeier7_1 = lambda p, x: np.sqrt(
     1
     + p[0]
-    + (p[1] * x ** 2 / (x ** 2 - p[2] ** 2))
-    + (p[3] * x ** 2 / (x ** 2 - p[4] ** 2))
-    + (p[5] * x ** 2 / (x ** 2 - p[6] ** 2))
+    + (p[1] * x**2 / (x**2 - p[2] ** 2))
+    + (p[3] * x**2 / (x**2 - p[4] ** 2))
+    + (p[5] * x**2 / (x**2 - p[6] ** 2))
 )
 sellmeier7_1.__doc__ = """ Sellmeier with 7 params and '1+...' """
 
 
 sellmeier8_1 = lambda p, x: np.sqrt(
     1
-    + (p[0] * x ** 2 / (x ** 2 - p[1] ** 2))
-    + (p[2] * x ** 2 / (x ** 2 - p[3] ** 2))
-    + (p[4] * x ** 2 / (x ** 2 - p[5] ** 2))
-    + (p[6] * x ** 2 / (x ** 2 - p[7] ** 2))
+    + (p[0] * x**2 / (x**2 - p[1] ** 2))
+    + (p[2] * x**2 / (x**2 - p[3] ** 2))
+    + (p[4] * x**2 / (x**2 - p[5] ** 2))
+    + (p[6] * x**2 / (x**2 - p[7] ** 2))
 )
 sellmeier8_1.__doc__ = """Sellmeier with 8 params and '1+...' """
 
 
 def fillfraction(base, fill):
     """Fill fraction, to reduce index of refraction"""
+
     def f(x):
         return (1.0 - fill) + fill * base(x)
+
     return f
 
 
@@ -1332,7 +1334,7 @@ def AlInGaAs(x, wl):
 
     A = 9.689 - 1.012 * x  # These params are in nanometers - must convert `wl`
     B = 1.590 - 0.376 * x
-    C = 1102.4 - 702.0 * x + 330.4 * x ** 2
+    C = 1102.4 - 702.0 * x + 330.4 * x**2
     return sellmeier1((A, B, C), wl * 1e3)
 
 

@@ -18,10 +18,10 @@ first element tuple defines simulation extent
 units should match units of wavelength wl
 """
 geom = (
-    ("base", -0.8, -0.8, 0.8, 1.0, 1.0 ** 2),
-    ("substrate", -0.8, -0.8, 0.8, 0.0, 1.5 ** 2),
-    ("core1", -0.30, 0.0, 0.0, 0.34, 3.4 ** 2),
-    ("core2", 0.0, 0.0, 0.30, 0.145, 3.4 ** 2),
+    ("base", -0.8, -0.8, 0.8, 1.0, 1.0**2),
+    ("substrate", -0.8, -0.8, 0.8, 0.0, 1.5**2),
+    ("core1", -0.30, 0.0, 0.0, 0.34, 3.4**2),
+    ("core2", 0.0, 0.0, 0.30, 0.145, 3.4**2),
 )
 
 wl = 1.55

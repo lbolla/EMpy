@@ -40,7 +40,7 @@ def dispersion_relation_ordinary(kx, ky, k, nO):
     if kx.shape != ky.shape:
         raise ValueError("kx and ky must have the same length")
 
-    delta = (k * nO) ** 2 - (kx ** 2 + ky ** 2)
+    delta = (k * nO) ** 2 - (kx**2 + ky**2)
     kz = S.sqrt(delta)
 
     # Adjust sign of real/imag part
@@ -69,17 +69,17 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
 
     for ii in range(0, kx.size):
 
-        alpha = nE ** 2 - nO ** 2
+        alpha = nE**2 - nO**2
         beta = kx[ii] / k * c[0] + ky[ii] / k * c[1]
 
         # coeffs
         C = S.array(
             [
-                nO ** 2 + c[2] ** 2 * alpha,
+                nO**2 + c[2] ** 2 * alpha,
                 2.0 * c[2] * beta * alpha,
-                nO ** 2 * (kx[ii] ** 2 + ky[ii] ** 2) / k ** 2
-                + alpha * beta ** 2
-                - nO ** 2 * nE ** 2,
+                nO**2 * (kx[ii] ** 2 + ky[ii] ** 2) / k**2
+                + alpha * beta**2
+                - nO**2 * nE**2,
             ]
         )
 
@@ -95,7 +95,7 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
     return kz
 
 
-class RCWA():
+class RCWA:
 
     """Class to handle the RCWA solvers.
 
@@ -265,9 +265,9 @@ class IsotropicRCWA(RCWA):
 
             Kx = S.diag(kx / k)
             Ky = ky / k * I
-            Z1 = S.diag(k1i[2, :] / (k * n1 ** 2))
+            Z1 = S.diag(k1i[2, :] / (k * n1**2))
             Y1 = S.diag(k1i[2, :] / k)
-            Z3 = S.diag(k3i[2, :] / (k * n3 ** 2))
+            Z3 = S.diag(k3i[2, :] / (k * n3**2))
             Y3 = S.diag(k3i[2, :] / k)
             # Fc = S.diag(S.cos(phi_i))
             fc = S.cos(phi_i)
@@ -415,10 +415,10 @@ class IsotropicRCWA(RCWA):
             Ts, Tp = S.split(T, 2)
 
             DE1[:, iwl] = (k1i[2, :] / (k1[2])).real * S.absolute(Rs) ** 2 + (
-                k1i[2, :] / (k1[2] * n1 ** 2)
+                k1i[2, :] / (k1[2] * n1**2)
             ).real * S.absolute(Rp) ** 2
             DE3[:, iwl] = (k3i[2, :] / (k1[2])).real * S.absolute(Ts) ** 2 + (
-                k3i[2, :] / (k1[2] * n3 ** 2)
+                k3i[2, :] / (k1[2] * n3**2)
             ).real * S.absolute(Tp) ** 2
 
         # save the results

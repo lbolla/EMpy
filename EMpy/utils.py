@@ -39,8 +39,8 @@ class Layer:
             EPS = numpy.zeros(2 * hmax + 1, dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
             rix = self.mat.n(wl)
-            EPS[hmax] = rix ** 2
-            EPS1[hmax] = rix ** -2
+            EPS[hmax] = rix**2
+            EPS1[hmax] = rix**-2
             return EPS, EPS1
         else:
             # anisotropic
@@ -95,8 +95,8 @@ class BinaryGrating:
             rix2 = self.mat2.n(wl)
             f = self.dc
             h = numpy.arange(-hmax, hmax + 1)
-            EPS = (rix1 ** 2 - rix2 ** 2) * f * numpy.sinc(h * f) + rix2 ** 2 * (h == 0)
-            EPS1 = (rix1 ** -2 - rix2 ** -2) * f * numpy.sinc(h * f) + rix2 ** -2 * (
+            EPS = (rix1**2 - rix2**2) * f * numpy.sinc(h * f) + rix2**2 * (h == 0)
+            EPS1 = (rix1**-2 - rix2**-2) * f * numpy.sinc(h * f) + rix2**-2 * (
                 h == 0
             )
             return EPS, EPS1
@@ -184,23 +184,23 @@ class SymmetricDoubleGrating:
             A = -N * f1 / 2.0
             B = N * f2 / 2.0
             EPS = (
-                rix3 ** 2 * (h == 0)
-                + (rix1 ** 2 - rix3 ** 2)
+                rix3**2 * (h == 0)
+                + (rix1**2 - rix3**2)
                 * f1
                 * numpy.sinc(h * f1)
                 * numpy.exp(2j * numpy.pi * h / N * A)
-                + (rix2 ** 2 - rix3 ** 2)
+                + (rix2**2 - rix3**2)
                 * f2
                 * numpy.sinc(h * f2)
                 * numpy.exp(2j * numpy.pi * h / N * B)
             )
             EPS1 = (
-                rix3 ** -2 * (h == 0)
-                + (rix1 ** -2 - rix3 ** -2)
+                rix3**-2 * (h == 0)
+                + (rix1**-2 - rix3**-2)
                 * f1
                 * numpy.sinc(h * f1)
                 * numpy.exp(2j * numpy.pi * h / N * A)
-                + (rix2 ** -2 - rix3 ** -2)
+                + (rix2**-2 - rix3**-2)
                 * f2
                 * numpy.sinc(h * f2)
                 * numpy.exp(2j * numpy.pi * h / N * B)
@@ -308,23 +308,23 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
             A = -N * (f1 + fM) / 2.0
             B = N * (f2 + fM) / 2.0
             EPS = (
-                rix3 ** 2 * (h == 0)
-                + (rix1 ** 2 - rix3 ** 2)
+                rix3**2 * (h == 0)
+                + (rix1**2 - rix3**2)
                 * f1
                 * numpy.sinc(h * f1)
                 * numpy.exp(2j * numpy.pi * h / N * A)
-                + (rix2 ** 2 - rix3 ** 2)
+                + (rix2**2 - rix3**2)
                 * f2
                 * numpy.sinc(h * f2)
                 * numpy.exp(2j * numpy.pi * h / N * B)
             )
             EPS1 = (
-                rix3 ** -2 * (h == 0)
-                + (rix1 ** -2 - rix3 ** -2)
+                rix3**-2 * (h == 0)
+                + (rix1**-2 - rix3**-2)
                 * f1
                 * numpy.sinc(h * f1)
                 * numpy.exp(2j * numpy.pi * h / N * A)
-                + (rix2 ** -2 - rix3 ** -2)
+                + (rix2**-2 - rix3**-2)
                 * f2
                 * numpy.sinc(h * f2)
                 * numpy.exp(2j * numpy.pi * h / N * B)
@@ -508,35 +508,35 @@ class LiquidCrystalCell:
         K3322 = K33 - K22
         costheta1 = numpy.cos(theta2)
         sintheta1 = numpy.sin(theta2)
-        ezz = e0 * (epslow + deleps * sintheta1 ** 2)
+        ezz = e0 * (epslow + deleps * sintheta1**2)
 
         # maple generated (see lc3k.mws)
         ddtheta2dz = (
             costheta1
             * sintheta1
             * (
-                K1122 * dtheta2dz ** 2
-                + 2 * K3322 * costheta1 ** 2 * dphi2dz ** 2
-                - K3322 * dtheta2dz ** 2
-                - K22 * dphi2dz ** 2
-                - e0 * deleps * du2dz ** 2
+                K1122 * dtheta2dz**2
+                + 2 * K3322 * costheta1**2 * dphi2dz**2
+                - K3322 * dtheta2dz**2
+                - K22 * dphi2dz**2
+                - e0 * deleps * du2dz**2
                 + 2 * q0 * K22 * dphi2dz
-                - K3322 * dphi2dz ** 2
+                - K3322 * dphi2dz**2
             )
-            / (K1122 * costheta1 ** 2 - K3322 * costheta1 ** 2 + K22 + K3322)
+            / (K1122 * costheta1**2 - K3322 * costheta1**2 + K22 + K3322)
         )
         ddphi2dz = (
             2
             * sintheta1
             * dtheta2dz
             * (
-                2 * K3322 * costheta1 ** 2 * dphi2dz
+                2 * K3322 * costheta1**2 * dphi2dz
                 - K22 * dphi2dz
                 + q0 * K22
                 - K3322 * dphi2dz
             )
             / costheta1
-            / (K3322 * costheta1 ** 2 - K22 - K3322)
+            / (K3322 * costheta1**2 - K22 - K3322)
         )
 
         ddu2dz = -2 * e0 * deleps * sintheta1 * costheta1 * dtheta2dz * du2dz / ezz
@@ -1239,8 +1239,8 @@ def blackbody(f, T):
     return (
         2
         * EMpy.constants.h
-        * f ** 3
-        / (EMpy.constants.c ** 2)
+        * f**3
+        / (EMpy.constants.c**2)
         * 1.0
         / (numpy.exp(EMpy.constants.h * f / (EMpy.constants.k * T)) - 1)
     )

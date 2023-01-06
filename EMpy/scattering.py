@@ -184,13 +184,13 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
     for ind in numpy.arange(NbP):
         # distance between scattering and observation point
         QP = P[:, ind].reshape((3, 1)) * numpy.ones((1, NbQ)) - Q
-        r = numpy.sqrt(numpy.sum(QP ** 2, axis=0))
+        r = numpy.sqrt(numpy.sum(QP**2, axis=0))
         # unit vector
         r1 = QP / r
         # integrand expression shorcuts
         kmr = km * r
         kmr_1 = 1 / kmr
-        kmr_2 = kmr_1 ** 2
+        kmr_2 = kmr_1**2
         aa = 1 - 1j * kmr_1 - kmr_2
         bb = -1 + 3 * 1j * kmr_1 + 3 * kmr_2
         cc = 1 - 1j * kmr_1

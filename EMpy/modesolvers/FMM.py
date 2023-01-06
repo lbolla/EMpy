@@ -358,7 +358,7 @@ class FMMMode2d(Mode):
                 psidotsueps = sueps(dot(slice.modie[n])).eval(y)
 
                 kfh = self.modih[n].k[mx]
-                kxh = scipy.sqrt(kfh ** 2 - kz ** 2)
+                kxh = scipy.sqrt(kfh**2 - kz**2)
                 sl = self.modih[n].sl[mx] * (k0 / kfh) ** 2
                 al = self.modih[n].al[mx]
                 sr = self.modih[n].sr[mx] * (k0 / kfh) ** 2
@@ -372,7 +372,7 @@ class FMMMode2d(Mode):
                 ) / numpy.sin(kxh * dx)
 
                 kfe = self.modie[n].k[mx]
-                kxe = scipy.sqrt(kfe ** 2 - kz ** 2)
+                kxe = scipy.sqrt(kfe**2 - kz**2)
                 sl = self.modie[n].sl[mx] * (k0 / kfe) ** 2
                 al = self.modie[n].al[mx]
                 sr = self.modie[n].sr[mx] * (k0 / kfe) ** 2
@@ -388,7 +388,7 @@ class FMMMode2d(Mode):
                 Exsh[:, n] = (kz / k0) * fi
                 Exah[:, n] = 0
                 Exse[:, n] = 0
-                Exae[:, n] = -psidotsueps / k0 ** 2
+                Exae[:, n] = -psidotsueps / k0**2
 
                 Eysh[:, n] = 0
                 Eyah[:, n] = 0
@@ -397,11 +397,11 @@ class FMMMode2d(Mode):
 
                 Ezsh[:, n] = 0
                 Ezah[:, n] = -1j * fi / k0
-                Ezse[:, n] = 1j * kz / k0 ** 2 * psidotsueps
+                Ezse[:, n] = 1j * kz / k0**2 * psidotsueps
                 Ezae[:, n] = 0
 
                 cBxsh[:, n] = 0
-                cBxah[:, n] = fidot / k0 ** 2
+                cBxah[:, n] = fidot / k0**2
                 cBxse[:, n] = kz / k0 * psi
                 cBxae[:, n] = 0
 
@@ -410,7 +410,7 @@ class FMMMode2d(Mode):
                 cByse[:, n] = 0
                 cByae[:, n] = 0
 
-                cBzsh[:, n] = -1j * kz / k0 ** 2 * fidot
+                cBzsh[:, n] = -1j * kz / k0**2 * fidot
                 cBzah[:, n] = 0
                 cBzse[:, n] = 0
                 cBzae[:, n] = -1j * psi / k0
@@ -567,7 +567,7 @@ class FMMMode2d(Mode):
                 uh_n1 = copy.deepcopy(self.modih[n1])
                 # reduce to a single slice
                 kfh_n1 = uh_n1.k[mx]
-                uh_n1.k = numpy.atleast_1d(scipy.sqrt(kfh_n1 ** 2 - kz ** 2))
+                uh_n1.k = numpy.atleast_1d(scipy.sqrt(kfh_n1**2 - kz**2))
                 uh_n1.sl = numpy.atleast_1d(uh_n1.sl[mx] * (k0 / kfh_n1) ** 2)
                 uh_n1.al = numpy.atleast_1d(uh_n1.al[mx])
                 uh_n1.sr = numpy.atleast_1d(uh_n1.sr[mx] * (k0 / kfh_n1) ** 2)
@@ -578,7 +578,7 @@ class FMMMode2d(Mode):
                 ue_n1 = copy.deepcopy(self.modie[n1])
                 # reduce to a single slice
                 kfe_n1 = ue_n1.k[mx]
-                ue_n1.k = numpy.atleast_1d(scipy.sqrt(kfe_n1 ** 2 - kz ** 2))
+                ue_n1.k = numpy.atleast_1d(scipy.sqrt(kfe_n1**2 - kz**2))
                 ue_n1.sl = numpy.atleast_1d(ue_n1.sl[mx] * (k0 / kfe_n1) ** 2)
                 ue_n1.al = numpy.atleast_1d(ue_n1.al[mx])
                 ue_n1.sr = numpy.atleast_1d(ue_n1.sr[mx] * (k0 / kfe_n1) ** 2)
@@ -598,7 +598,7 @@ class FMMMode2d(Mode):
                     uh_n2 = copy.deepcopy(mode.modih[n2])
                     # reduce to a single slice
                     kfh_n2 = uh_n2.k[mx]
-                    uh_n2.k = numpy.atleast_1d(scipy.sqrt(kfh_n2 ** 2 - kz ** 2))
+                    uh_n2.k = numpy.atleast_1d(scipy.sqrt(kfh_n2**2 - kz**2))
                     uh_n2.sl = numpy.atleast_1d(uh_n2.sl[mx] * (k0 / kfh_n2) ** 2)
                     uh_n2.al = numpy.atleast_1d(uh_n2.al[mx])
                     uh_n2.sr = numpy.atleast_1d(uh_n2.sr[mx] * (k0 / kfh_n2) ** 2)
@@ -609,7 +609,7 @@ class FMMMode2d(Mode):
                     ue_n2 = copy.deepcopy(mode.modie[n2])
                     # reduce to a single slice
                     kfe_n2 = ue_n2.k[mx]
-                    ue_n2.k = numpy.atleast_1d(scipy.sqrt(kfe_n2 ** 2 - kz ** 2))
+                    ue_n2.k = numpy.atleast_1d(scipy.sqrt(kfe_n2**2 - kz**2))
                     ue_n2.sl = numpy.atleast_1d(ue_n2.sl[mx] * (k0 / kfe_n2) ** 2)
                     ue_n2.al = numpy.atleast_1d(ue_n2.al[mx])
                     ue_n2.sr = numpy.atleast_1d(ue_n2.sr[mx] * (k0 / kfe_n2) ** 2)
@@ -617,18 +617,18 @@ class FMMMode2d(Mode):
                     ue_n2.U = numpy.atleast_1d(ue_n2.U[mx : mx + 2])
                     # uedot_n2 = dot(ue_n2)
 
-                    Sx += kz * kfh_n2 ** 2 / k0 ** 3 * scalarprod(
+                    Sx += kz * kfh_n2**2 / k0**3 * scalarprod(
                         uh_n1, uh_n2
-                    ) * scalarprod(phi_n1, phi_n2) - kfh_n2 ** 2 / k0 ** 4 * scalarprod(
+                    ) * scalarprod(phi_n1, phi_n2) - kfh_n2**2 / k0**4 * scalarprod(
                         uedot_n1, uh_n2
                     ) * scalarprod(
                         psidotsueps_n1, phi_n2
                     )
-                    Sy += kfe_n1 ** 2 * kz / k0 ** 3 * scalarprod(
+                    Sy += kfe_n1**2 * kz / k0**3 * scalarprod(
                         ue_n1, ue_n2
                     ) * scalarprod(
                         psisueps_n1, psi_n2
-                    ) + kfe_n1 ** 2 / k0 ** 4 * scalarprod(
+                    ) + kfe_n1**2 / k0**4 * scalarprod(
                         ue_n1, uhdot_n2
                     ) * scalarprod(
                         psisueps_n1, phidot_n2
@@ -686,7 +686,7 @@ class FMMMode2d(Mode):
                 # reduce to a single slice
                 kfh_n1 = uh_n1.k[mx]
                 kfh_n1s.append(kfh_n1)
-                uh_n1.k = numpy.atleast_1d(scipy.sqrt(kfh_n1 ** 2 - kz ** 2))
+                uh_n1.k = numpy.atleast_1d(scipy.sqrt(kfh_n1**2 - kz**2))
                 uh_n1.sl = numpy.atleast_1d(uh_n1.sl[mx] * (k0 / kfh_n1) ** 2)
                 uh_n1.al = numpy.atleast_1d(uh_n1.al[mx])
                 uh_n1.sr = numpy.atleast_1d(uh_n1.sr[mx] * (k0 / kfh_n1) ** 2)
@@ -699,7 +699,7 @@ class FMMMode2d(Mode):
                 # reduce to a single slice
                 kfe_n1 = ue_n1.k[mx]
                 kfe_n1s.append(kfe_n1)
-                ue_n1.k = numpy.atleast_1d(scipy.sqrt(kfe_n1 ** 2 - kz ** 2))
+                ue_n1.k = numpy.atleast_1d(scipy.sqrt(kfe_n1**2 - kz**2))
                 ue_n1.sl = numpy.atleast_1d(ue_n1.sl[mx] * (k0 / kfe_n1) ** 2)
                 ue_n1.al = numpy.atleast_1d(ue_n1.al[mx])
                 ue_n1.sr = numpy.atleast_1d(ue_n1.sr[mx] * (k0 / kfe_n1) ** 2)
@@ -721,7 +721,7 @@ class FMMMode2d(Mode):
                 # reduce to a single slice
                 kfh_n2 = uh_n2.k[mx]
                 kfh_n2s.append(kfh_n2)
-                uh_n2.k = numpy.atleast_1d(scipy.sqrt(kfh_n2 ** 2 - kz ** 2))
+                uh_n2.k = numpy.atleast_1d(scipy.sqrt(kfh_n2**2 - kz**2))
                 uh_n2.sl = numpy.atleast_1d(uh_n2.sl[mx] * (k0 / kfh_n2) ** 2)
                 uh_n2.al = numpy.atleast_1d(uh_n2.al[mx])
                 uh_n2.sr = numpy.atleast_1d(uh_n2.sr[mx] * (k0 / kfh_n2) ** 2)
@@ -734,7 +734,7 @@ class FMMMode2d(Mode):
                 # reduce to a single slice
                 kfe_n2 = ue_n2.k[mx]
                 kfe_n2s.append(kfe_n2)
-                ue_n2.k = numpy.atleast_1d(scipy.sqrt(kfe_n2 ** 2 - kz ** 2))
+                ue_n2.k = numpy.atleast_1d(scipy.sqrt(kfe_n2**2 - kz**2))
                 ue_n2.sl = numpy.atleast_1d(ue_n2.sl[mx] * (k0 / kfe_n2) ** 2)
                 ue_n2.al = numpy.atleast_1d(ue_n2.al[mx])
                 ue_n2.sr = numpy.atleast_1d(ue_n2.sr[mx] * (k0 / kfe_n2) ** 2)
@@ -764,18 +764,18 @@ class FMMMode2d(Mode):
                     psi_n2 = psi_n2s[n2]
                     kfh_n2 = kfh_n2s[n2]
 
-                    Sx += kz * kfh_n2 ** 2 / k0 ** 3 * scalarprod(
+                    Sx += kz * kfh_n2**2 / k0**3 * scalarprod(
                         uh_n1, uh_n2
-                    ) * scalarprod(phi_n1, phi_n2) - kfh_n2 ** 2 / k0 ** 4 * scalarprod(
+                    ) * scalarprod(phi_n1, phi_n2) - kfh_n2**2 / k0**4 * scalarprod(
                         uedot_n1, uh_n2
                     ) * scalarprod(
                         psidotsueps_n1, phi_n2
                     )
-                    Sy += kfe_n1 ** 2 * kz / k0 ** 3 * scalarprod(
+                    Sy += kfe_n1**2 * kz / k0**3 * scalarprod(
                         ue_n1, ue_n2
                     ) * scalarprod(
                         psisueps_n1, psi_n2
-                    ) + kfe_n1 ** 2 / k0 ** 4 * scalarprod(
+                    ) + kfe_n1**2 / k0**4 * scalarprod(
                         ue_n1, uhdot_n2
                     ) * scalarprod(
                         psisueps_n1, phidot_n2
@@ -1106,7 +1106,7 @@ def FMMshootingTM(kz_, FMMpars):
     al = numpy.zeros_like(sl)
     ar = numpy.zeros_like(sl)
 
-    k_ = scipy.sqrt(betay ** 2 - kz[:, numpy.newaxis] ** 2)
+    k_ = scipy.sqrt(betay**2 - kz[:, numpy.newaxis] ** 2)
     kd = k_[:, numpy.newaxis] * d
     sinkdsuk_ = sinxsux(kd) * d
     coskd_ = numpy.cos(kd)
@@ -1213,7 +1213,7 @@ def FMMshooting(kz_, FMMpars):
     al = numpy.zeros_like(sl)
     ar = numpy.zeros_like(sl)
 
-    k_ = scipy.sqrt(betay ** 2 - kz[:, numpy.newaxis] ** 2)
+    k_ = scipy.sqrt(betay**2 - kz[:, numpy.newaxis] ** 2)
     kd = k_[:, numpy.newaxis] * d
     sinkdsuk_ = sinxsux(kd) * d
     coskd_ = numpy.cos(kd)
@@ -1525,7 +1525,7 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
     imsearchinterval = 10 * k0
     # ypointsperregion = 5000
 
-    FMMpars = {"epsilon": ny ** 2, "beta": betay, "boundary": boundaryRL, "Uy": Uy}
+    FMMpars = {"epsilon": ny**2, "beta": betay, "boundary": boundaryRL, "Uy": Uy}
 
     # analytical solution
     if numpy.allclose(ny, ny[0]):
@@ -1545,7 +1545,7 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
         matchingre, modotmp = FMMshooting(rekz, FMMpars)
 
     # nre = rekz / k0
-    nre2 = rekz2 / k0 ** 2
+    nre2 = rekz2 / k0**2
     # zerire, z1, z2 = findzerosnew(nre, numpy.abs(matchingre), searchinterval / k0)
     zerire2, z12, z22 = findzerosnew(
         nre2, numpy.abs(matchingre), (searchinterval / k0) ** 2
@@ -1564,7 +1564,7 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
             imkza = imkza + numpy.max(numpy.real(betay))
             imkzb = imkzb + numpy.max(numpy.real(betay))
             # imkz = numpy.linspace(imkza, imkzb, Nstepskz)
-            imkz2 = numpy.linspace(imkza ** 2, imkzb ** 2, Nstepskz)
+            imkz2 = numpy.linspace(imkza**2, imkzb**2, Nstepskz)
             imkz = scipy.sqrt(imkz2)
             if TETM == "TM":
                 matchingim, modotmp = FMMshootingTM(1j * imkz, FMMpars)
@@ -1647,7 +1647,7 @@ def script1d(Ux, Uy, refindex, wl, boundary, nmodislices, verbosity=0):
         # OKKIO: do I really need them?
         slice.Ux = Ux
         slice.refractiveindex = refindex
-        slice.epsilon = refindex ** 2
+        slice.epsilon = refindex**2
         slice.wl = wl
         slices.append(slice)
     return slices
@@ -1659,8 +1659,8 @@ def dot(modo):
     mododot = copy.deepcopy(modo)
     mododot.sl = modo.al
     mododot.sr = modo.ar
-    mododot.al = -(k ** 2) * modo.sl
-    mododot.ar = -(k ** 2) * modo.sr
+    mododot.al = -(k**2) * modo.sl
+    mododot.ar = -(k**2) * modo.sr
     return mododot
 
 
@@ -1710,12 +1710,12 @@ def genera_rotazione(slices):
                 R.Rhh[n, m, idx] = scalarprod(Fhn, Fp1hm)
                 R.Rhhm[n, m, idx] = scalarprod(Fp1hn, Fhm)
 
-                s1 = k0 * scalarprod(Fhndot, Fp1emsueps) / khidx ** 2
-                s2 = k0 * scalarprod(Fhn, Fp1emdotsueps) / keidxp1 ** 2
+                s1 = k0 * scalarprod(Fhndot, Fp1emsueps) / khidx**2
+                s2 = k0 * scalarprod(Fhn, Fp1emdotsueps) / keidxp1**2
                 R.Rhe[n, m, idx] = (s1 + s2).item()
 
-                s1 = k0 * scalarprod(Fp1hndot, Femsueps) / khidxp1 ** 2
-                s2 = k0 * scalarprod(Fp1hn, Femdotsueps) / keidx ** 2
+                s1 = k0 * scalarprod(Fp1hndot, Femsueps) / khidxp1**2
+                s2 = k0 * scalarprod(Fp1hn, Femdotsueps) / keidx**2
                 R.Rhem[n, m, idx] = (s1 + s2).item()
 
     return R
@@ -1757,8 +1757,8 @@ def ortonormalita(slices):
                 M.hh[n, m, idx] = scalarprod(Fhn, Fhm)
 
                 Fp1em = slice.modie[m]
-                s1 = k0 * scalarprod(dot(Fhn), sueps(Fp1em)) / khidx ** 2
-                s2 = k0 * scalarprod(Fhn, sueps(dot(Fp1em))) / keidxp1 ** 2
+                s1 = k0 * scalarprod(dot(Fhn), sueps(Fp1em)) / khidx**2
+                s2 = k0 * scalarprod(Fhn, sueps(dot(Fp1em))) / keidxp1**2
                 M.Rhe[n, m, idx] = (s1 + s2).item()
 
     R = genera_rotazione(slices)
@@ -1834,8 +1834,8 @@ def creaTeThSeSh(kz, slices):
         ke = numpy.array([m.keff.item() for m in slices[idx].modie])
         kh = numpy.array([m.keff.item() for m in slices[idx].modih])
 
-        kxh = scipy.sqrt(kh ** 2 - kz ** 2)
-        kxe = scipy.sqrt(ke ** 2 - kz ** 2)
+        kxh = scipy.sqrt(kh**2 - kz**2)
+        kxe = scipy.sqrt(ke**2 - kz**2)
 
         Th[:, idx] = (k0 / kh) ** 2 * kxh / numpy.tan(kxh * d[idx])
         Sh[:, idx] = (k0 / kh) ** 2 * kxh / numpy.sin(kxh * d[idx])
@@ -1844,8 +1844,8 @@ def creaTeThSeSh(kz, slices):
 
     ke = numpy.array([m.keff.item() for m in slices[0].modie])
     kh = numpy.array([m.keff.item() for m in slices[0].modih])
-    kxh = scipy.sqrt(kh ** 2 - kz ** 2)
-    kxe = scipy.sqrt(ke ** 2 - kz ** 2)
+    kxh = scipy.sqrt(kh**2 - kz**2)
+    kxe = scipy.sqrt(ke**2 - kz**2)
 
     if slices[0].boundary.xleft == "Electric Wall":
         # ah = 0
@@ -1858,8 +1858,8 @@ def creaTeThSeSh(kz, slices):
 
     ke = numpy.array([m.keff.item() for m in slices[-1].modie])
     kh = numpy.array([m.keff.item() for m in slices[-1].modih])
-    kxh = scipy.sqrt(kh ** 2 - kz ** 2)
-    kxe = scipy.sqrt(ke ** 2 - kz ** 2)
+    kxh = scipy.sqrt(kh**2 - kz**2)
+    kxe = scipy.sqrt(ke**2 - kz**2)
 
     if slices[-1].boundary.xleft == "Electric Wall":
         # ah = 0

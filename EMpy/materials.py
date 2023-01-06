@@ -125,9 +125,9 @@ class RefractiveIndex:
         B1, B2, B3, C1, C2, C3 = n0_smcoeffs
         return numpy.sqrt(
             1.0
-            + B1 * wls ** 2 / (wls ** 2 - C1)
-            + B2 * wls ** 2 / (wls ** 2 - C2)
-            + B3 * wls ** 2 / (wls ** 2 - C3)
+            + B1 * wls**2 / (wls**2 - C1)
+            + B2 * wls**2 / (wls**2 - C2)
+            + B3 * wls**2 / (wls**2 - C3)
         ) * numpy.ones_like(wls)
 
     @staticmethod
@@ -335,8 +335,8 @@ class LiquidCrystal(Material):
         self.K22 = K22
         self.K33 = K33
         self.q0 = q0
-        self.epslow = self.nO_electrical ** 2
-        self.deleps = self.nE_electrical ** 2 - self.epslow
+        self.epslow = self.nO_electrical**2
+        self.deleps = self.nE_electrical**2 - self.epslow
 
 
 def get_10400_000_100(conc000):
@@ -345,8 +345,8 @@ def get_10400_000_100(conc000):
     conc = [0, 100]
     epsO_electrical = [3.38, 3.28]
     epsE_electrical = [5.567, 5.867]
-    epsO = [1.47551 ** 2, 1.46922 ** 2]
-    epsE = [1.61300 ** 2, 1.57016 ** 2]
+    epsO = [1.47551**2, 1.46922**2]
+    epsE = [1.61300**2, 1.57016**2]
 
     K11 = 13.5e-12  # elastic constant [N] (splay)
     K22 = 6.5e-12  # elastic constant [N] (twist)

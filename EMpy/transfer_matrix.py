@@ -193,19 +193,19 @@ class AnisotropicTransferMatrix(TransferMatrix):
             """
 
             omega = 2.0 * S.pi * c / wl
-            K = omega ** 2 * mu0 * epsilon
+            K = omega**2 * mu0 * epsilon
 
             k0 = 2.0 * S.pi / wl
-            K /= k0 ** 2
+            K /= k0**2
             alpha /= k0
             beta /= k0
 
-            alpha2 = alpha ** 2
-            alpha3 = alpha ** 3
-            alpha4 = alpha ** 4
-            beta2 = beta ** 2
-            beta3 = beta ** 3
-            beta4 = beta ** 4
+            alpha2 = alpha**2
+            alpha3 = alpha**3
+            alpha4 = alpha**4
+            beta2 = beta**2
+            beta3 = beta**3
+            beta4 = beta**4
 
             coeff = [
                 K[2, 2],
@@ -292,12 +292,12 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 #     [alpha * g, beta * g, -alpha2 - beta2],
                 # ]
                 v[i, :] = [
-                    (K[1, 1] - alpha2 - g ** 2) * (K[2, 2] - alpha2 - beta2)
+                    (K[1, 1] - alpha2 - g**2) * (K[2, 2] - alpha2 - beta2)
                     - (K[1, 2] + beta * g) ** 2,
                     (K[1, 2] + beta * g) * (K[2, 0] + alpha * g)
                     - (K[0, 1] + alpha * beta) * (K[2, 2] - alpha2 - beta2),
                     (K[0, 1] + alpha * beta) * (K[1, 2] + beta * g)
-                    - (K[0, 2] + alpha * g) * (K[1, 1] - alpha2 - g ** 2),
+                    - (K[0, 2] + alpha * g) * (K[1, 1] - alpha2 - g**2),
                 ]
 
             p3 = v[0, :]

@@ -11,12 +11,12 @@ def epsfunc(x_, y_):
     for ix, xx in enumerate(x_):
         for iy, yy in enumerate(y_):
             if abs(xx - 1.24e-6) <= 0.24e-6 and abs(yy - 1.11e-6) <= 0.11e-6:
-                a = 3.4757 ** 2
+                a = 3.4757**2
                 b = 1  # some xy value
                 # eps_xx, xy, yx, yy, zz
                 eps[ix, iy, :] = [a, b, b, a, a]
             else:
-                a = 1.446 ** 2
+                a = 1.446**2
                 # isotropic
                 eps[ix, iy, :] = [a, 0, 0, a, a]
     return eps
