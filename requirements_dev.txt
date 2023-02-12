@@ -30,7 +30,7 @@ filelock==3.8.0
     #   virtualenv
 flake8==6.0.0
     # via -r requirements_dev.in
-ipython==8.7.0
+ipython==8.10.0
     # via -r requirements_dev.in
 jedi==0.18.2
     # via ipython
@@ -91,12 +91,6 @@ six==1.16.0
     # via tox
 stack-data==0.6.2
     # via ipython
-tomli==2.0.1
-    # via
-    #   black
-    #   build
-    #   mypy
-    #   tox
 tox==3.27.1
     # via -r requirements_dev.in
 traitlets==5.6.0
