@@ -81,7 +81,7 @@ pyflakes==3.0.1
     # via
     #   -r requirements_dev.in
     #   flake8
-pygments==2.13.0
+pygments==2.15.0
     # via ipython
 pyparsing==3.0.9
     # via
