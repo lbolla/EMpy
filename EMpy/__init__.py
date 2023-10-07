@@ -22,8 +22,6 @@ __all__ = [
 ]
 __author__ = "Lorenzo Bolla"
 
-from numpy.testing import Tester  # type: ignore
-
 from . import constants
 from . import devices
 from . import materials
@@ -35,5 +33,3 @@ from . import utils
 from .version import version
 
 __version__ = version
-
-test = Tester().test
