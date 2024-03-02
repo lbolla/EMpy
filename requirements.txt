@@ -4,17 +4,17 @@
 #
 #    pip-compile --output-file=requirements.txt setup.py
 #
-contourpy==1.1.1
+contourpy==1.2.0
     # via matplotlib
 cycler==0.12.1
     # via matplotlib
-fonttools==4.43.1
+fonttools==4.49.0
     # via matplotlib
 kiwisolver==1.4.5
     # via matplotlib
-matplotlib==3.8.0
+matplotlib==3.8.3
     # via ElectroMagneticPython (setup.py)
-numpy==1.26.0
+numpy==1.26.4
     # via
     #   ElectroMagneticPython (setup.py)
     #   contourpy
@@ -22,13 +22,13 @@ numpy==1.26.0
     #   scipy
 packaging==23.2
     # via matplotlib
-pillow==10.0.1
+pillow==10.2.0
     # via matplotlib
 pyparsing==3.1.1
     # via matplotlib
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via matplotlib
-scipy==1.11.3
+scipy==1.12.0
     # via ElectroMagneticPython (setup.py)
 six==1.16.0
     # via python-dateutil
