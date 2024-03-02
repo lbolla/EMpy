@@ -52,7 +52,6 @@ def overlap(m1, m2, x=None, y=None):
 
 
 def interface_matrix(solver1, solver2, x=None, y=None):
-
     neigs = solver1.nmodes
 
     O11 = numpy.zeros((neigs, neigs), dtype=complex)
@@ -62,7 +61,6 @@ def interface_matrix(solver1, solver2, x=None, y=None):
 
     for i in range(neigs):
         for j in range(neigs):
-
             O11[i, j] = overlap(solver1.modes[i], solver1.modes[j], x, y)
             O22[i, j] = overlap(solver2.modes[i], solver2.modes[j], x, y)
             O12[i, j] = overlap(solver1.modes[i], solver2.modes[j], x, y)

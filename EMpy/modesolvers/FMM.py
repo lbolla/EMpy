@@ -342,14 +342,12 @@ class FMMMode2d(Mode):
         cBzTM = numpy.zeros_like(ExTE)
 
         for mx, slice in enumerate(self.slicesx):
-
             idx = numpy.where((slice.x1 <= x) & (x < slice.x2))
             x2 = x[idx] - slice.x1
             x1 = slice.x2 - x[idx]
             dx = slice.x2 - slice.x1
 
             for n in range(nmodi):
-
                 fi = slice.modih[n].eval(y)
                 fidot = dot(slice.modih[n]).eval(y)
 
@@ -501,7 +499,6 @@ class FMMMode2d(Mode):
         return cSz
 
     def TEfrac_old(self, x_=None, y_=None):
-
         if x_ is None:
             x = self.get_x()
         else:
@@ -517,12 +514,10 @@ class FMMMode2d(Mode):
         return numpy.abs(cSTE) / (numpy.abs(cSTE) + numpy.abs(cSTM))
 
     def TEfrac(self):
-
         Sx, Sy = self.__overlap(self)
         return Sx / (Sx - Sy)
 
     def overlap_old(self, m, x_=None, y_=None):
-
         if x_ is None:
             x = self.get_x()
         else:
@@ -545,7 +540,6 @@ class FMMMode2d(Mode):
         )
 
     def __overlap_old(self, mode):
-
         nmodi = len(self.modie)
         k0 = 2.0 * numpy.pi / self.slicesx[0].wl
         kz = self.keff
@@ -554,9 +548,7 @@ class FMMMode2d(Mode):
         Sy = 0j
 
         for mx, slice in enumerate(self.slicesx):
-
             for n1 in range(nmodi):
-
                 phi_n1 = slice.modih[n1]
                 # phidot_n1 = dot(phi_n1)
 
@@ -587,7 +579,6 @@ class FMMMode2d(Mode):
                 uedot_n1 = dot(ue_n1)
 
                 for n2 in range(nmodi):
-
                     phi_n2 = mode.slicesx[mx].modih[n2]
                     phidot_n2 = dot(phi_n2)
 
@@ -637,7 +628,6 @@ class FMMMode2d(Mode):
         return (Sx, Sy)
 
     def __overlap(self, mode):
-
         nmodi = len(self.modie)
         k0 = 2.0 * numpy.pi / self.slicesx[0].wl
         kz = self.keff
@@ -646,7 +636,6 @@ class FMMMode2d(Mode):
         Sy = 0j
 
         for mx, slice in enumerate(self.slicesx):
-
             phi_n1s = []
             phidot_n1s = []
             psi_n1s = []
@@ -672,7 +661,6 @@ class FMMMode2d(Mode):
             kfh_n2s = []
 
             for n1 in range(nmodi):
-
                 phi_n1 = slice.modih[n1]
                 phi_n1s.append(phi_n1)
                 phidot_n1s.append(dot(phi_n1))
@@ -744,7 +732,6 @@ class FMMMode2d(Mode):
                 uedot_n2s.append(dot(ue_n2))
 
             for n1 in range(nmodi):
-
                 uh_n1 = uh_n1s[n1]
                 ue_n1 = ue_n1s[n1]
                 uedot_n1 = uedot_n1s[n1]
@@ -755,7 +742,6 @@ class FMMMode2d(Mode):
                 kfe_n1 = kfe_n1s[n1]
 
                 for n2 in range(nmodi):
-
                     uh_n2 = uh_n2s[n2]
                     uhdot_n2 = uhdot_n2s[n2]
                     ue_n2 = ue_n2s[n2]
@@ -784,16 +770,13 @@ class FMMMode2d(Mode):
         return (Sx, Sy)
 
     def overlap(self, mode):
-
         Sx, Sy = self.__overlap(mode)
         return Sx - Sy
 
     def norm(self):
-
         return scipy.sqrt(self.overlap(self))
 
     def normalize(self):
-
         n = self.norm()
         for ue, uh in zip(self.modie, self.modih):
             ue.sl /= n
@@ -850,7 +833,6 @@ class FMMMode2d(Mode):
         return (Ex_FDTD, Ey_FDTD, Ez_FDTD, Hx_FDTD, Hy_FDTD, Hz_FDTD)
 
     def plot(self, x_=None, y_=None):
-
         if x_ is None:
             x = self.get_x()
         else:
@@ -995,7 +977,6 @@ class FMM2d(FMM):
 
 
 def analyticalsolution(nmodi, TETM, FMMpars):
-
     betay = FMMpars["beta"]
     epsilon = FMMpars["epsilon"]
     Uy = FMMpars["Uy"]
@@ -1089,7 +1070,6 @@ def sinxsux(x):
 
 
 def FMMshootingTM(kz_, FMMpars):
-
     betay = FMMpars["beta"]
     eps = FMMpars["epsilon"]
     Uy = FMMpars["Uy"]
@@ -1138,14 +1118,12 @@ def FMMshootingTM(kz_, FMMpars):
     modo = FMMMode1dy()
 
     for m in range(0, len(kz)):
-
         k = k_[m, :]
         sinkdsuk = sinkdsuk_[m, :][0]
         coskd = coskd_[m, :][0]
         sinkdk = sinkdk_[m, :][0]
 
         for idx in range(0, n1):
-
             sr[idx] = sl[idx] * coskd[idx] + al[idx] * sinkdsuk[idx]
             ar[idx] = al[idx] * coskd[idx] - sl[idx] * sinkdk[idx]
 
@@ -1156,7 +1134,6 @@ def FMMshootingTM(kz_, FMMpars):
             # *******************
 
         for idx1 in range(Nregions - 1, n2 - 2, -1):
-
             sl[idx1] = sr[idx1] * coskd[idx1] - ar[idx1] * sinkdsuk[idx1]
             al[idx1] = ar[idx1] * coskd[idx1] + sr[idx1] * sinkdk[idx1]
 
@@ -1172,7 +1149,6 @@ def FMMshootingTM(kz_, FMMpars):
         )
 
         if len(kz) < 2:
-
             # normalize and save only if len(kz) == 1
             # otherwise, modo is ignored and only Delta is useful
 
@@ -1197,7 +1173,6 @@ def FMMshootingTM(kz_, FMMpars):
 
 
 def FMMshooting(kz_, FMMpars):
-
     betay = FMMpars["beta"]
     Uy = FMMpars["Uy"]
     by = FMMpars["boundary"]
@@ -1245,14 +1220,12 @@ def FMMshooting(kz_, FMMpars):
     modo = FMMMode1dy()
 
     for m in range(0, len(kz)):
-
         k = k_[m, :]
         sinkdsuk = sinkdsuk_[m, :][0]
         coskd = coskd_[m, :][0]
         sinkdk = sinkdk_[m, :][0]
 
         for idx in range(0, n1):
-
             sr[idx] = sl[idx] * coskd[idx] + al[idx] * sinkdsuk[idx]
             ar[idx] = al[idx] * coskd[idx] - sl[idx] * sinkdk[idx]
 
@@ -1263,7 +1236,6 @@ def FMMshooting(kz_, FMMpars):
             # *******************
 
         for idx1 in range(Nregions - 1, n2 - 2, -1):
-
             sl[idx1] = sr[idx1] * coskd[idx1] - ar[idx1] * sinkdsuk[idx1]
             al[idx1] = ar[idx1] * coskd[idx1] + sr[idx1] * sinkdk[idx1]
 
@@ -1317,7 +1289,6 @@ def FMMshooting(kz_, FMMpars):
     #                 compiler = 'gcc')
 
     if len(kz) < 2:
-
         # normalize and save only if len(kz) == 1
         # otherwise, modo is ignored and only Delta is useful
 
@@ -1343,7 +1314,6 @@ def FMMshooting(kz_, FMMpars):
 
 
 def remove_consecutives(x, y):
-
     b = numpy.r_[numpy.diff(x) == 1, 0].astype(int)
 
     ic = 0
@@ -1373,7 +1343,6 @@ def remove_consecutives(x, y):
 
 
 def findzerosnew(x, y, searchinterval):
-
     minsi = 2 * numpy.abs(x[1] - x[0])
     if searchinterval < minsi:
         searchinterval = minsi
@@ -1413,7 +1382,6 @@ def findzerosnew(x, y, searchinterval):
 
 
 def absfzzero2(t, f, xmin, xmax, ymin, ymax):
-
     xmean = numpy.mean([xmin, xmax])
     ymean = numpy.mean([ymin, ymax])
     xwidth = xmax - xmin
@@ -1426,7 +1394,6 @@ def absfzzero2(t, f, xmin, xmax, ymin, ymax):
 
 
 def fzzeroabs2(f, zmin, zmax):
-
     xmin = numpy.real(zmin)
     ymin = numpy.imag(zmin)
     xmax = numpy.real(zmax)
@@ -1459,7 +1426,6 @@ def fzzeroabs2(f, zmin, zmax):
 
 
 def scalarprod(modo1, modo2):
-
     d = numpy.diff(modo1.U)
 
     ky1 = modo1.k
@@ -1478,7 +1444,6 @@ def scalarprod(modo1, modo2):
     scprod = numpy.zeros_like(modo1.sl)
 
     for idy in range(Nlayers):
-
         if numpy.allclose(ky1[idy], ky2[idy]):
             if numpy.linalg.norm(ky1) < 1e-10:
                 scprod[idy] = sl1[idy] * sl2[idy] * (modo1.U[idy + 1] - modo1.U[idy])
@@ -1505,7 +1470,6 @@ def scalarprod(modo1, modo2):
 
 
 def sueps(modo):
-
     eps = modo.pars["epsilon"]
     modosueps = copy.deepcopy(modo)
     modosueps.sl /= eps
@@ -1517,7 +1481,6 @@ def sueps(modo):
 
 
 def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
-
     k0 = 2 * numpy.pi / wl
     betay = ny * k0
     Nstepskz = 1543
@@ -1592,7 +1555,6 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
     # inizia il ciclo sugli intervalli
     Message("Refine zeros.", 2).show(verbosity)
     for m in range(0, len(kz1)):
-
         if mk == nmodi:
             break
         if TETM == "TM":
@@ -1629,7 +1591,6 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
 
 
 def script1d(Ux, Uy, refindex, wl, boundary, nmodislices, verbosity=0):
-
     nx = refindex.shape[0]
     slices = []
     for m in range(nx):
@@ -1654,7 +1615,6 @@ def script1d(Ux, Uy, refindex, wl, boundary, nmodislices, verbosity=0):
 
 
 def dot(modo):
-
     k = modo.k
     mododot = copy.deepcopy(modo)
     mododot.sl = modo.al
@@ -1665,7 +1625,6 @@ def dot(modo):
 
 
 def genera_rotazione(slices):
-
     nmodi = len(slices[0].modih)
     k0 = 2 * numpy.pi / slices[0].wl
     Nslices = len(slices)
@@ -1722,7 +1681,6 @@ def genera_rotazione(slices):
 
 
 def ortonormalita(slices):
-
     nmodi = len(slices[0].modih)
     k0 = 2 * numpy.pi / slices[0].wl
     Nslices = len(slices)
@@ -1741,7 +1699,6 @@ def ortonormalita(slices):
     M.Rhe = numpy.zeros_like(M.ee)
 
     for idx, slice in enumerate(slices):
-
         for n in range(nmodi):
             Fhn = slice.modih[n]
             Fen = slice.modie[n]
@@ -1787,7 +1744,6 @@ def ortonormalita(slices):
 
 
 def method_of_component(kz_, slices, Rot, uscelto=None, icomp=None):
-
     kz = numpy.atleast_1d(kz_)
     abscomp = numpy.zeros(len(kz))
     #    tmp = 500 # OKKIO: perche' 500?
@@ -1815,7 +1771,6 @@ def method_of_component(kz_, slices, Rot, uscelto=None, icomp=None):
 
 
 def creaTeThSeSh(kz, slices):
-
     Nslices = len(slices)
     nmodi = len(slices[0].modie)
     d = numpy.array([s.x2 - s.x1 for s in slices])
@@ -1874,7 +1829,6 @@ def creaTeThSeSh(kz, slices):
 
 
 def Mvec(kz, slices, R):
-
     Nslices = len(slices)
     Rhh = R.Rhh
     Ree = R.Ree
@@ -1897,7 +1851,6 @@ def Mvec(kz, slices, R):
     Dim1 = numpy.arange(dim1)
 
     for idx in range(3, Nslices):
-
         idxeJA = (2 * idx - 4) * dim1
         idxeJB = (2 * idx - 6) * dim1
         idxeJC = (2 * idx - 2) * dim1
@@ -2052,7 +2005,6 @@ def Mvec(kz, slices, R):
 
 
 def check_matching(kz, slices, modo, R):
-
     Te, Th, Se, Sh, Teleft, Teright, Thleft, Thright = creaTeThSeSh(kz, slices)
     Shr = numpy.array([m.sr for m in modo.modih])
     Shl = numpy.array([m.sl for m in modo.modih])
@@ -2131,7 +2083,6 @@ def check_matching(kz, slices, modo, R):
 
 
 def creacoeffx3(kz, solution, slices, R):
-
     Nslices = len(slices)
 
     xl = slices[0].boundary.xleft
@@ -2160,7 +2111,6 @@ def creacoeffx3(kz, solution, slices, R):
     arh = numpy.zeros_like(ale)
 
     if (xl == "Electric Wall") & (xr == "Electric Wall"):
-
         sle = numpy.c_[numpy.zeros((nmodi, 1)), sle2end]
         sre[:, -1] = numpy.zeros(nmodi)
         are[:, -1] = -Se[:, -1] * sle[:, -1]
@@ -2192,7 +2142,6 @@ def creacoeffx3(kz, solution, slices, R):
             )
 
     elif (xl == "Electric Wall") & (xr == "Magnetic Wall"):
-
         sle = numpy.c_[numpy.zeros((nmodi, 1)), sle2end]
         are[:, -1] = numpy.zeros(nmodi)
         sre[:, -1] = Se[:, -1] / Te[:, -1] * sle[:, -1]
@@ -2224,7 +2173,6 @@ def creacoeffx3(kz, solution, slices, R):
             )
 
     elif (xl == "Magnetic Wall") & (xr == "Electric Wall"):
-
         sle = numpy.c_[numpy.zeros((nmodi, 1)), sle2end]
         slh = numpy.c_[numpy.zeros((nmodi, 1)), slh2end]
 
@@ -2256,7 +2204,6 @@ def creacoeffx3(kz, solution, slices, R):
             )
 
     elif (xl == "Magnetic Wall") & (xr == "Magnetic Wall"):
-
         sle = numpy.c_[numpy.zeros((nmodi, 1)), sle2end]
         slh = numpy.c_[numpy.zeros((nmodi, 1)), slh2end]
 
@@ -2296,7 +2243,6 @@ def creacoeffx3(kz, solution, slices, R):
     ke = numpy.zeros_like(kh)
 
     for n in range(nmodi):
-
         for q, slice in enumerate(slices):
             kh[n, q] = slice.modih[n].keff.item()
             ke[n, q] = slice.modie[n].keff.item()
@@ -2323,7 +2269,6 @@ def creacoeffx3(kz, solution, slices, R):
 
 
 def FMM1d_x_component(slices, nmodi, verbosity=0):
-
     Message("Matching 1dmodes on slices interfaces.", 1).show(verbosity)
 
     TolnullEig = 1e-1
@@ -2375,7 +2320,6 @@ def FMM1d_x_component(slices, nmodi, verbosity=0):
     mk = 0
     modi = []
     for m in range(len(kz1)):
-
         if mk == nmodi:
             break
 
@@ -2389,7 +2333,6 @@ def FMM1d_x_component(slices, nmodi, verbosity=0):
         )
 
         if len(valf) > 0:
-
             eigval, eigvec = numpy.linalg.eig(Mvec(z0, slices, Rot))
             mk += 1
             index0 = numpy.where(numpy.abs(eigval) < TolnullEig)[0]

@@ -68,7 +68,6 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
     kz = S.empty_like(kx)
 
     for ii in range(0, kx.size):
-
         alpha = nE**2 - nO**2
         beta = kx[ii] / k * c[0] + ky[ii] / k * c[1]
 
@@ -234,7 +233,6 @@ class IsotropicRCWA(RCWA):
         dlt = (i == 0).astype(int)
 
         for iwl, wl in enumerate(self.wls):
-
             # free space wavevector
             k = 2 * pi / wl
 
@@ -287,7 +285,6 @@ class IsotropicRCWA(RCWA):
             MTp1.fill(0.0)
             MTp2.fill(0.0)
             for nlayer in range(nlayers - 2, 0, -1):  # internal layers
-
                 layer = multilayer[nlayer]
                 d = layer.thickness
 
@@ -315,13 +312,11 @@ class IsotropicRCWA(RCWA):
                         A = S.diag((kx / k) ** 2) - E
 
                 if S.absolute(K[2] / k) > 1e-10:
-
                     raise ValueError(
                         "First Order Helmholtz Operator not implemented, yet!"
                     )
 
                 elif ky == 0 or S.allclose(S.diag(Ky / ky * k), 1):
-
                     # lalanne
                     # H_U_reduced = S.dot(Ky, Ky) + A
                     H_U_reduced = (ky / k) ** 2 * I + A
@@ -395,7 +390,6 @@ class IsotropicRCWA(RCWA):
                     )
 
                 else:
-
                     ValueError("Second Order Helmholtz Operator not implemented, yet!")
 
             # M = S.asarray(S.bmat([-MR, MT]))
@@ -516,7 +510,6 @@ class AnisotropicRCWA(RCWA):
         dlt = (i == 0).astype(int)
 
         for iwl, wl in enumerate(self.wls):
-
             nO1 = nE1 = multilayer[0].mat.n(wl).item()
             nO3 = nE3 = multilayer[-1].mat.n(wl).item()
 
@@ -653,7 +646,6 @@ class AnisotropicRCWA(RCWA):
             M.fill(0.0)
 
             for nlayer in range(nlayers - 2, 0, -1):  # internal layers
-
                 layer = multilayer[nlayer]
                 thickness = layer.thickness
 

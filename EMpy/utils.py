@@ -441,7 +441,6 @@ class LiquidCrystalCell:
         nlayers=100,
         data_file=None,
     ):
-
         self.lc = lc
         self.t_tot = t_tot
         self.t_anchoring = t_anchoring
@@ -616,7 +615,6 @@ class LiquidCrystalCell:
         return z, theta, phi, u
 
     def _get_angles_from_file(self):
-
         # interpolate data file
         data = numpy.loadtxt(self.data_file)
         data_x = numpy.linspace(0, 1, data.shape[0] - 1)
@@ -628,7 +626,6 @@ class LiquidCrystalCell:
         return angles.squeeze()
 
     def _get_angles_from_bvp(self):
-
         # solve bvp
         self.__apply_tension()
         z_ = self.normalized_sample_points
@@ -860,7 +857,6 @@ class CrossSection(list):
         return self.widths().sum()
 
     def grid(self, nx_per_region, ny_per_region):
-
         xs = self.xs()
         ys = self.ys()
 
@@ -1158,7 +1154,6 @@ def find_peaks(x, y, threshold=1e-6):
 
     peaks = []
     for idx in idxs:
-
         # look around the candidate
         xtol = (x.max() - x.min()) * 1e-6
         xopt = scipy.optimize.fminbound(
@@ -1167,7 +1162,6 @@ def find_peaks(x, y, threshold=1e-6):
         yopt = scipy.interpolate.splev(xopt, tck)
 
         if yopt > threshold * y.max():
-
             # FWHM
             tckFWHM = scipy.interpolate.splrep(x, y - 0.5 * yopt)
             roots = scipy.interpolate.sproot(tckFWHM)

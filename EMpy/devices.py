@@ -1297,7 +1297,6 @@ class SWG(Device):
     pf400_225 = [1.255208385485759e-007, -1.784557912270417e-003, 4.737972109281652e000]
 
     def __init__(self, w, h, T):
-
         self.w = w
         self.h = h  # not used!
         self.T = T

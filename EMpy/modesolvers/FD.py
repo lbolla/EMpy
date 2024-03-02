@@ -88,7 +88,6 @@ class SVFDModeSolver(ModeSolver):
         return eps
 
     def build_matrix(self):
-
         from scipy.sparse import coo_matrix
 
         wl = self.wl
@@ -134,7 +133,6 @@ class SVFDModeSolver(ModeSolver):
         # three methods: Ex, Ey and scalar
 
         if method == "Ex":
-
             # Ex
 
             An = 2 / n / (n + s)
@@ -164,7 +162,6 @@ class SVFDModeSolver(ModeSolver):
             Ap = ep * k**2 - An - As - Ae * ep / ee - Aw * ep / ew
 
         elif method == "Ey":
-
             # Ey
 
             An = (
@@ -194,7 +191,6 @@ class SVFDModeSolver(ModeSolver):
             Ap = ep * k**2 - An * ep / en - As * ep / es - Ae - Aw
 
         elif method == "scalar":
-
             # scalar
 
             An = 2 / n / (n + s)
@@ -204,7 +200,6 @@ class SVFDModeSolver(ModeSolver):
             Ap = ep * k**2 - An - As - Ae - Aw
 
         else:
-
             raise ValueError("unknown method")
 
         ii = numpy.arange(nx * ny).reshape(nx, ny)
@@ -260,7 +255,6 @@ class SVFDModeSolver(ModeSolver):
         return A
 
     def solve(self, neigs, tol):
-
         from scipy.sparse.linalg import eigen
 
         self.nmodes = neigs
@@ -388,7 +382,6 @@ class VFDModeSolver(ModeSolver):
         return epsxx, epsxy, epsyx, epsyy, epszz
 
     def build_matrix(self):
-
         from scipy.sparse import coo_matrix
 
         wl = self.wl
@@ -814,7 +807,6 @@ class VFDModeSolver(ModeSolver):
         return A
 
     def compute_other_fields(self, neffs, Hxs, Hys):
-
         from scipy.sparse import coo_matrix
 
         wl = self.wl
@@ -827,7 +819,6 @@ class VFDModeSolver(ModeSolver):
         Eys = []
         Ezs = []
         for neff, Hx, Hy in zip(neffs, Hxs, Hys):
-
             dx = numpy.diff(x)
             dy = numpy.diff(y)
 
@@ -2123,7 +2114,7 @@ class VFDModeSolver(ModeSolver):
         [Hzs, Exs, Eys, Ezs] = self.compute_other_fields(neffs, Hxs, Hys)
 
         self.modes = []
-        for (neff, Hx, Hy, Hz, Ex, Ey, Ez) in zip(neffs, Hxs, Hys, Hzs, Exs, Eys, Ezs):
+        for neff, Hx, Hy, Hz, Ex, Ey, Ez in zip(neffs, Hxs, Hys, Hzs, Exs, Eys, Ezs):
             self.modes.append(
                 FDMode(
                     self.wl, self.x, self.y, neff, Ex, Ey, Ez, Hx, Hy, Hz
@@ -2165,7 +2156,6 @@ class FDMode(Mode):
         return numpy.linspace(self.y[0], self.y[-1], n)
 
     def get_field(self, fname, x=None, y=None):
-
         if fname == "Ex":
             f = self.Ex
             centered = True
@@ -2246,7 +2236,6 @@ class FDMode(Mode):
         return self
 
     def overlap(self, m, x=None, y=None):
-
         x1 = EMpy.utils.centered1d(self.x)
         y1 = EMpy.utils.centered1d(self.y)
 
@@ -2423,7 +2412,6 @@ class FDMode(Mode):
 
 
 def stretchmesh(x, y, nlayers, factor, method="PPPP"):
-
     # OKKIO: check me!
 
     # This function can be used to continuously stretch the grid
@@ -2479,9 +2467,7 @@ def stretchmesh(x, y, nlayers, factor, method="PPPP"):
     factor *= numpy.ones(4)
 
     for idx, (n, f, m) in enumerate(zip(nlayers, factor, method.upper())):
-
         if n > 0 and f != 1:
-
             if idx == 0:
                 # north boundary
                 kv = numpy.arange(len(y) - 1 - n, len(y))

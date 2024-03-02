@@ -90,7 +90,6 @@ class RefractiveIndex:
     def __init__(
         self, n0_const=None, n0_poly=None, n0_smcoeffs=None, n0_known=None, n0_func=None
     ):
-
         if n0_const is not None:
             self.get_rix = partial(self.__from_const, n0_const)
 

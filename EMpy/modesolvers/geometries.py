@@ -38,7 +38,6 @@ def T2S(T):
 
 
 class SWG:
-
     #    def __init__(self, cs, solver, length, inputLHS=None, inputRHS=None):
     def __init__(self, solver, length, inputLHS=None, inputRHS=None):
         #        self.cs = cs
@@ -95,7 +94,6 @@ class SWG:
 
 
 class SimpleJoint:
-
     #    def __init__(self, cs1, cs2, solver1, solver2, inputLHS=None, inputRHS=None):
     def __init__(self, solver1, solver2, inputLHS=None, inputRHS=None):
         #        self.cs1 = cs1
