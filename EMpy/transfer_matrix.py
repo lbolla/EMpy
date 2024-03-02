@@ -68,10 +68,10 @@ class IsotropicTransferMatrix(TransferMatrix):
         nlayers = len(multilayer)
         d = S.array([l.thickness for l in multilayer]).ravel()
 
-        Rs = S.zeros_like(self.wls)
-        Ts = S.zeros_like(self.wls)
-        Rp = S.zeros_like(self.wls)
-        Tp = S.zeros_like(self.wls)
+        Rs = S.zeros_like(self.wls, dtype=float)
+        Ts = S.zeros_like(self.wls, dtype=float)
+        Rp = S.zeros_like(self.wls, dtype=float)
+        Tp = S.zeros_like(self.wls, dtype=float)
 
         Dp = S.zeros((2, 2), dtype=complex)
         Ds = S.zeros((2, 2), dtype=complex)
@@ -86,7 +86,6 @@ class IsotropicTransferMatrix(TransferMatrix):
             ntot[:, i] = l.mat.n(self.wls, l.mat.toc.T0)
 
         for iwl, wl in enumerate(self.wls):
-
             n = ntot[iwl, :]
             theta = snell(theta_inc, n)
 
@@ -99,7 +98,6 @@ class IsotropicTransferMatrix(TransferMatrix):
             Mp = inv(Dp)
 
             for nn, dd, tt, kk in zip(n[1:-1], d[1:-1], theta[1:-1], k[1:-1, 0]):
-
                 Ds = [[1.0, 1.0], [nn * S.cos(tt), -nn * S.cos(tt)]]
                 Dp = [[S.cos(tt), S.cos(tt)], [nn, -nn]]
                 phi = kk * dd
@@ -285,7 +283,6 @@ class AnisotropicTransferMatrix(TransferMatrix):
             v = S.zeros((4, 3), dtype=complex)
 
             for i, g in enumerate(gamma):
-
                 # H = K + [
                 #     [-beta2 - g ** 2, alpha * beta, alpha * g],
                 #     [alpha * beta, -alpha2 - g ** 2, beta * g],
@@ -327,7 +324,6 @@ class AnisotropicTransferMatrix(TransferMatrix):
             epstot[:, :, :, i] = l.mat.epsilonTensor(self.wls)
 
         for iwl, wl in enumerate(self.wls):
-
             epsilon = epstot[:, :, iwl, :]
 
             kx = 2 * S.pi / wl * S.sin(theta_inc_x)
@@ -342,7 +338,6 @@ class AnisotropicTransferMatrix(TransferMatrix):
             P = S.zeros((4, 4, nlayers), dtype=complex)
 
             for i in range(nlayers):
-
                 k[:, :, i], p[:, :, i], q[:, :, i] = find_roots(
                     wl, epsilon[:, :, i], kx, ky
                 )
