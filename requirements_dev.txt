@@ -8,7 +8,7 @@ asttokens==2.4.0
     # via stack-data
 backcall==0.2.0
     # via ipython
-black==23.9.1
+black==24.3.0
     # via -r requirements_dev.in
 build==1.0.3
     # via pip-tools
