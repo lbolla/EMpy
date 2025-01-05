@@ -10,6 +10,9 @@ REQUIREMENTS = requirements.txt requirements_dev.txt
 help:  ## Print this help
 	@grep -E '^[a-zA-Z][a-zA-Z0-9_-]*:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+venv:  ## Create venv for EMpy
+	mkvirtualenv EMpy
+
 develop: upgrade-dev requirements-install  ## Install project for development
 	pip install -e .
 

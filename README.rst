@@ -31,25 +31,37 @@ Optionally, install `bvp`:
 Development
 ===========
 
-First, download the source code from https://github.com/lbolla/EMpy. Then, from inside a `virtualenv`, install with:
+First, download the source code from https://github.com/lbolla/EMpy.
+
+Create a virtualenv with, e.g:
 
 .. code-block:: bash
 
-    $> pip install -r requirements_dev.txt
-    $> python setup.py develop
+  $> make venv
+
+Then, from inside a `virtualenv`, install dev environment with:
+
+.. code-block:: bash
+
+  $> make develop
 
 Run tests with:
 
 .. code-block:: bash
 
-    $> python setup.py test
+Upgrade dependencies with:
+
+.. code-block:: bash
+
+  $> make requirements-upgrade
+  $> make requirements-sync
+
 
 Release process
 ===============
 
 1. Edit CHANGES
-2. `bumpversion major|minor|patch`
-3. `git push && git push --tags`
+2. `make release PART=major|minor|patch`
 
 Citation
 ========
