@@ -2,13 +2,13 @@
 
 Solve for both an isotropic and anisotropic multilayer.
 """
-import scipy
+import numpy as np
 import pylab
 
 import EMpy
 
-n = scipy.array([1.0, 2.0, 2.3, 4.3, 3.0])
-d = scipy.array([scipy.inf, 1e-6, 2.3e-6, 0.1e-6, scipy.inf])
+n = np.array([1.0, 2.0, 2.3, 4.3, 3.0])
+d = np.array([np.inf, 1e-6, 2.3e-6, 0.1e-6, np.inf])
 
 iso_layers = EMpy.utils.Multilayer()
 aniso_layers = EMpy.utils.Multilayer()
@@ -27,7 +27,7 @@ for i in range(n.size):
             EMpy.materials.AnisotropicMaterial(
                 "Air",
                 epsilon_tensor=EMpy.materials.EpsilonTensor(
-                    epsilon_tensor_const=n[i] ** 2 * EMpy.constants.eps0 * scipy.eye(3)
+                    epsilon_tensor_const=n[i] ** 2 * EMpy.constants.eps0 * np.eye(3)
                 ),
             ),
             d[i],
@@ -37,7 +37,7 @@ for i in range(n.size):
 theta_inc = EMpy.utils.deg2rad(10.0)
 theta_inc_x = theta_inc
 theta_inc_y = 0.0
-wls = scipy.linspace(1.4e-6, 1.7e-6, 100)
+wls = np.linspace(1.4e-6, 1.7e-6, 100)
 solution_iso = EMpy.transfer_matrix.IsotropicTransferMatrix(
     iso_layers, theta_inc
 ).solve(wls)

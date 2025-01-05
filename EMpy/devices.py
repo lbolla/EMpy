@@ -619,8 +619,8 @@ class MZ(Device):
         self.coupler2.sanity_check()
         self.line.sanity_check()
         if not (
-            numpy.alltrue(self.coupler1.wl == self.line.wl)
-            and numpy.alltrue(self.coupler1.wl == self.coupler2.wl)
+            numpy.all(self.coupler1.wl == self.line.wl)
+            and numpy.all(self.coupler1.wl == self.coupler2.wl)
         ):
             raise ValueError("incompatible wl")
 
@@ -808,9 +808,9 @@ class SRR(Device):
         self.line1.sanity_check()
         self.line2.sanity_check()
         if not (
-            numpy.alltrue(self.coupler1.wl == self.coupler2.wl)
-            and numpy.alltrue(self.coupler1.wl == self.line1.wl)
-            and numpy.alltrue(self.coupler1.wl == self.line2.wl)
+            numpy.all(self.coupler1.wl == self.coupler2.wl)
+            and numpy.all(self.coupler1.wl == self.line1.wl)
+            and numpy.all(self.coupler1.wl == self.line2.wl)
         ):
             raise ValueError("incompatible wl")
 
@@ -926,7 +926,7 @@ class NRR(Device):
 
         for K in self.Ks:
             K.sanity_check()
-            if not (numpy.alltrue(self.wl == K.wl)):
+            if not (numpy.all(self.wl == K.wl)):
                 raise ValueError("incompatible wl")
         if not (len(self.Ks) - 1 == len(self.neffs) == len(self.l1s) == len(self.l2s)):
             raise ValueError("number of couplers and number of rings do not match.")

@@ -9,7 +9,7 @@ anisotropic one.
 """
 __author__ = "Lorenzo Bolla"
 
-import scipy as S
+import numpy as np
 from scipy.linalg import inv
 from EMpy.utils import snell, norm
 from EMpy.constants import c, mu0
@@ -60,27 +60,27 @@ class IsotropicTransferMatrix(TransferMatrix):
         transmitted on s and p polarizations.
         """
 
-        self.wls = S.asarray(wls)
+        self.wls = np.asarray(wls)
 
         multilayer = self.multilayer
         theta_inc = self.theta_inc
 
         nlayers = len(multilayer)
-        d = S.array([l.thickness for l in multilayer]).ravel()
+        d = np.array([l.thickness for l in multilayer]).ravel()
 
-        Rs = S.zeros_like(self.wls, dtype=float)
-        Ts = S.zeros_like(self.wls, dtype=float)
-        Rp = S.zeros_like(self.wls, dtype=float)
-        Tp = S.zeros_like(self.wls, dtype=float)
+        Rs = np.zeros_like(self.wls, dtype=float)
+        Ts = np.zeros_like(self.wls, dtype=float)
+        Rp = np.zeros_like(self.wls, dtype=float)
+        Tp = np.zeros_like(self.wls, dtype=float)
 
-        Dp = S.zeros((2, 2), dtype=complex)
-        Ds = S.zeros((2, 2), dtype=complex)
-        P = S.zeros((2, 2), dtype=complex)
-        Ms = S.zeros((2, 2), dtype=complex)
-        Mp = S.zeros((2, 2), dtype=complex)
-        k = S.zeros((nlayers, 2), dtype=complex)
+        Dp = np.zeros((2, 2), dtype=complex)
+        Ds = np.zeros((2, 2), dtype=complex)
+        P = np.zeros((2, 2), dtype=complex)
+        Ms = np.zeros((2, 2), dtype=complex)
+        Mp = np.zeros((2, 2), dtype=complex)
+        k = np.zeros((nlayers, 2), dtype=complex)
 
-        ntot = S.zeros((self.wls.size, nlayers), dtype=complex)
+        ntot = np.zeros((self.wls.size, nlayers), dtype=complex)
         for i, l in enumerate(multilayer):
             #            ntot[:,i] = l.mat.n(self.wls,l.mat.T0)
             ntot[:, i] = l.mat.n(self.wls, l.mat.toc.T0)
@@ -89,26 +89,26 @@ class IsotropicTransferMatrix(TransferMatrix):
             n = ntot[iwl, :]
             theta = snell(theta_inc, n)
 
-            k[:, 0] = 2 * S.pi * n / wl * S.cos(theta)
-            k[:, 1] = 2 * S.pi * n / wl * S.sin(theta)
+            k[:, 0] = 2 * np.pi * n / wl * np.cos(theta)
+            k[:, 1] = 2 * np.pi * n / wl * np.sin(theta)
 
-            Ds = [[1.0, 1.0], [n[0] * S.cos(theta[0]), -n[0] * S.cos(theta[0])]]
-            Dp = [[S.cos(theta[0]), S.cos(theta[0])], [n[0], -n[0]]]
+            Ds = [[1.0, 1.0], [n[0] * np.cos(theta[0]), -n[0] * np.cos(theta[0])]]
+            Dp = [[np.cos(theta[0]), np.cos(theta[0])], [n[0], -n[0]]]
             Ms = inv(Ds)
             Mp = inv(Dp)
 
             for nn, dd, tt, kk in zip(n[1:-1], d[1:-1], theta[1:-1], k[1:-1, 0]):
-                Ds = [[1.0, 1.0], [nn * S.cos(tt), -nn * S.cos(tt)]]
-                Dp = [[S.cos(tt), S.cos(tt)], [nn, -nn]]
+                Ds = [[1.0, 1.0], [nn * np.cos(tt), -nn * np.cos(tt)]]
+                Dp = [[np.cos(tt), np.cos(tt)], [nn, -nn]]
                 phi = kk * dd
-                P = [[S.exp(1j * phi), 0], [0, S.exp(-1j * phi)]]
-                Ms = S.dot(Ms, S.dot(Ds, S.dot(P, inv(Ds))))
-                Mp = S.dot(Mp, S.dot(Dp, S.dot(P, inv(Dp))))
+                P = [[np.exp(1j * phi), 0], [0, np.exp(-1j * phi)]]
+                Ms = np.dot(Ms, np.dot(Ds, np.dot(P, inv(Ds))))
+                Mp = np.dot(Mp, np.dot(Dp, np.dot(P, inv(Dp))))
 
-            Ds = [[1.0, 1.0], [n[-1] * S.cos(theta[-1]), -n[-1] * S.cos(theta[-1])]]
-            Dp = [[S.cos(theta[-1]), S.cos(theta[-1])], [n[-1], -n[-1]]]
-            Ms = S.dot(Ms, Ds)
-            Mp = S.dot(Mp, Dp)
+            Ds = [[1.0, 1.0], [n[-1] * np.cos(theta[-1]), -n[-1] * np.cos(theta[-1])]]
+            Dp = [[np.cos(theta[-1]), np.cos(theta[-1])], [n[-1], -n[-1]]]
+            Ms = np.dot(Ms, Ds)
+            Mp = np.dot(Mp, Dp)
 
             rs = Ms[1, 0] / Ms[0, 0]
             ts = 1.0 / Ms[0, 0]
@@ -116,15 +116,15 @@ class IsotropicTransferMatrix(TransferMatrix):
             rp = Mp[1, 0] / Mp[0, 0]
             tp = 1.0 / Mp[0, 0]
 
-            Rs[iwl] = S.absolute(rs) ** 2
+            Rs[iwl] = np.absolute(rs) ** 2
             Ts[iwl] = (
-                S.absolute((n[-1] * S.cos(theta[-1])) / (n[0] * S.cos(theta[0])))
-                * S.absolute(ts) ** 2
+                np.absolute((n[-1] * np.cos(theta[-1])) / (n[0] * np.cos(theta[0])))
+                * np.absolute(ts) ** 2
             )
-            Rp[iwl] = S.absolute(rp) ** 2
+            Rp[iwl] = np.absolute(rp) ** 2
             Tp[iwl] = (
-                S.absolute((n[-1] * S.cos(theta[-1])) / (n[0] * S.cos(theta[0])))
-                * S.absolute(tp) ** 2
+                np.absolute((n[-1] * np.cos(theta[-1])) / (n[0] * np.cos(theta[0])))
+                * np.absolute(tp) ** 2
             )
 
         self.Rs = Rs
@@ -176,7 +176,7 @@ class AnisotropicTransferMatrix(TransferMatrix):
         self.R, self.T = power reflected and transmitted.
         """
 
-        self.wls = S.asarray(wls)
+        self.wls = np.asarray(wls)
 
         multilayer = self.multilayer
         theta_inc_x = self.theta_inc_x
@@ -190,10 +190,10 @@ class AnisotropicTransferMatrix(TransferMatrix):
             gamma_i, i = 1,2,3,4 that satisfy the boundary conditions.
             """
 
-            omega = 2.0 * S.pi * c / wl
+            omega = 2.0 * np.pi * c / wl
             K = omega**2 * mu0 * epsilon
 
-            k0 = 2.0 * S.pi / wl
+            k0 = 2.0 * np.pi / wl
             K /= k0**2
             alpha /= k0
             beta /= k0
@@ -270,17 +270,17 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 - K[2, 0] * K[0, 2] * K[1, 1],
             ]
 
-            gamma = S.roots(coeff)
-            tmp = S.sort_complex(gamma)
+            gamma = np.roots(coeff)
+            tmp = np.sort_complex(gamma)
             gamma = tmp[[3, 0, 2, 1]]  # convention
 
             k = (
                 k0
-                * S.array(
-                    [alpha * S.ones(gamma.shape), beta * S.ones(gamma.shape), gamma]
+                * np.array(
+                    [alpha * np.ones(gamma.shape), beta * np.ones(gamma.shape), gamma]
                 ).T
             )
-            v = S.zeros((4, 3), dtype=complex)
+            v = np.zeros((4, 3), dtype=complex)
 
             for i, g in enumerate(gamma):
                 # H = K + [
@@ -301,41 +301,41 @@ class AnisotropicTransferMatrix(TransferMatrix):
             p3 /= norm(p3)
             p4 = v[1, :]
             p4 /= norm(p4)
-            p1 = S.cross(p3, k[0, :])
+            p1 = np.cross(p3, k[0, :])
             p1 /= norm(p1)
-            p2 = S.cross(p4, k[1, :])
+            p2 = np.cross(p4, k[1, :])
             p2 /= norm(p2)
 
-            p = S.array([p1, p2, p3, p4])
-            q = wl / (2.0 * S.pi * mu0 * c) * S.cross(k, p)
+            p = np.array([p1, p2, p3, p4])
+            q = wl / (2.0 * np.pi * mu0 * c) * np.cross(k, p)
 
             return k, p, q
 
         nlayers = len(multilayer)
-        d = S.asarray([l.thickness for l in multilayer])
+        d = np.asarray([l.thickness for l in multilayer])
 
         # R and T are real, because they are powers
         # r and t are complex!
-        R = S.zeros((2, 2, self.wls.size))
-        T = S.zeros((2, 2, self.wls.size))
+        R = np.zeros((2, 2, self.wls.size))
+        T = np.zeros((2, 2, self.wls.size))
 
-        epstot = S.zeros((3, 3, self.wls.size, nlayers), dtype=complex)
+        epstot = np.zeros((3, 3, self.wls.size, nlayers), dtype=complex)
         for i, l in enumerate(multilayer):
             epstot[:, :, :, i] = l.mat.epsilonTensor(self.wls)
 
         for iwl, wl in enumerate(self.wls):
             epsilon = epstot[:, :, iwl, :]
 
-            kx = 2 * S.pi / wl * S.sin(theta_inc_x)
-            ky = 2 * S.pi / wl * S.sin(theta_inc_y)
-            x = S.array([1, 0, 0], dtype=float)
-            y = S.array([0, 1, 0], dtype=float)
-            # z = S.array([0, 0, 1], dtype=float)
-            k = S.zeros((4, 3, nlayers), dtype=complex)
-            p = S.zeros((4, 3, nlayers), dtype=complex)
-            q = S.zeros((4, 3, nlayers), dtype=complex)
-            D = S.zeros((4, 4, nlayers), dtype=complex)
-            P = S.zeros((4, 4, nlayers), dtype=complex)
+            kx = 2 * np.pi / wl * np.sin(theta_inc_x)
+            ky = 2 * np.pi / wl * np.sin(theta_inc_y)
+            x = np.array([1, 0, 0], dtype=float)
+            y = np.array([0, 1, 0], dtype=float)
+            # z = np.array([0, 0, 1], dtype=float)
+            k = np.zeros((4, 3, nlayers), dtype=complex)
+            p = np.zeros((4, 3, nlayers), dtype=complex)
+            q = np.zeros((4, 3, nlayers), dtype=complex)
+            D = np.zeros((4, 4, nlayers), dtype=complex)
+            P = np.zeros((4, 4, nlayers), dtype=complex)
 
             for i in range(nlayers):
                 k[:, :, i], p[:, :, i], q[:, :, i] = find_roots(
@@ -343,45 +343,45 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 )
                 D[:, :, i] = [
                     [
-                        S.dot(x, p[0, :, i]),
-                        S.dot(x, p[1, :, i]),
-                        S.dot(x, p[2, :, i]),
-                        S.dot(x, p[3, :, i]),
+                        np.dot(x, p[0, :, i]),
+                        np.dot(x, p[1, :, i]),
+                        np.dot(x, p[2, :, i]),
+                        np.dot(x, p[3, :, i]),
                     ],
                     [
-                        S.dot(y, q[0, :, i]),
-                        S.dot(y, q[1, :, i]),
-                        S.dot(y, q[2, :, i]),
-                        S.dot(y, q[3, :, i]),
+                        np.dot(y, q[0, :, i]),
+                        np.dot(y, q[1, :, i]),
+                        np.dot(y, q[2, :, i]),
+                        np.dot(y, q[3, :, i]),
                     ],
                     [
-                        S.dot(y, p[0, :, i]),
-                        S.dot(y, p[1, :, i]),
-                        S.dot(y, p[2, :, i]),
-                        S.dot(y, p[3, :, i]),
+                        np.dot(y, p[0, :, i]),
+                        np.dot(y, p[1, :, i]),
+                        np.dot(y, p[2, :, i]),
+                        np.dot(y, p[3, :, i]),
                     ],
                     [
-                        S.dot(x, q[0, :, i]),
-                        S.dot(x, q[1, :, i]),
-                        S.dot(x, q[2, :, i]),
-                        S.dot(x, q[3, :, i]),
+                        np.dot(x, q[0, :, i]),
+                        np.dot(x, q[1, :, i]),
+                        np.dot(x, q[2, :, i]),
+                        np.dot(x, q[3, :, i]),
                     ],
                 ]
 
             for i in range(1, nlayers - 1):
-                P[:, :, i] = S.diag(S.exp(1j * k[:, 2, i] * d[i]))
+                P[:, :, i] = np.diag(np.exp(1j * k[:, 2, i] * d[i]))
 
             M = inv(D[:, :, 0])
             for i in range(1, nlayers - 1):
-                M = S.dot(M, S.dot(D[:, :, i], S.dot(P[:, :, i], inv(D[:, :, i]))))
-            M = S.dot(M, D[:, :, -1])
+                M = np.dot(M, np.dot(D[:, :, i], np.dot(P[:, :, i], inv(D[:, :, i]))))
+            M = np.dot(M, D[:, :, -1])
 
             deltaM = M[0, 0] * M[2, 2] - M[0, 2] * M[2, 0]
 
             # reflectance matrix (from yeh_electromagnetic)
             # r = [rss rsp; rps rpp]
             r = (
-                S.array(
+                np.array(
                     [
                         [
                             M[1, 0] * M[2, 2] - M[1, 2] * M[2, 0],
@@ -399,13 +399,13 @@ class AnisotropicTransferMatrix(TransferMatrix):
 
             # transmittance matrix (from yeh_electromagnetic)
             # t = [tss tsp; tps tpp]
-            t = S.array([[M[2, 2], -M[2, 0]], [-M[0, 2], M[0, 0]]]) / deltaM
+            t = np.array([[M[2, 2], -M[2, 0]], [-M[0, 2], M[0, 0]]]) / deltaM
 
             # P_t/P_inc = |E_t|**2/|E_inc|**2 . k_t_z/k_inc_z
-            T[:, :, iwl] = (S.absolute(t) ** 2 * k[0, 2, -1] / k[0, 2, 0]).real
+            T[:, :, iwl] = (np.absolute(t) ** 2 * k[0, 2, -1] / k[0, 2, 0]).real
 
             # P_r/P_inc = |E_r|**2/|E_inc|**2
-            R[:, :, iwl] = S.absolute(r) ** 2
+            R[:, :, iwl] = np.absolute(r) ** 2
 
         self.R = R
         self.T = T
