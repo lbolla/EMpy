@@ -5,6 +5,7 @@ ipython
 mypy
 pip-tools>=6.4
 pyflakes
+pytest
 tox>=3.24
 
 packaging>=20

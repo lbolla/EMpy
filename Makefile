@@ -17,10 +17,10 @@ develop: upgrade-dev requirements-install  ## Install project for development
 	pip install -e .
 
 upgrade-dev:  ## Upgrade packages for development
-	pip install -U setuptools pip pip-tools tox
+	pip install -U setuptools pip pip-tools pytest tox
 
 test: lint  ## Run tests
-	python setup.py test
+	pytest
 
 tox:  ## Run Python tests
 	tox
