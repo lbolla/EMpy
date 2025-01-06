@@ -49,6 +49,8 @@ Run tests with:
 
 .. code-block:: bash
 
+  $> make test
+
 Upgrade dependencies with:
 
 .. code-block:: bash
