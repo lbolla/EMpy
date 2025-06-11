@@ -30,6 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 mypy pytest
         pip install -r requirements.txt
+        pip install --editable .
     - name: Lint with flake8
       run: |
         flake8 EMpy tests examples scripts
