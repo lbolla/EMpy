@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ElectroMagneticPython"
 dynamic = ["version"]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 description = "EMpy - ElectroMagnetic Python"
 readme = "README.rst"
 license = { text = "BSD" }
