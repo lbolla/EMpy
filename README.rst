@@ -63,7 +63,19 @@ Release process
 ===============
 
 1. Edit CHANGES
-2. `make release PART=major|minor|patch`
+2. For releases with `setuptools_scm`/`uv`:
+
+.. code-block:: bash
+
+  # tag the release (use the desired version)
+  git tag vX.Y.Z
+  git push --tags
+
+  # create the lockfile and build artifacts locally
+  uv lock
+  uv run python -m build
+
+3. `make release PART=major|minor|patch` (optional — bump metadata locally)
 
 Citation
 ========
