@@ -5,7 +5,6 @@ UV = uv
 
 SRC = EMpy
 SRC_TEST = tests
-REQUIREMENTS = requirements.txt requirements_dev.txt
 
 # Self-documenting Makefile
 # https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
@@ -15,7 +14,8 @@ help:  ## Print this help
 venv:  ## Create venv for EMpy (uv-managed)
 	$(UV) venv
 
-develop: upgrade-dev requirements-install  ## Install project for development
+
+develop: upgrade-dev  ## Install project for development
 	$(UV) venv
 	$(UV) sync
 	$(UV) run pip install -e .
@@ -43,33 +43,14 @@ pyflakes:  ## Run pyflake linter
 mypy:  ## Run mypy linter
 	$(UV) run mypy ${SRC} tests examples scripts
 
-requirements: ${REQUIREMENTS}  ## Create requirements files
 
-
-requirements.txt: setup.py
-	$(UV) pip compile ${PIP_COMPILE_ARGS} --output-file requirements.txt setup.py
-
-%.txt: %.in
-	$(UV) pip compile ${PIP_COMPILE_ARGS} --output-file $@ $<
-
-requirements-upgrade: PIP_COMPILE_ARGS += --upgrade
-requirements-upgrade: requirements  ## Upgrade requirements
-
-
-requirements-sync: requirements  ## Synchronize requirements
-	$(UV) sync
-	$(UV) run pip install -e .
-
-
-requirements-install: requirements  ## Install requirements
-	$(foreach req, ${REQUIREMENTS}, $(UV) run pip install --no-binary :all: -r $(req);)
 
 clean-repo:
 	git diff --quiet HEAD  # no pending commits
 	git diff --cached --quiet HEAD  # no unstaged changes
 	git pull --ff-only  # latest code
 
-release: requirements clean-repo  ## Make a release (specify: PART=[major|minor|patch])
+release: clean-repo  ## Make a release (specify: PART=[major|minor|patch])
 	bump2version ${PART}
 	git push
 	git push --tags
