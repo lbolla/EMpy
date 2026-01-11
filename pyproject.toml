@@ -87,6 +87,14 @@ write_to = "EMpy/version.py"
 write_to_template = 'version = "{version}\n"'
 local_scheme = "no-local-version"
 
+[tool.flake8]
+max-line-length = 130
+ignore = ["E203", "E741", "W503"]
+
+[tool.setuptools.data-files]
+# Install examples into the package's `examples/` directory on install
+"examples" = ["examples/*"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
