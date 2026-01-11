@@ -192,7 +192,6 @@ wheels = [
 
 [[package]]
 name = "electromagneticpython"
-version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "matplotlib" },
