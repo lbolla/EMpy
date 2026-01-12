@@ -32,18 +32,7 @@ jobs:
         python -m pip install --upgrade uv
         uv venv --python ${{ matrix.python-version }}
         uv sync
-    - name: Install dev extras
-      run: |
-        # Ensure pip exists in the uv venv and install dev extras so tools (flake8, mypy, etc.) are available
-        # 1) Try to bootstrap pip via ensurepip
-        uv run python -m ensurepip --upgrade || true
-        # 2) If pip still missing, fetch get-pip.py and run it inside the venv
-        uv run python -m pip --version || (curl -sS https://bootstrap.pypa.io/get-pip.py | uv run python -)
-        # 3) Upgrade pip and install dev extras from pyproject.toml (non-editable installs extras reliably)
-        uv run python -m pip install --upgrade pip setuptools wheel
-        uv run python -m pip install --break-system-packages .[dev] || uv run python -m pip install .[dev]
-        # Explicit fallbacks to guarantee tools are present in case extras failed to install
-        uv run python -m pip install --upgrade flake8 mypy pytest
+    # Rely on uv.lock and `uv sync` (run earlier) to install dev/test/runtime packages
     - name: Lint with flake8
       run: |
         uv run flake8 EMpy tests examples scripts
@@ -53,11 +42,7 @@ jobs:
     - name: Lint with mypy
       run: |
         uv run mypy EMpy tests examples scripts
-    - name: Install runtime dependencies
-      run: |
-        # Install runtime dependencies declared in pyproject.toml by installing the package
-        uv run python -m pip install --upgrade pip setuptools wheel
-        uv run python -m pip install --break-system-packages . || uv run python -m pip install .
+    # No explicit runtime installs: dependencies should come from `uv sync` and `uv.lock`
     - name: "Debug: list installed packages and venv contents"
       run: |
         echo "Python executable:" && uv run python -c 'import sys; print(sys.executable)'
