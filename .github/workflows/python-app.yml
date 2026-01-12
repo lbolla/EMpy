@@ -17,8 +17,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-          # Test across requested versions (3.10-3.12). Note: package metadata requires >=3.12
-          python-version: ["3.10", "3.11", "3.12"]
+        # Test across requested versions (3.10-3.12). Note: package metadata requires >=3.12
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v6
