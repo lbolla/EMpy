@@ -3,7 +3,14 @@
 *.egg
 .eggs/
 .tox/
-.vscode/
+/.vscode/
+/.venv/
+.mypy_cache/
+__pycache__/
+ElectroMagneticPython.egg-info/
+uv.lock
+*.log
+*.cache
 dist
 build
 .idea
