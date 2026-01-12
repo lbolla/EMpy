@@ -27,10 +27,3 @@ jobs:
           uv sync
       - name: Build
         run: uv run python -m build
-      #- name: Publish to PyPI
-      #  run: |
-      #    python -m pip install --upgrade twine
-      #    uv run python -m twine upload dist/*
-      #  env:
-      #    TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-      #    TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}

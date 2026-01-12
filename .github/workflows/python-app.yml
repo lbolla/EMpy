@@ -1,6 +1,3 @@
-# This workflow will install Python dependencies, run tests, and lint with a single version of Python
-# For more information, see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Python application
 
 on:
@@ -17,32 +14,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Test across requested versions (3.10-3.12). Note: package metadata requires >=3.12
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v6
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+
+    - name: Install uv and set the Python version
+      uses: astral-sh/setup-uv@v7
       with:
-        python-version: "${{ matrix.python-version }}"
-    - name: Install uv and create venv
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install --upgrade uv
-        uv venv --python ${{ matrix.python-version }}
-        uv sync
-        # For linting and testing, install dev dependencies
-        uv pip install '.[dev]'
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install the project
+      run: uv sync --locked --all-extras --dev
+
     - name: Lint with flake8
-      run: |
-        uv run flake8 EMpy tests examples scripts
+      run: uv run flake8 EMpy tests examples scripts
+
     - name: Lint with pyflakes
-      run: |
-        uv run pyflakes EMpy tests examples scripts
+      run: uv run pyflakes EMpy tests examples scripts
+
     - name: Lint with mypy
-      run: |
-        uv run mypy EMpy tests examples scripts
+      run: uv run mypy EMpy tests examples scripts
+
     - name: Run tests
-      run: |
-        uv run pytest
+      run: uv run pytest
