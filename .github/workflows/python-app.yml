@@ -33,8 +33,10 @@ jobs:
         uv sync
     - name: Install dev extras
       run: |
-        # Install project with dev extras into the uv venv so tools (flake8, mypy, etc.) are available
-        uv run pip install -e '.[dev]'
+        # Ensure pip inside the uv venv is up-to-date and install dev extras so tools (flake8, mypy, etc.) are available
+        uv run python -m pip install --upgrade pip
+        # In some hosted runners the environment is externally-managed; try with --break-system-packages, fallback to plain install
+        uv run python -m pip install --break-system-packages -e '.[dev]' || uv run python -m pip install -e '.[dev]'
     - name: Lint with flake8
       run: |
         uv run flake8 EMpy tests examples scripts
