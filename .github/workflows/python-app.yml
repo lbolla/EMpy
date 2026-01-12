@@ -17,7 +17,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+          # Test across requested versions (3.10-3.12). Note: package metadata requires >=3.12
+          python-version: ["3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v6
@@ -57,6 +58,11 @@ jobs:
         # Install runtime dependencies declared in pyproject.toml by installing the package
         uv run python -m pip install --upgrade pip setuptools wheel
         uv run python -m pip install --break-system-packages . || uv run python -m pip install .
+    - name: "Debug: list installed packages and venv contents"
+      run: |
+        echo "Python executable:" && uv run python -c 'import sys; print(sys.executable)'
+        echo "Pip list:" && uv run python -m pip list
+        echo "Venv bin listing (first 100 lines):" && uv run bash -lc 'ls -la $(dirname $(which python)) | sed -n "1,100p"'
     - name: Run tests
       run: |
         uv run pytest
