@@ -33,9 +33,13 @@ jobs:
         uv sync
     - name: Install dev extras
       run: |
-        # Ensure pip inside the uv venv is up-to-date and install dev extras so tools (flake8, mypy, etc.) are available
-        uv run python -m pip install --upgrade pip
-        # In some hosted runners the environment is externally-managed; try with --break-system-packages, fallback to plain install
+        # Ensure pip exists in the uv venv and install dev extras so tools (flake8, mypy, etc.) are available
+        # 1) Try to bootstrap pip via ensurepip
+        uv run python -m ensurepip --upgrade || true
+        # 2) If pip still missing, fetch get-pip.py and run it inside the venv
+        uv run python -m pip --version || (curl -sS https://bootstrap.pypa.io/get-pip.py | uv run python -)
+        # 3) Upgrade pip and install dev extras; try using --break-system-packages then fallback
+        uv run python -m pip install --upgrade pip setuptools wheel
         uv run python -m pip install --break-system-packages -e '.[dev]' || uv run python -m pip install -e '.[dev]'
     - name: Lint with flake8
       run: |
