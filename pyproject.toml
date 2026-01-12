@@ -1,108 +1,16 @@
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=7"]
+requires = [
+  "setuptools>=61",
+  "wheel",
+  "setuptools_scm>=7",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ElectroMagneticPython"
 dynamic = ["version"]
 requires-python = ">=3.10"
-description = "EMpy - ElectroMagnetic Python"
-readme = "README.rst"
-license = { text = "BSD" }
-authors = [ { name = "Lorenzo Bolla", email = "code@lbolla.info" } ]
-urls = { Homepage = "http://lbolla.github.io/EMpy/", Repository = "https://github.com/lbolla/EMpy" }
-classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Environment :: Console",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
-  "Natural Language :: English",
-  "Programming Language :: Python :: 3",
-  "Operating System :: OS Independent",
-  "Topic :: Scientific/Engineering :: Physics",
-]
-
-dependencies = [
-  "numpy>=1.18",
-  "scipy>=1.7",
-  "matplotlib>=3.1",
-]
-
-[project.optional-dependencies]
-dev = [
-  "asttokens==3.0.0",
-  "black==24.10.0",
-  "build==1.2.2.post1",
-  "bump2version==1.0.1",
-  "cachetools==5.5.0",
-  "chardet==5.2.0",
-  "click==8.1.8",
-  "colorama==0.4.6",
-  "decorator==5.1.1",
-  "distlib==0.3.9",
-  "executing==2.1.0",
-  "filelock==3.16.1",
-  "flake8==7.1.1",
-  "iniconfig==2.0.0",
-  "ipython==8.31.0",
-  "jedi==0.19.2",
-  "matplotlib-inline==0.1.7",
-  "mccabe==0.7.0",
-  "mypy==1.14.1",
-  "mypy-extensions==1.0.0",
-  "packaging==24.2",
-  "parso==0.8.4",
-  "pathspec==0.12.1",
-  "pexpect==4.9.0",
-  "pip-tools==7.4.1",
-  "platformdirs==4.3.6",
-  "pluggy==1.5.0",
-  "prompt-toolkit==3.0.48",
-  "ptyprocess==0.7.0",
-  "pure-eval==0.2.3",
-  "pycodestyle==2.12.1",
-  "pyflakes==3.2.0",
-  "pygments==2.19.0",
-  "pyparsing==3.2.1",
-  "pyproject-api==1.8.0",
-  "pyproject-hooks==1.2.0",
-  "pytest==8.3.4",
-  "stack-data==0.6.3",
-  "tox==4.23.2",
-  "traitlets==5.14.3",
-  "typing-extensions==4.12.2",
-  "virtualenv==20.28.1",
-  "wcwidth==0.2.13",
-  "wheel==0.45.1",
-]
-
-[tool.setuptools.packages.find]
-where = ["."]
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools_scm]
-write_to = "EMpy/version.py"
-write_to_template = 'version = "{version}\n"'
-local_scheme = "no-local-version"
 
 [tool.flake8]
 max-line-length = 130
 ignore = ["E203", "E741", "E501"]
-
-[tool.setuptools.data-files]
-# Install examples into the package's `examples/` directory on install
-"examples" = ["examples/*"]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.3.4",
-]
-
-# Notes:
-# - This is a draft `pyproject.toml` using setuptools as the build backend.
-# - Version is set to a placeholder; consider using `dynamic = ["version"]`
-#   with a suitable version source (e.g. setuptools_scm or reading `EMpy/version.py`).
-# - Final `pyproject.toml` content will be adjusted once we choose the build backend
-#   and the exact `uv` configuration layout.
