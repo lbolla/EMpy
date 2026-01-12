@@ -1,5 +1,5 @@
 .EXPORT_ALL_VARIABLES:
-.PHONY: help requirements-dev-upgrade
+.PHONY: help
 
 UV = uv
 

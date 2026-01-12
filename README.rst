@@ -51,12 +51,14 @@ Run tests with:
 
   $> make test
 
-Upgrade dependencies with:
+Upgrade dependencies with `uv`:
 
 .. code-block:: bash
 
-  $> make requirements-upgrade
-  $> make requirements-sync
+  # add or update a dependency, then refresh lockfile and sync environment
+  uv add <package>
+  uv lock
+  uv sync
 
 
 Release process
