@@ -1,1 +1,1 @@
-version = "2.2.2.dev38\n"
+version = "2.2.2.dev40"

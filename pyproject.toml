@@ -88,17 +88,10 @@ include-package-data = true
 
 [tool.setuptools_scm]
 write_to = "EMpy/version.py"
-write_to_template = 'version = "{version}\n"'
+write_to_template = 'version = "{version}"'
 local_scheme = "no-local-version"
 
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
 ]
-
-# Notes:
-# - This is a draft `pyproject.toml` using setuptools as the build backend.
-# - Version is set to a placeholder; consider using `dynamic = ["version"]`
-#   with a suitable version source (e.g. setuptools_scm or reading `EMpy/version.py`).
-# - Final `pyproject.toml` content will be adjusted once we choose the build backend
-#   and the exact `uv` configuration layout.
