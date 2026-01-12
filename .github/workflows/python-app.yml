@@ -52,6 +52,11 @@ jobs:
     - name: Lint with mypy
       run: |
         uv run mypy EMpy tests examples scripts
+    - name: Install runtime dependencies
+      run: |
+        # Ensure runtime packages required by tests are available inside the uv venv
+        uv run python -m pip install --upgrade pip setuptools wheel
+        uv run python -m pip install numpy scipy matplotlib
     - name: Run tests
       run: |
         uv run pytest
