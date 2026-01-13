@@ -28,7 +28,7 @@ distlib==0.3.9
     # via virtualenv
 executing==2.1.0
     # via stack-data
-filelock==3.16.1
+filelock==3.20.3
     # via
     #   tox
     #   virtualenv
@@ -109,7 +109,7 @@ traitlets==5.14.3
     #   matplotlib-inline
 typing-extensions==4.12.2
     # via mypy
-virtualenv==20.28.1
+virtualenv==20.36.1
     # via tox
 wcwidth==0.2.13
     # via prompt-toolkit
