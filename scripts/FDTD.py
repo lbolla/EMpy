@@ -1,6 +1,7 @@
 """FDTD Postprocessing.
 
 """
+
 import os
 import numpy
 import EMpy.utils

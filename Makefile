@@ -3,47 +3,35 @@
 
 UV = uv
 
-SRC = EMpy
-SRC_TEST = tests
+SRC = EMpy tests examples scripts
 
 # Self-documenting Makefile
 # https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 help:  ## Print this help
 	@grep -E '^[a-zA-Z][a-zA-Z0-9_-]*:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-venv:  ## Create venv for EMpy (uv-managed)
-	$(UV) venv
+develop:  ## Install dev dependencies
+	$(UV) pip install '.[dev]'
 
-
-develop: upgrade-dev  ## Install project for development
-	$(UV) venv
-	$(UV) sync
-	$(UV) run pip install -e .
-
-upgrade-dev:  ## Upgrade packages for development (run inside uv env)
-	$(UV) run pip install -U setuptools pip pip-tools pytest tox wheel
+upgrade:  ## Upgrade dependencies
+	$(UV) lock --upgrade
 
 test: lint  ## Run tests
 	$(UV) run pytest
 
-tox:  ## Run Python tests
-	$(UV) run tox
-
 black:  ## Run formatter
-	$(UV) run black .
+	$(UV) run black ${SRC}
 
 lint: flake8 pyflakes mypy  ## Run linters
 
 flake8:  ## Run flake8 linter
-	$(UV) run flake8 ${SRC} tests examples scripts
+	$(UV) run flake8 ${SRC}
 
 pyflakes:  ## Run pyflake linter
-	$(UV) run pyflakes ${SRC} tests examples scripts
+	$(UV) run pyflakes ${SRC}
 
 mypy:  ## Run mypy linter
-	$(UV) run mypy ${SRC} tests examples scripts
-
-
+	$(UV) run mypy ${SRC}
 
 clean-repo:
 	git diff --quiet HEAD  # no pending commits

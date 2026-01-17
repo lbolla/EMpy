@@ -13,6 +13,7 @@ Examples
     See L{FMM1d} and L{FMM2d}.
 
 """
+
 import copy
 from functools import reduce
 

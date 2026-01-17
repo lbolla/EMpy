@@ -2,6 +2,7 @@
 
 Solve for both an isotropic and anisotropic multilayer.
 """
+
 import numpy as np
 import pylab
 

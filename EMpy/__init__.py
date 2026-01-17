@@ -10,6 +10,7 @@ The package contains some useful routines to study electromagnetic problems with
 It is based on U{numpy<http://numpy.scipy.org>} and U{scipy<http://www.scipy.org>}.
 
 """
+
 __all__ = [
     "constants",
     "devices",
