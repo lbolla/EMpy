@@ -21,3 +21,9 @@ class UtilsTest(TestCase):
         self.assertEqual(U.norm([0, 1, 0]), 1)
         self.assertEqual(U.norm([0, 0, 1]), 1)
         assert_almost_equal(U.norm([1, 0, 1]), math.sqrt(2))
+
+    def test_trapz2(self):
+        f = [[i + j for i in range(5)] for j in range(5)]
+        res = U.trapz2(f, dx=1.0, dy=1.0)
+        # integral of f = x + y over [0,4]x[0,4] = 64
+        self.assertAlmostEqual(res, 64.0)

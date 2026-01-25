@@ -17,7 +17,7 @@ upgrade:  ## Upgrade dependencies
 	$(UV) lock --upgrade
 	$(UV) sync
 
-test: lint  ## Run tests
+test:  ## Run tests
 	$(UV) run pytest
 
 black:  ## Run formatter
