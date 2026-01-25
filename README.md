@@ -6,7 +6,7 @@
 
 Run the examples in `examples/*` to have an idea how EMpy works.
 
-Visit http://lbolla.github.io/EMpy/ for more information.
+Visit https://lbolla.github.io/EMpy/ for more information.
 
 ## Installation
 
@@ -26,22 +26,21 @@ First, download the source code from https://github.com/lbolla/EMpy.
 
 EMpy is managed with `uv` (https://docs.astral.sh/uv/):
 
-Run tests with:
-
-```bash
-make test
-```
-
 Install dev environment with:
 
 ```bash
 make develop
 ```
 
+Run tests with:
+
+```bash
+make test
+```
+
 Upgrade dependencies with `uv`:
 
 ```bash
-# add or update a dependency, then refresh lockfile and sync environment
 make upgrade
 ```
 
