@@ -5,6 +5,7 @@
 A material is an object with a refractive index function.
 
 """
+
 from functools import partial
 
 import numpy

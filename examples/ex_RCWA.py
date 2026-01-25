@@ -11,7 +11,6 @@ from EMpy.materials import (
     EpsilonTensor,
 )
 
-
 alpha = 0.0
 delta = 0.0
 # psi = EMpy.utils.deg2rad(0.)  # TM

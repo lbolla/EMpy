@@ -31,6 +31,7 @@ devices, new ones can be studied.
     isnumber=8367>}
 
 """
+
 __author__ = "Lorenzo Bolla"
 
 import numpy
@@ -1378,7 +1379,7 @@ class Etalon(Device):
         self.wl0 = numpy.mean(wls)
         self.FSRwl = self.wl0**2 / (2 * n * l * numpy.cos(self.theta) + self.wl0)
 
-        (self.f0, self.FSR) = EMpy.utils.wl2f(self.wl0, self.FSRwl)
+        self.f0, self.FSR = EMpy.utils.wl2f(self.wl0, self.FSRwl)
 
         self.FINESSE = numpy.pi / (2 * numpy.arcsin(1.0 / numpy.sqrt(self.F)))
         # self.FINESSE = numpy.pi * numpy.sqrt(self.F) / 2.

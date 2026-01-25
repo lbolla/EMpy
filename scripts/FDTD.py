@@ -1,6 +1,4 @@
-"""FDTD Postprocessing.
-
-"""
+"""FDTD Postprocessing."""
 
 import os
 import numpy
@@ -307,7 +305,7 @@ class FDTD:
             return
         inp = Input(filename)
 
-        (inp.dx, inp.dy, inp.dz, inp.cfl) = numpy.fromstring(
+        inp.dx, inp.dy, inp.dz, inp.cfl = numpy.fromstring(
             strip_comment(f.readline()), sep=" "
         )
         tmp = strip_comment(f.readline())
@@ -320,11 +318,11 @@ class FDTD:
                 inp.pmltype = "G"
             else:
                 raise ValueError("wrong pmltype")
-        (inp.xmax, inp.ymax, inp.zmax, inp.pmlx, inp.pmly, inp.pmlz) = numpy.fromstring(
+        inp.xmax, inp.ymax, inp.zmax, inp.pmlx, inp.pmly, inp.pmlz = numpy.fromstring(
             tmp[:tmp_idx], sep=" "
         )
-        (inp.pmlsmooth, inp.pmlref) = numpy.fromstring(tmp[tmp_idx + 1 :], sep=" ")
-        (inp.start, inp.end, inp.slides, inp.snapshot) = numpy.fromstring(
+        inp.pmlsmooth, inp.pmlref = numpy.fromstring(tmp[tmp_idx + 1 :], sep=" ")
+        inp.start, inp.end, inp.slides, inp.snapshot = numpy.fromstring(
             strip_comment(f.readline()), sep=" "
         )
         inp.output3deps = numpy.fromstring(strip_comment(f.readline()), sep=" ")
@@ -346,7 +344,7 @@ class FDTD:
             )
 
         # dielobjs
-        (ndielobjs, inp.bgrix, inp.bgsigma) = numpy.fromstring(
+        ndielobjs, inp.bgrix, inp.bgsigma = numpy.fromstring(
             strip_comment(f.readline()), sep=" "
         )
         inp.dielobjs = []
@@ -371,7 +369,7 @@ class FDTD:
             )
 
         # dft monitors
-        (inp.lambdamin, inp.lambdamax, inp.dlambda) = numpy.fromstring(
+        inp.lambdamin, inp.lambdamax, inp.dlambda = numpy.fromstring(
             strip_comment(f.readline()), sep=" "
         )
         ndftmonitors = numpy.fromstring(strip_comment(f.readline()), dtype=int, sep=" ")

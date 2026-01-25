@@ -6,7 +6,6 @@ import pylab
 import EMpy
 from EMpy.materials import IsotropicMaterial, RefractiveIndex
 
-
 alpha = EMpy.utils.deg2rad(30.0)
 delta = EMpy.utils.deg2rad(45.0)
 psi = EMpy.utils.deg2rad(0.0)  # TE

@@ -31,7 +31,6 @@ import EMpy
 # file of refractive indices, takes wavelengths in Microns!!
 import nk
 
-
 # Simulation Parameters
 # laser monitor wavelength
 wl_lasermon = 670e-9

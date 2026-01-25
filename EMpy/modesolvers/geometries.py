@@ -1,6 +1,4 @@
-"""Geometries.
-
-"""
+"""Geometries."""
 
 import numpy
 import pylab

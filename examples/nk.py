@@ -65,13 +65,11 @@ Demis D. John:  2009 added some Cauchy fits for SiO2, Ta2O5, SiN
 ######################################################
 """
 
-
 ###########################
 """ Import some modules """
 ###########################
 import numpy as np  # array math
 import warnings  # warn user if invalid parameter, but continue program
-
 
 ##############################################
 """ 		Refractive Index models 		"""
