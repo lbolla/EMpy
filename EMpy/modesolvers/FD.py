@@ -248,14 +248,14 @@ class SVFDModeSolver(ModeSolver):
         return A
 
     def solve(self, neigs, tol):
-        from scipy.sparse.linalg import eigen
+        from scipy.sparse import linalg
 
         self.nmodes = neigs
         self.tol = tol
 
         A = self.build_matrix()
 
-        eigvals, eigvecs = eigen.eigs(  # type: ignore
+        eigvals, eigvecs = linag.eigs(  # type: ignore
             A, k=neigs, which="LR", tol=tol, ncv=10 * neigs, return_eigenvectors=True
         )
 
@@ -2038,7 +2038,7 @@ class VFDModeSolver(ModeSolver):
             Ez = solver.modes[0].Ez
         """
 
-        from scipy.sparse.linalg import eigen
+        from scipy.sparse import linalg
 
         self.nmodes = neigs
         self.tol = tol
@@ -2053,7 +2053,7 @@ class VFDModeSolver(ModeSolver):
             shift = None
 
         # Here is where the actual mode-solving takes place!
-        [eigvals, eigvecs] = eigen.eigs(
+        [eigvals, eigvecs] = linalg.eigs(
             A,
             k=neigs,
             which="LR",

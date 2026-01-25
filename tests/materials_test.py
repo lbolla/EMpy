@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use
 from unittest import TestCase
 
 from numpy import array
@@ -8,6 +7,7 @@ import EMpy.materials as mat
 
 
 class RefractiveIndexTest(TestCase):
+
     def test_all_nones(self):
         with assert_raises(ValueError):
             mat.RefractiveIndex()
