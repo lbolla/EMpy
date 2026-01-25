@@ -1,3 +1,2 @@
 include README.rst
-include requirements.txt
 recursive-include examples *.py *.dat

@@ -1,10 +1,7 @@
-*.pyc
-*.egg-info/
-*.egg
-.eggs/
-.tox/
-.vscode/
-dist
+*.egg-info
+.mypy_cache
+.venv
+.vscode
 build
-.idea
-.DS_Store
+dist
+__pycache__

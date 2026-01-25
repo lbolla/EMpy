@@ -88,9 +88,7 @@ cauchy = lambda p, x: p[0] + p[1] / x**2 + p[2] / x**4
 cauchy.__doc__ = """ 3-parameter lossless Cauchy fit, as used on the J.A.Woolam WVase Ellipsometer:"""
 
 
-cauchy5 = (
-    lambda p, x: p[0] + p[1] / x**2 + p[2] / x**4 + p[3] / x**6 + p[4] / x**8
-)
+cauchy5 = lambda p, x: p[0] + p[1] / x**2 + p[2] / x**4 + p[3] / x**6 + p[4] / x**8
 cauchy5.__doc__ = """ 5-parameter Cauchy fit  """
 
 
@@ -118,9 +116,7 @@ def sellmeier1(p, x):
 
 
 sellmeier5 = lambda p, x: np.sqrt(
-    p[0]
-    + (p[1] * x**2 / (x**2 - p[2] ** 2))
-    + (p[3] * x**2 / (x**2 - p[4] ** 2))
+    p[0] + (p[1] * x**2 / (x**2 - p[2] ** 2)) + (p[3] * x**2 / (x**2 - p[4] ** 2))
 )
 sellmeier5.__doc__ = """ Sellmeier with 5 params -
 #### CHECK THIS - maybe not good model - curvature doesn't look right

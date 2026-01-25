@@ -7,6 +7,7 @@ any thickness.
 Two versions of the algorithm are present: an isotropic one and an
 anisotropic one.
 """
+
 __author__ = "Lorenzo Bolla"
 
 import numpy as np
@@ -18,7 +19,6 @@ from EMpy.constants import c, mu0
 
 
 class TransferMatrix:
-
     """Class to handle the transfer matrix solvers."""
 
     def __init__(self, multilayer):

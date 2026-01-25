@@ -15,7 +15,6 @@ import sys
 
 
 class Layer:
-
     """A layer is defined by a material (iso or aniso) and a thickness."""
 
     def __init__(self, mat, thickness):
@@ -96,9 +95,7 @@ class BinaryGrating:
             f = self.dc
             h = numpy.arange(-hmax, hmax + 1)
             EPS = (rix1**2 - rix2**2) * f * numpy.sinc(h * f) + rix2**2 * (h == 0)
-            EPS1 = (rix1**-2 - rix2**-2) * f * numpy.sinc(h * f) + rix2**-2 * (
-                h == 0
-            )
+            EPS1 = (rix1**-2 - rix2**-2) * f * numpy.sinc(h * f) + rix2**-2 * (h == 0)
             return EPS, EPS1
         else:
             # anisotropic
@@ -694,7 +691,6 @@ class LiquidCrystalCell:
 
 
 class Multilayer:
-
     """A Multilayer is a list of layers with some more methods."""
 
     def __init__(self, data=None):
@@ -1251,7 +1247,6 @@ def warning(s):
 
 
 class ProgressBar:
-
     """Creates a text-based progress bar. Call the object with the `print'
     command to see the progress bar, which looks something like this:
 

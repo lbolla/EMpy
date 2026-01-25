@@ -15,7 +15,6 @@ __author__ = "Lorenzo Bolla"
 
 
 class Material:
-
     """Generic class to handle materials.
 
     This class is intended to be subclassed to obtain isotropic and
@@ -28,7 +27,6 @@ class Material:
 
 
 class RefractiveIndex:
-
     """Refractive Index.
 
     Unaware of temperature.
@@ -146,7 +144,6 @@ class RefractiveIndex:
 
 
 class ThermalOpticCoefficient:
-
     """Thermal Optic Coefficient."""
 
     def __init__(self, data=None, T0=300):
@@ -168,7 +165,6 @@ class ThermalOpticCoefficient:
 
 
 class IsotropicMaterial(Material):
-
     """Subclasses Material to describe isotropic materials.
 
     Frequency dispersion and thermic aware.
@@ -232,7 +228,6 @@ class EpsilonTensor:
 
 
 class AnisotropicMaterial(Material):
-
     """Subclass Material to describe anisotropic materials.
 
     No frequency dispersion nor thermic aware.
@@ -292,7 +287,6 @@ BK7 = IsotropicMaterial(
 
 
 class LiquidCrystal(Material):
-
     """Liquid Crystal.
 
     A liquid crystal is determined by it ordinary and extraordinary

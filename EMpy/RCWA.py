@@ -12,6 +12,7 @@ for every diffraction order and layer thickness, and an anisotropic
 one, only stable for low diffraction orders and thin layers.
 
 """
+
 __author__ = "Lorenzo Bolla"
 
 import numpy as np
@@ -95,7 +96,6 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
 
 
 class RCWA:
-
     """Class to handle the RCWA solvers.
 
     NOTE
@@ -168,7 +168,6 @@ class RCWA:
 
 
 class IsotropicRCWA(RCWA):
-
     """Isotropic RCWA solver."""
 
     def solve(self, wls):
@@ -215,7 +214,11 @@ class IsotropicRCWA(RCWA):
         DE3 = np.zeros_like(DE1)
 
         dirk1 = np.array(
-            [np.sin(alpha) * np.cos(delta), np.sin(alpha) * np.sin(delta), np.cos(alpha)]
+            [
+                np.sin(alpha) * np.cos(delta),
+                np.sin(alpha) * np.sin(delta),
+                np.cos(alpha),
+            ]
         )
 
         # usefull matrices
@@ -323,7 +326,9 @@ class IsotropicRCWA(RCWA):
                     # H_S_reduced = np.dot(Ky, Ky) + np.dot(Kx, linsolve(E, np.dot(Kx, E11))) - E11
                     H_S_reduced = (
                         (ky / k) ** 2 * I
-                        + kx[:, np.newaxis] / k * linsolve(E, kx[:, np.newaxis] / k * E11)
+                        + kx[:, np.newaxis]
+                        / k
+                        * linsolve(E, kx[:, np.newaxis] / k * E11)
                         - E11
                     )
 
@@ -448,7 +453,6 @@ class IsotropicRCWA(RCWA):
 
 
 class AnisotropicRCWA(RCWA):
-
     """Anisotropic RCWA solver."""
 
     def solve(self, wls):
@@ -487,14 +491,20 @@ class AnisotropicRCWA(RCWA):
         # grating on the xy plane
         K = 2 * pi / LAMBDA * np.array([np.sin(phi), 0.0, np.cos(phi)], dtype=complex)
         dirk1 = np.array(
-            [np.sin(alpha) * np.cos(delta), np.sin(alpha) * np.sin(delta), np.cos(alpha)]
+            [
+                np.sin(alpha) * np.cos(delta),
+                np.sin(alpha) * np.sin(delta),
+                np.cos(alpha),
+            ]
         )
 
         # D polarization vector
         u = np.array(
             [
-                np.cos(psi) * np.cos(alpha) * np.cos(delta) - np.sin(psi) * np.sin(delta),
-                np.cos(psi) * np.cos(alpha) * np.sin(delta) + np.sin(psi) * np.cos(delta),
+                np.cos(psi) * np.cos(alpha) * np.cos(delta)
+                - np.sin(psi) * np.sin(delta),
+                np.cos(psi) * np.cos(alpha) * np.sin(delta)
+                + np.sin(psi) * np.cos(delta),
                 -np.cos(psi) * np.sin(alpha),
             ]
         )
@@ -814,7 +824,11 @@ class AnisotropicRCWA(RCWA):
             denom = (k1[2] - np.dot(u, k1) * u[2]).real
             DEO1[:, iwl] = (
                 -(
-                    (np.absolute(ROx) ** 2 + np.absolute(ROy) ** 2 + np.absolute(ROz) ** 2)
+                    (
+                        np.absolute(ROx) ** 2
+                        + np.absolute(ROy) ** 2
+                        + np.absolute(ROz) ** 2
+                    )
                     * np.conj(kO1i[2, :])
                     - (ROx * kO1i[0, :] + ROy * kO1i[1, :] + ROz * kO1i[2, :])
                     * np.conj(ROz)
@@ -823,7 +837,11 @@ class AnisotropicRCWA(RCWA):
             )
             DEE1[:, iwl] = (
                 -(
-                    (np.absolute(REx) ** 2 + np.absolute(REy) ** 2 + np.absolute(REz) ** 2)
+                    (
+                        np.absolute(REx) ** 2
+                        + np.absolute(REy) ** 2
+                        + np.absolute(REz) ** 2
+                    )
                     * np.conj(kE1i[2, :])
                     - (REx * kE1i[0, :] + REy * kE1i[1, :] + REz * kE1i[2, :])
                     * np.conj(REz)
@@ -833,12 +851,14 @@ class AnisotropicRCWA(RCWA):
             DEO3[:, iwl] = (
                 (np.absolute(TOx) ** 2 + np.absolute(TOy) ** 2 + np.absolute(TOz) ** 2)
                 * np.conj(kO3i[2, :])
-                - (TOx * kO3i[0, :] + TOy * kO3i[1, :] + TOz * kO3i[2, :]) * np.conj(TOz)
+                - (TOx * kO3i[0, :] + TOy * kO3i[1, :] + TOz * kO3i[2, :])
+                * np.conj(TOz)
             ).real / denom
             DEE3[:, iwl] = (
                 (np.absolute(TEx) ** 2 + np.absolute(TEy) ** 2 + np.absolute(TEz) ** 2)
                 * np.conj(kE3i[2, :])
-                - (TEx * kE3i[0, :] + TEy * kE3i[1, :] + TEz * kE3i[2, :]) * np.conj(TEz)
+                - (TEx * kE3i[0, :] + TEy * kE3i[1, :] + TEz * kE3i[2, :])
+                * np.conj(TEz)
             ).real / denom
 
         # save the results

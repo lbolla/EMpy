@@ -33,17 +33,7 @@ Development
 
 First, download the source code from https://github.com/lbolla/EMpy.
 
-Create a virtualenv with, e.g:
-
-.. code-block:: bash
-
-  $> make venv
-
-Then, from inside a `virtualenv`, install dev environment with:
-
-.. code-block:: bash
-
-  $> make develop
+EMpy is managed with `uv` (https://docs.astral.sh/uv/):
 
 Run tests with:
 
@@ -51,19 +41,31 @@ Run tests with:
 
   $> make test
 
-Upgrade dependencies with:
+Install dev environment with:
 
 .. code-block:: bash
 
-  $> make requirements-upgrade
-  $> make requirements-sync
+  $> make develop
 
+Upgrade dependencies with `uv`:
+
+.. code-block:: bash
+
+  # add or update a dependency, then refresh lockfile and sync environment
+  $> make upgrade
 
 Release process
 ===============
 
-1. Edit CHANGES
-2. `make release PART=major|minor|patch`
+Package version is handed by `setuptools_scm`/`uv`:
+
+.. code-block:: bash
+
+  # tag the release (use the desired version)
+  git tag vX.Y.Z
+  git push --tags
+
+GitHub actions will build and upload the package to PyPI.
 
 Citation
 ========

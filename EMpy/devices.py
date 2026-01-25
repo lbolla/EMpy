@@ -39,7 +39,6 @@ from functools import reduce
 
 
 class DeviceMatrix:
-
     """Device Matrix.
 
     Base class for TransferMatrix and ChainMatrix.
@@ -83,7 +82,6 @@ class DeviceMatrix:
 
 
 class TransferMatrix(DeviceMatrix):
-
     """Transfer Matrix.
 
     Notation::
@@ -158,7 +156,6 @@ class TransferMatrix(DeviceMatrix):
 
 
 class ChainMatrix(DeviceMatrix):
-
     """Chain Matrix.
 
     Notation::
@@ -289,7 +286,6 @@ def composeCMlist(CMlist):
 
 
 class Device:
-
     """Generic device.
 
     Notes
@@ -307,7 +303,6 @@ class Device:
 
 
 class Coupler(Device):
-
     """Coupler.
 
     Examples
@@ -436,7 +431,6 @@ class Coupler(Device):
 
 
 class Line(Device):
-
     """Line.
 
     Notes
@@ -570,7 +564,6 @@ class Line(Device):
 
 
 class MZ(Device):
-
     """Mach-Zehnder Interferometer (MZI).
 
     A MZI is made of two L{Coupler}s connected by a L{Line}.
@@ -679,7 +672,6 @@ class MZ(Device):
 
 
 class APRR(Device):
-
     """All-Pass Ring Resonator.
 
     An APRR is made of a L{Coupler} with a feedback line (the ring).
@@ -746,7 +738,6 @@ class APRR(Device):
 
 
 class SRR(Device):
-
     """Single Ring Resonator.
 
     A SRR is made of the parallel of a L{Coupler} a feedback line (the
@@ -872,7 +863,6 @@ class SRR(Device):
 
 
 class NRR(Device):
-
     """N-Rings Resonator.
 
     A NRR is made of the parallel of two lines connected by N ring resonators.
@@ -996,7 +986,6 @@ class NRR(Device):
 
 
 class T_TCRR(Device):
-
     """Tunable Triple-Coupled Ring Resonator.
 
     A T_TCRR is made of a L{MZ}, with a feedback line.
@@ -1056,8 +1045,7 @@ class T_TCRR(Device):
         t4 = numpy.exp(-1j * beta * l[3])
 
         denom = (
-            q**3 * Kbar[2] * t3 * t4 * (Kbar[0] * Kbar[1] * t1 - K[0] * K[1] * t2)
-            - 1.0
+            q**3 * Kbar[2] * t3 * t4 * (Kbar[0] * Kbar[1] * t1 - K[0] * K[1] * t2) - 1.0
         )
         self.DROP = (
             q**3 * K[2] * t3 * (K[0] * Kbar[1] * t1 + Kbar[0] * K[1] * t2) / denom
@@ -1071,7 +1059,6 @@ class T_TCRR(Device):
 
 
 class T_CRTCRR(Device):
-
     """Tunable Coupled Ring Triple-Coupled Ring Resonator.
 
     NOTE
@@ -1129,16 +1116,7 @@ class T_CRTCRR(Device):
             - q**2 * Kbar[1] * t2**2 * (Kbar[2] - q**3 * t1**2 * N1)
         )
         self.DROP = (
-            1j
-            * q**4
-            * K[0]
-            * K[1]
-            * K[2]
-            * Kbar[0]
-            * t1**1.5
-            * t2
-            * (1 + t31)
-            / denom
+            1j * q**4 * K[0] * K[1] * K[2] * Kbar[0] * t1**1.5 * t2 * (1 + t31) / denom
         )
         self.THRU = (
             q**2
@@ -1156,7 +1134,6 @@ class T_CRTCRR(Device):
 
 
 class T_CTCRR(Device):
-
     """Tunable Coupled Triple Coupled Ring Resonator.
 
     NOTE
@@ -1363,7 +1340,6 @@ class SWG(Device):
 
 
 class Etalon(Device):
-
     """Etalon.
 
     @ivar R: Reflectivity.

@@ -19,7 +19,6 @@ from EMpy.modesolvers.interface import Mode, ModeSolver
 
 
 class SVFDModeSolver(ModeSolver):
-
     """
     This function calculates the modes of a dielectric waveguide
     using the semivectorial finite difference method.
@@ -142,10 +141,8 @@ class SVFDModeSolver(ModeSolver):
                 * (p * (ep - ew) + 2 * w * ew)
                 * ee
                 / (
-                    (p * (ep - ee) + 2 * e * ee)
-                    * (p**2 * (ep - ew) + 4 * w**2 * ew)
-                    + (p * (ep - ew) + 2 * w * ew)
-                    * (p**2 * (ep - ee) + 4 * e**2 * ee)
+                    (p * (ep - ee) + 2 * e * ee) * (p**2 * (ep - ew) + 4 * w**2 * ew)
+                    + (p * (ep - ew) + 2 * w * ew) * (p**2 * (ep - ee) + 4 * e**2 * ee)
                 )
             )
             Aw = (
@@ -153,10 +150,8 @@ class SVFDModeSolver(ModeSolver):
                 * (p * (ep - ee) + 2 * e * ee)
                 * ew
                 / (
-                    (p * (ep - ee) + 2 * e * ee)
-                    * (p**2 * (ep - ew) + 4 * w**2 * ew)
-                    + (p * (ep - ew) + 2 * w * ew)
-                    * (p**2 * (ep - ee) + 4 * e**2 * ee)
+                    (p * (ep - ee) + 2 * e * ee) * (p**2 * (ep - ew) + 4 * w**2 * ew)
+                    + (p * (ep - ew) + 2 * w * ew) * (p**2 * (ep - ee) + 4 * e**2 * ee)
                 )
             )
             Ap = ep * k**2 - An - As - Ae * ep / ee - Aw * ep / ew
@@ -169,10 +164,8 @@ class SVFDModeSolver(ModeSolver):
                 * (q * (ep - es) + 2 * s * es)
                 * en
                 / (
-                    (q * (ep - en) + 2 * n * en)
-                    * (q**2 * (ep - es) + 4 * s**2 * es)
-                    + (q * (ep - es) + 2 * s * es)
-                    * (q**2 * (ep - en) + 4 * n**2 * en)
+                    (q * (ep - en) + 2 * n * en) * (q**2 * (ep - es) + 4 * s**2 * es)
+                    + (q * (ep - es) + 2 * s * es) * (q**2 * (ep - en) + 4 * n**2 * en)
                 )
             )
             As = (
@@ -180,10 +173,8 @@ class SVFDModeSolver(ModeSolver):
                 * (q * (ep - en) + 2 * n * en)
                 * es
                 / (
-                    (q * (ep - en) + 2 * n * en)
-                    * (q**2 * (ep - es) + 4 * s**2 * es)
-                    + (q * (ep - es) + 2 * s * es)
-                    * (q**2 * (ep - en) + 4 * n**2 * en)
+                    (q * (ep - en) + 2 * n * en) * (q**2 * (ep - es) + 4 * s**2 * es)
+                    + (q * (ep - es) + 2 * s * es) * (q**2 * (ep - en) + 4 * n**2 * en)
                 )
             )
             Ae = 2 / e / (e + w)
@@ -296,7 +287,6 @@ class SVFDModeSolver(ModeSolver):
 
 
 class VFDModeSolver(ModeSolver):
-
     """
     The VFDModeSolver class computes the electric and magnetic fields
     for modes of a dielectric waveguide using the "Vector Finite
@@ -1135,12 +1125,7 @@ class VFDModeSolver(ModeSolver):
                 (n * ezz1 * ezz2 / eyy1 + s * ezz2 * ezz1 / eyy2)
                 * (
                     0.5 * n * ezz4 * ezz3 / eyy4 * (2.0 / e**2 - eyx4 / ezz4 / n / e)
-                    + 0.5
-                    * s
-                    * ezz3
-                    * ezz4
-                    / eyy3
-                    * (2.0 / e**2 + eyx3 / ezz3 / s / e)
+                    + 0.5 * s * ezz3 * ezz4 / eyy3 * (2.0 / e**2 + eyx3 / ezz3 / s / e)
                 )
                 / ezz4
                 / ezz3
@@ -1190,12 +1175,7 @@ class VFDModeSolver(ModeSolver):
                 (-n * ezz4 * ezz3 / eyy4 - s * ezz3 * ezz4 / eyy3)
                 * (
                     0.5 * n * ezz1 * ezz2 / eyy1 * (2.0 / w**2 + eyx1 / ezz1 / n / w)
-                    + 0.5
-                    * s
-                    * ezz2
-                    * ezz1
-                    / eyy2
-                    * (2.0 / w**2 - eyx2 / ezz2 / s / w)
+                    + 0.5 * s * ezz2 * ezz1 / eyy2 * (2.0 / w**2 - eyx2 / ezz2 / s / w)
                 )
                 / ezz4
                 / ezz3
@@ -1517,12 +1497,7 @@ class VFDModeSolver(ModeSolver):
                 + (ezz3 / exx2 * ezz2 * w + ezz2 / exx3 * ezz3 * e)
                 * (
                     0.5 * ezz4 * (2.0 / n**2 + exy1 / ezz1 / n / w) / exx1 * ezz1 * w
-                    + 0.5
-                    * ezz1
-                    * (2.0 / n**2 - exy4 / ezz4 / n / e)
-                    / exx4
-                    * ezz4
-                    * e
+                    + 0.5 * ezz1 * (2.0 / n**2 - exy4 / ezz4 / n / e) / exx4 * ezz4 * e
                 )
                 / ezz3
                 / ezz2
@@ -1572,12 +1547,7 @@ class VFDModeSolver(ModeSolver):
                 - (ezz4 / exx1 * ezz1 * w + ezz1 / exx4 * ezz4 * e)
                 * (
                     0.5 * ezz3 * (2.0 / s**2 - exy2 / ezz2 / s / w) / exx2 * ezz2 * w
-                    + 0.5
-                    * ezz2
-                    * (2.0 / s**2 + exy3 / ezz3 / s / e)
-                    / exx3
-                    * ezz3
-                    * e
+                    + 0.5 * ezz2 * (2.0 / s**2 + exy3 / ezz3 / s / e) / exx3 * ezz3 * e
                 )
                 / ezz3
                 / ezz2
