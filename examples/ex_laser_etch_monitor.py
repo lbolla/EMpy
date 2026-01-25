@@ -110,8 +110,8 @@ mat_AlGaAs95 = EMpy.materials.IsotropicMaterial(
 
 # DBR mirror periods, at 1/4-wavelength thicknesses
 wl_center = 1100e-9
-d_GaAs_DBR = wl_center / n_GaAs(wl_center).real / 4
-d_AlGaAs_DBR = wl_center / n_AlGaAs95(wl_center).real / 4
+d_GaAs_DBR = wl_center / n_GaAs(wl_center)[0].real / 4
+d_AlGaAs_DBR = wl_center / n_AlGaAs95(wl_center)[0].real / 4
 
 
 # Build the Multilayer stack

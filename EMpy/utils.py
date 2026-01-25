@@ -1207,7 +1207,7 @@ def interp2(x, y, xp, yp, fp):
 
 def trapz2(f, x=None, y=None, dx=1.0, dy=1.0):
     """Double integrate."""
-    return numpy.trapz(numpy.trapz(f, x=y, dx=dy), x=x, dx=dx)
+    return numpy.trapezoid(numpy.trapezoid(f, x=y, dx=dy), x=x, dx=dx)
 
 
 def centered1d(x):
