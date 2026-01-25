@@ -1,9 +1,5 @@
 [build-system]
-requires = [
-  "setuptools>=61",
-  "wheel",
-  "setuptools_scm>=7",
-]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=7"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,26 +7,22 @@ name = "ElectroMagneticPython"
 dynamic = ["version"]
 requires-python = ">=3.10"
 description = "EMpy - ElectroMagnetic Python"
-readme = "README.rst"
-license = { text = "BSD" }
-authors = [ { name = "Lorenzo Bolla", email = "code@lbolla.info" } ]
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Lorenzo Bolla", email = "code@lbolla.info" }]
 urls = { Homepage = "http://lbolla.github.io/EMpy/", Repository = "https://github.com/lbolla/EMpy" }
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
   "Natural Language :: English",
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",
   "Topic :: Scientific/Engineering :: Physics",
 ]
 
-dependencies = [
-  "numpy>=1.18",
-  "scipy>=1.7",
-  "matplotlib>=3.1",
-]
+dependencies = ["numpy>=1.18", "scipy>=1.7", "matplotlib>=3.1"]
 
 [project.optional-dependencies]
 dev = [
@@ -92,6 +84,4 @@ write_to_template = 'version = "{version}"'
 local_scheme = "no-local-version"
 
 [dependency-groups]
-dev = [
-    "pytest>=8.3.4",
-]
+dev = ["pytest>=8.3.4"]
