@@ -255,7 +255,7 @@ class SVFDModeSolver(ModeSolver):
 
         A = self.build_matrix()
 
-        eigvals, eigvecs = linag.eigs(  # type: ignore
+        eigvals, eigvecs = linalg.eigs(  # type: ignore
             A, k=neigs, which="LR", tol=tol, ncv=10 * neigs, return_eigenvectors=True
         )
 
