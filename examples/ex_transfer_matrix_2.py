@@ -1,7 +1,8 @@
 # taken from http://hyperphysics.phy-astr.gsu.edu/hbase/phyopt/antiref.html#c1
 
+
+from matplotlib import pyplot as plt
 import numpy
-import pylab
 
 import EMpy
 
@@ -24,8 +25,8 @@ tm = EMpy.transfer_matrix.IsotropicTransferMatrix(iso_layers, theta_inc)
 solution_iso = tm.solve(wls)
 
 # plot
-pylab.figure()
-pylab.plot(
+plt.figure()
+plt.plot(
     wls,
     10 * numpy.log10(solution_iso.Rs),
     "rx-",
@@ -33,11 +34,11 @@ pylab.plot(
     10 * numpy.log10(solution_iso.Rp),
     "g.-",
 )
-pylab.legend(("Rs", "Rp"))
-pylab.title("Single Layer Anti-Reflection Coating")
-pylab.xlabel("wavelength /m")
-pylab.ylabel("Power /dB")
-pylab.grid()
-pylab.xlim(wls.min(), wls.max())
-pylab.savefig(__file__ + ".png")
-pylab.show()
+plt.legend(("Rs", "Rp"))
+plt.title("Single Layer Anti-Reflection Coating")
+plt.xlabel("wavelength /m")
+plt.ylabel("Power /dB")
+plt.grid()
+plt.xlim(wls.min(), wls.max())
+plt.savefig(__file__ + ".png")
+plt.show()

@@ -1,7 +1,7 @@
 """Geometries."""
 
+from matplotlib import pyplot as plt
 import numpy
-import pylab
 
 from EMpy.modesolvers.interface import interface_matrix
 
@@ -88,8 +88,8 @@ class SWG:
                 numpy.abs(coeffLHS) ** 2 * tmp[:, numpy.newaxis] * const_z
                 + numpy.abs(coeffRHS) ** 2 * tmp[:, numpy.newaxis] * const_z
             )
-        pylab.hot()
-        pylab.contourf(x, z0 + z, numpy.abs(f).T, 16)
+        plt.hot()
+        plt.contourf(x, z0 + z, numpy.abs(f).T, 16)
 
 
 class SimpleJoint:
@@ -220,9 +220,9 @@ class GenericDevice:
         for d in self.devlist:
             d.plot(sumx, nxy, nz, z0=z)
             z += d.length
-        pylab.ylabel("z")
+        plt.ylabel("z")
         if sumx is None:
-            pylab.xlabel("y")
+            plt.xlabel("y")
         else:
-            pylab.xlabel("x")
-        pylab.axis("tight")
+            plt.xlabel("x")
+        plt.axis("tight")

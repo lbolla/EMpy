@@ -11,6 +11,7 @@
 
 """
 
+from matplotlib import pyplot as plt
 import numpy
 import scipy
 import scipy.optimize
@@ -2291,14 +2292,9 @@ class FDMode(Mode):
 
     @staticmethod
     def plot_field(x, y, field):
-        try:
-            import pylab
-        except ImportError:
-            print("no pylab installed")
-            return
-        pylab.hot()
-        pylab.contour(x, y, numpy.abs(field.T), 16)
-        pylab.axis("image")
+        plt.hot()
+        plt.contour(x, y, numpy.abs(field.T), 16)
+        plt.axis("image")
 
     def plot_Ex(self, x=None, y=None):
         if x is None:
@@ -2356,30 +2352,25 @@ class FDMode(Mode):
 
     def plot(self):
         """Plot the mode's fields."""
-        try:
-            import pylab
-        except ImportError:
-            print("no pylab installed")
-            return
-        pylab.figure()
-        pylab.subplot(2, 3, 1)
+        plt.figure()
+        plt.subplot(2, 3, 1)
         self.plot_Ex()
-        pylab.title("Ex")
-        pylab.subplot(2, 3, 2)
+        plt.title("Ex")
+        plt.subplot(2, 3, 2)
         self.plot_Ey()
-        pylab.title("Ey")
-        pylab.subplot(2, 3, 3)
+        plt.title("Ey")
+        plt.subplot(2, 3, 3)
         self.plot_Ez()
-        pylab.title("Ez")
-        pylab.subplot(2, 3, 4)
+        plt.title("Ez")
+        plt.subplot(2, 3, 4)
         self.plot_Hx()
-        pylab.title("Hx")
-        pylab.subplot(2, 3, 5)
+        plt.title("Hx")
+        plt.subplot(2, 3, 5)
         self.plot_Hy()
-        pylab.title("Hy")
-        pylab.subplot(2, 3, 6)
+        plt.title("Hy")
+        plt.subplot(2, 3, 6)
         self.plot_Hz()
-        pylab.title("Hz")
+        plt.title("Hz")
 
 
 def stretchmesh(x, y, nlayers, factor, method="PPPP"):

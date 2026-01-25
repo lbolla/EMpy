@@ -1,8 +1,9 @@
 """Fully vectorial finite-difference mode solver example."""
 
+from matplotlib import pyplot as plt
 import numpy
+
 import EMpy
-import pylab
 
 
 def epsfunc(x_, y_):
@@ -34,14 +35,14 @@ solver = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, epsfunc, boundary).solve(
     neigs, tol
 )
 
-fig = pylab.figure()
+fig = plt.figure()
 fig.add_subplot(1, 3, 1)
-pylab.contourf(abs(solver.modes[0].Ex), 50)
-pylab.title("Ex")
+plt.contourf(abs(solver.modes[0].Ex), 50)
+plt.title("Ex")
 fig.add_subplot(1, 3, 2)
-pylab.contourf(abs(solver.modes[0].Ey), 50)
-pylab.title("Ey")
+plt.contourf(abs(solver.modes[0].Ey), 50)
+plt.title("Ey")
 fig.add_subplot(1, 3, 3)
-pylab.contourf(abs(solver.modes[0].Ez), 50)
-pylab.title("Ez")
-pylab.show()
+plt.contourf(abs(solver.modes[0].Ez), 50)
+plt.title("Ez")
+plt.show()

@@ -14,15 +14,15 @@ Examples
 
 """
 
+__author__ = "Luca Gamberale & Lorenzo Bolla"
+
 import copy
 from functools import reduce
 
-__author__ = "Luca Gamberale & Lorenzo Bolla"
-
+from matplotlib import pyplot as plt
 import numpy
 import scipy
 import scipy.optimize
-import pylab
 
 import EMpy.utils
 from EMpy.modesolvers.interface import Mode, ModeSolver
@@ -248,11 +248,11 @@ class FMMMode1dy(FMMMode1d):
 
     def plot(self, y):
         f = self.eval(y)
-        pylab.plot(y, numpy.real(f), y, numpy.imag(y))
-        pylab.legend(("real", "imag"))
-        pylab.xlabel("y")
-        pylab.ylabel("mode1d")
-        pylab.show()
+        plt.plot(y, numpy.real(f), y, numpy.imag(y))
+        plt.legend(("real", "imag"))
+        plt.xlabel("y")
+        plt.ylabel("mode1d")
+        plt.show()
 
     def __str__(self):
         return (
@@ -846,26 +846,26 @@ class FMMMode2d(Mode):
         f = self.fields(x, y)
 
         # fields
-        pylab.figure()
+        plt.figure()
         titles = ["Ex", "Ey", "Ez", "cBx", "cBy", "cBz"]
         for i in range(6):
             subplot_id = 231 + i
-            pylab.subplot(subplot_id)
-            pylab.contour(x, y, numpy.abs(f[i]))
-            pylab.xlabel("x")
-            pylab.ylabel("y")
-            pylab.title(titles[i])
-            pylab.axis("image")
-        pylab.show()
+            plt.subplot(subplot_id)
+            plt.contour(x, y, numpy.abs(f[i]))
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.title(titles[i])
+            plt.axis("image")
+        plt.show()
 
         # power
-        pylab.figure()
-        pylab.contour(x, y, numpy.abs(f[-1]))
-        pylab.xlabel("x")
-        pylab.ylabel("y")
-        pylab.title("cSz")
-        pylab.axis("image")
-        pylab.show()
+        plt.figure()
+        plt.contour(x, y, numpy.abs(f[-1]))
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.title("cSz")
+        plt.axis("image")
+        plt.show()
 
     def __str__(self):
         return "neff = %s" % (self.keff / (2 * numpy.pi / self.slicesx[0].wl))

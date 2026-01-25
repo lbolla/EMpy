@@ -1,8 +1,9 @@
 """Fully vectorial finite-difference mode solver example."""
 
+from matplotlib import pyplot as plt
 import numpy
+
 import EMpy
-import pylab
 
 
 def epsfunc(x_, y_):
@@ -32,36 +33,36 @@ solver = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, epsfunc, boundary).solve(
     neigs, tol
 )
 
-fig = pylab.figure()
+fig = plt.figure()
 
 fig.add_subplot(1, 3, 1)
 Ex = numpy.transpose(solver.modes[0].get_field("Ex", x, y))
-pylab.contourf(x, y, abs(Ex), 50)
-pylab.title("Ex")
+plt.contourf(x, y, abs(Ex), 50)
+plt.title("Ex")
 
 fig.add_subplot(1, 3, 2)
 Ey = numpy.transpose(solver.modes[0].get_field("Ey", x, y))
-pylab.contourf(x, y, abs(Ey), 50)
-pylab.title("Ey")
+plt.contourf(x, y, abs(Ey), 50)
+plt.title("Ey")
 
 fig.add_subplot(1, 3, 3)
 Ez = numpy.transpose(solver.modes[0].get_field("Ez", x, y))
-pylab.contourf(x, y, abs(Ez), 50)
-pylab.title("Ez")
+plt.contourf(x, y, abs(Ez), 50)
+plt.title("Ez")
 
 fig.add_subplot(1, 3, 1)
 Hx = numpy.transpose(solver.modes[0].get_field("Hx", x, y))
-pylab.contourf(x, y, abs(Hx), 50)
-pylab.title("Hx")
+plt.contourf(x, y, abs(Hx), 50)
+plt.title("Hx")
 
 fig.add_subplot(1, 3, 2)
 Hy = numpy.transpose(solver.modes[0].get_field("Hy", x, y))
-pylab.contourf(x, y, abs(Hy), 50)
-pylab.title("Hy")
+plt.contourf(x, y, abs(Hy), 50)
+plt.title("Hy")
 
 fig.add_subplot(1, 3, 3)
 Hz = numpy.transpose(solver.modes[0].get_field("Hz", x, y))
-pylab.contourf(x, y, abs(Hz), 50)
-pylab.title("Hz")
+plt.contourf(x, y, abs(Hz), 50)
+plt.title("Hz")
 
-pylab.show()
+plt.show()

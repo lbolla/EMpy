@@ -3,8 +3,8 @@
 Solve for both an isotropic and anisotropic multilayer.
 """
 
+from matplotlib import pyplot as plt
 import numpy as np
-import pylab
 
 import EMpy
 
@@ -46,8 +46,8 @@ solution_aniso = EMpy.transfer_matrix.AnisotropicTransferMatrix(
     aniso_layers, theta_inc_x, theta_inc_y
 ).solve(wls)
 
-pylab.figure()
-pylab.plot(
+plt.figure()
+plt.plot(
     wls,
     solution_iso.Rs,
     wls,
@@ -57,10 +57,10 @@ pylab.plot(
     wls,
     solution_iso.Tp,
 )
-pylab.title("isotropic")
+plt.title("isotropic")
 
-pylab.figure()
-pylab.plot(
+plt.figure()
+plt.plot(
     wls,
     solution_aniso.R[0, 0, :],
     wls,
@@ -78,5 +78,5 @@ pylab.plot(
     wls,
     solution_aniso.T[1, 1, :],
 )
-pylab.title("anisotropic")
-pylab.show()
+plt.title("anisotropic")
+plt.show()

@@ -1,8 +1,9 @@
 """Semi-vectorial finite-difference mode solver example."""
 
+from matplotlib import pyplot as plt
 import numpy
+
 import EMpy
-import pylab
 
 
 def epsfunc(x_, y_):
@@ -32,11 +33,11 @@ solver = EMpy.modesolvers.FD.SVFDModeSolver(wl, x, y, epsfunc, boundary).solve(
     neigs, tol
 )
 
-fig = pylab.figure()
+fig = plt.figure()
 fig.add_subplot(1, 2, 1)
-pylab.contourf(abs(solver.Ex[0]), 50)
-pylab.title("Ex first mode")
+plt.contourf(abs(solver.Ex[0]), 50)
+plt.title("Ex first mode")
 fig.add_subplot(1, 2, 2)
-pylab.contourf(abs(solver.Ex[1]), 50)
-pylab.title("Ex second mode")
-pylab.show()
+plt.contourf(abs(solver.Ex[1]), 50)
+plt.title("Ex second mode")
+plt.show()

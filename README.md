@@ -38,6 +38,11 @@ Run tests with:
 make test
 ```
 
+Run examples with, e.g.:
+```bash
+uv run examples/ex_APRR.py
+```
+
 Upgrade dependencies with `uv`:
 
 ```bash

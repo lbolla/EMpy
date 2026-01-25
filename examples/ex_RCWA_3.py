@@ -1,7 +1,8 @@
 """Rigorous Coupled Wave Analysis example."""
 
+
+from matplotlib import pyplot as plt
 import numpy
-import pylab
 
 import EMpy
 from EMpy.materials import IsotropicMaterial, RefractiveIndex
@@ -29,7 +30,7 @@ multilayer = EMpy.utils.Multilayer(
 
 solution = EMpy.RCWA.IsotropicRCWA(multilayer, alpha, delta, psi, phi, n).solve(wls)
 
-pylab.plot(
+plt.plot(
     wls,
     solution.DE1[n, :],
     "ko-",
@@ -49,9 +50,9 @@ pylab.plot(
     solution.DE3[n + 1, :],
     "r.-",
 )
-pylab.xlabel("wavelength /m")
-pylab.ylabel("diffraction efficiency")
-pylab.legend(("DE1:0", "DE3:0", "DE1:-1", "DE3:-1", "DE1:+1", "DE3:+1"))
-pylab.axis("tight")
-pylab.ylim([0, 1])
-pylab.show()
+plt.xlabel("wavelength /m")
+plt.ylabel("diffraction efficiency")
+plt.legend(("DE1:0", "DE3:0", "DE1:-1", "DE3:-1", "DE1:+1", "DE3:+1"))
+plt.axis("tight")
+plt.ylim([0, 1])
+plt.show()

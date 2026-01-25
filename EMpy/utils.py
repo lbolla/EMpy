@@ -4,14 +4,17 @@
 
 __author__ = "Lorenzo Bolla"
 
+import time
+import sys
+
+from matplotlib import pyplot as plt
 import numpy
-import EMpy.constants
-import EMpy.materials
 import scipy.linalg
 import scipy.interpolate
 import scipy.optimize
-import time
-import sys
+
+import EMpy.constants
+import EMpy.materials
 
 
 class Layer:
@@ -812,22 +815,17 @@ class Slice(Multilayer):
             return self[0]
 
     def plot(self, x0, x1, nmin, nmax, wl=1.55e-6):
-        try:
-            import pylab
-        except ImportError:
-            warning("no pylab installed")
-            return
         y0 = 0
         # ytot = sum([l.thickness for l in self])
         for l in self:
             y1 = y0 + l.thickness
             n = l.mat.n(wl)
             r = 1.0 - (1.0 * (n - nmin) / (nmax - nmin))
-            pylab.fill(
+            plt.fill(
                 [x0, x1, x1, x0], [y0, y0, y1, y1], ec="yellow", fc=(r, r, r), alpha=0.5
             )
             y0 = y1
-        pylab.axis("image")
+        plt.axis("image")
 
     def __str__(self):
         return "width = %e\n%s" % (self.width, Multilayer.__str__(self))
@@ -912,11 +910,6 @@ class CrossSection(list):
         return eps
 
     def plot(self, wl=1.55e-6):
-        try:
-            import pylab
-        except ImportError:
-            warning("no pylab installed")
-            return
         x0 = 0
         ns = [[l.mat.n(wl) for l in s] for s in self]
         nmax = max(max(ns))
@@ -925,7 +918,7 @@ class CrossSection(list):
             x1 = x0 + s.width
             s.plot(x0, x1, nmin, nmax, wl=wl)
             x0 = x1
-        pylab.axis("image")
+        plt.axis("image")
 
 
 class Peak:

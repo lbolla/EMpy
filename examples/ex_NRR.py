@@ -1,8 +1,10 @@
 """N-Ring resonators example."""
 
-import EMpy
+
+from matplotlib import pyplot as plt
 import numpy
-import pylab
+
+import EMpy
 
 wls = numpy.linspace(1.53e-6, 1.57e-6, 1000)
 
@@ -22,7 +24,7 @@ neffs = [SWG.neff, SWG.neff, SWG.neff]
 
 NRR = EMpy.devices.NRR(Ks, neffs, l1s, l2s).solve()
 
-pylab.plot(
+plt.plot(
     wls,
     20 * numpy.log10(numpy.absolute(NRR.THRU)),
     "r.-",
@@ -30,9 +32,9 @@ pylab.plot(
     20 * numpy.log10(numpy.absolute(NRR.DROP)),
     "g.-",
 )
-pylab.axis("tight")
-pylab.ylim([-30, 0])
-pylab.xlabel("wavelength /m")
-pylab.ylabel("power /dB")
-pylab.legend(("THRU", "DROP"))
-pylab.show()
+plt.axis("tight")
+plt.ylim([-30, 0])
+plt.xlabel("wavelength /m")
+plt.ylabel("power /dB")
+plt.legend(("THRU", "DROP"))
+plt.show()

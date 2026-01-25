@@ -1,7 +1,7 @@
 """Rigorous Coupled Wave Analysis example."""
 
+from matplotlib import pyplot as plt
 import numpy
-import pylab
 
 import EMpy
 from EMpy.materials import (
@@ -69,7 +69,7 @@ solution1 = EMpy.RCWA.AnisotropicRCWA(multilayer1, alpha, delta, psi, phi, n).so
 solution2 = EMpy.RCWA.AnisotropicRCWA(multilayer2, alpha, delta, psi, phi, n).solve(wls)
 
 um = 1e-6
-pylab.plot(
+plt.plot(
     # wls / um, solution1.DEO1[n, :], 'k.-',
     # wls / um, solution1.DEO3[n, :], 'r.-',
     wls / um,
@@ -87,9 +87,9 @@ pylab.plot(
     solution2.DEE3[n, :],
     "g--",
 )
-pylab.xlabel("wavelength [um]")
-pylab.ylabel("diffraction efficiency")
-pylab.legend(("DEO1", "DEO3", "DEE1", "DEE3"))
-pylab.axis("tight")
-pylab.ylim([0, 0.15])
-pylab.show()
+plt.xlabel("wavelength [um]")
+plt.ylabel("diffraction efficiency")
+plt.legend(("DEO1", "DEO3", "DEE1", "DEE3"))
+plt.axis("tight")
+plt.ylim([0, 0.15])
+plt.show()

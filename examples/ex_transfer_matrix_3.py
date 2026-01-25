@@ -1,6 +1,7 @@
+from matplotlib import pyplot as plt
 import numpy
+
 import EMpy
-import pylab
 
 # define the multilayer
 epsilon = [
@@ -32,8 +33,8 @@ tm = EMpy.transfer_matrix.AnisotropicTransferMatrix(
 solution_aniso = tm.solve(wls)
 
 # plot
-pylab.figure()
-pylab.plot(
+plt.figure()
+plt.plot(
     wls,
     solution_aniso.R[0, 0, :],
     wls,
@@ -51,9 +52,9 @@ pylab.plot(
     wls,
     solution_aniso.T[1, 1, :],
 )
-pylab.legend(("Rss", "Rps", "Rsp", "Rpp", "Tss", "Tps", "Tsp", "Tpp"))
-pylab.title("Anisotropic Multilayer")
-pylab.xlabel("wavelength /m")
-pylab.ylabel("Power /dB")
-pylab.xlim(wls.min(), wls.max())
-pylab.show()
+plt.legend(("Rss", "Rps", "Rsp", "Rpp", "Tss", "Tps", "Tsp", "Tpp"))
+plt.title("Anisotropic Multilayer")
+plt.xlabel("wavelength /m")
+plt.ylabel("Power /dB")
+plt.xlim(wls.min(), wls.max())
+plt.show()

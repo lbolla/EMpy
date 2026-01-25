@@ -4,8 +4,8 @@ Inspired by Moharam, "Formulation for stable and efficient implementation of the
 binary gratings", JOSA A, 12(5), 1995
 """
 
+from matplotlib import pyplot as plt
 import numpy
-import pylab
 
 import EMpy
 from EMpy.materials import IsotropicMaterial, RefractiveIndex
@@ -43,10 +43,10 @@ for ss, s in enumerate(solutions):
     DE1[ss] = s.DE1[n, 0]
     DE3[ss] = s.DE3[n, 0]
 
-pylab.plot(ds / wl, DE1[:], "k.-", ds / wl, DE3[:], "r.-")
-pylab.xlabel("normalized groove depth")
-pylab.ylabel("diffraction efficiency")
-pylab.legend(("DE1", "DE3"))
-pylab.axis("tight")
-pylab.ylim([0, 1])
-pylab.show()
+plt.plot(ds / wl, DE1[:], "k.-", ds / wl, DE3[:], "r.-")
+plt.xlabel("normalized groove depth")
+plt.ylabel("diffraction efficiency")
+plt.legend(("DE1", "DE3"))
+plt.axis("tight")
+plt.ylim([0, 1])
+plt.show()

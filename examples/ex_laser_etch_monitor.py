@@ -17,13 +17,10 @@ Simulate a laser etch monitor (aka. laser endpoint detection):
     Author: Demis D. John, March 2017 (demis.john@gmail.com)
 """
 
-# to make copies of Layer objects, instead of mutable references
 from copy import copy, deepcopy
-
-# for progress bar (sys.stdout)
 import sys
 
-import pylab
+from matplotlib import pyplot as plt
 import numpy
 
 import EMpy
@@ -226,7 +223,7 @@ print("\n")
 
 
 # Plots:
-fig1, [ax1, ax2] = pylab.subplots(nrows=2, ncols=1, sharex=True)
+fig1, [ax1, ax2] = plt.subplots(nrows=2, ncols=1, sharex=True)
 ax1.set_title(r"Reflectivity at $\lambda = %0.1fnm$" % (wls[wlidx] * 1e9))
 
 # plot refractive index vs. depth
@@ -241,4 +238,4 @@ ax2.set_xlabel("Etch Depth (nm)")
 ax2.grid(True)
 
 fig1.show()
-pylab.show()
+plt.show()

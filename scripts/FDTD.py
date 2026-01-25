@@ -1,9 +1,11 @@
 """FDTD Postprocessing."""
 
 import os
+
+from matplotlib import pyplot as plt
 import numpy
+
 import EMpy.utils
-import pylab
 
 __author__ = "Lorenzo Bolla"
 
@@ -183,25 +185,25 @@ class Sensor:
 
     def plot(self, n):
         """Plot the sensor's fields."""
-        pylab.clf()
-        pylab.hot()
-        pylab.subplot(2, 2, 1)
-        pylab.contour(numpy.abs(self.E1[:, :, n].T), 16)
-        pylab.axis("image")
-        pylab.title("E1")
-        pylab.subplot(2, 2, 2)
-        pylab.contour(numpy.abs(self.H1[:, :, n].T), 16)
-        pylab.axis("image")
-        pylab.title("H1")
-        pylab.subplot(2, 2, 3)
-        pylab.contour(numpy.abs(self.E2[:, :, n].T), 16)
-        pylab.axis("image")
-        pylab.title("E2")
-        pylab.subplot(2, 2, 4)
-        pylab.contour(numpy.abs(self.H2[:, :, n].T), 16)
-        pylab.axis("image")
-        pylab.title("H2")
-        pylab.show()
+        plt.clf()
+        plt.hot()
+        plt.subplot(2, 2, 1)
+        plt.contour(numpy.abs(self.E1[:, :, n].T), 16)
+        plt.axis("image")
+        plt.title("E1")
+        plt.subplot(2, 2, 2)
+        plt.contour(numpy.abs(self.H1[:, :, n].T), 16)
+        plt.axis("image")
+        plt.title("H1")
+        plt.subplot(2, 2, 3)
+        plt.contour(numpy.abs(self.E2[:, :, n].T), 16)
+        plt.axis("image")
+        plt.title("E2")
+        plt.subplot(2, 2, 4)
+        plt.contour(numpy.abs(self.H2[:, :, n].T), 16)
+        plt.axis("image")
+        plt.title("H2")
+        plt.show()
 
     def __str__(self):
         """Return a representation of the sensor."""
@@ -232,11 +234,11 @@ class TimeSensor:
     def __plot_field(self, field, logplot=False):
         if logplot:
             data = 20 * numpy.log10(1e-20 + numpy.abs(field))
-            pylab.plot(self.t, data)
+            plt.plot(self.t, data)
         else:
             data = field
-            pylab.plot(self.t, data)
-        pylab.show()
+            plt.plot(self.t, data)
+        plt.show()
 
 
 class FDTD:
@@ -534,18 +536,18 @@ class FDTD:
             x1label = "x"
             x2label = "y"
         data = data.reshape((n2, n1))
-        pylab.clf()
+        plt.clf()
         if logplot:
             data = 20 * numpy.log10(numpy.abs(data).clip(1e-30, 1e30))
-            pylab.jet()
+            plt.jet()
         else:
-            pylab.hot()
-        pylab.contour(x1, x2, data, 64)
-        pylab.colorbar()
-        pylab.axis("image")
-        pylab.xlabel(x1label + " /um")
-        pylab.ylabel(x2label + " /um")
-        pylab.show()
+            plt.hot()
+        plt.contour(x1, x2, data, 64)
+        plt.colorbar()
+        plt.axis("image")
+        plt.xlabel(x1label + " /um")
+        plt.ylabel(x2label + " /um")
+        plt.show()
 
     def memory(self):
         """Estimate the memory occupation."""
