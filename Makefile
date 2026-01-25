@@ -10,11 +10,12 @@ SRC = EMpy tests examples scripts
 help:  ## Print this help
 	@grep -E '^[a-zA-Z][a-zA-Z0-9_-]*:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-develop:  ## Install dev dependencies
-	$(UV) pip install '.[dev]'
+develop:  ## Install all dependencies
+	$(UV) sync
 
 upgrade:  ## Upgrade dependencies
 	$(UV) lock --upgrade
+	$(UV) sync
 
 test: lint  ## Run tests
 	$(UV) run pytest
