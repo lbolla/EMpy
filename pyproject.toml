@@ -48,8 +48,7 @@ where = ["."]
 include-package-data = true
 
 [tool.setuptools_scm]
-write_to = "EMpy/version.py"
-write_to_template = 'version = "{version}"'
+write_to = "EMpy/_version.py"
 local_scheme = "no-local-version"
 
 [tool.uv]

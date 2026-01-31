@@ -31,6 +31,13 @@ from . import RCWA
 from . import scattering
 from . import transfer_matrix
 from . import utils
-from .version import version
 
-__version__ = version
+try:
+    from ._version import version as __version__
+except ImportError:
+    # Fallback for development environments or edge cases
+    try:
+        from importlib.metadata import version, PackageNotFoundError
+        __version__ = version("electromagneticpython")
+    except PackageNotFoundError:
+        __version__ = "0.0.0.dev0"
