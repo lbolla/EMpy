@@ -62,7 +62,7 @@ class DeviceMatrix:
         return self.__data
 
     def setdata(self, value):
-        self.__data = numpy.asmatrix(value)
+        self.__data = numpy.array(value)
 
     __data = None
     data = property(fget=getdata, fset=setdata, doc="data")
@@ -137,6 +137,7 @@ class TransferMatrix(DeviceMatrix):
 
         Notation::
 
+
             b12 = H1 a12 and d12 = H2 c12, but b12 == c12,
 
         therefore::
@@ -153,7 +154,7 @@ class TransferMatrix(DeviceMatrix):
 
         """
 
-        return TransferMatrix(M.to_transfer().data * self.data)
+        return TransferMatrix(M.to_transfer().data @ self.data)
 
 
 class ChainMatrix(DeviceMatrix):
@@ -227,7 +228,7 @@ class ChainMatrix(DeviceMatrix):
 
         """
 
-        return ChainMatrix(self.data * M.to_chain().data)
+        return ChainMatrix(self.data @ M.to_chain().data)
 
 
 def composeTM(A, B):
