@@ -1,5 +1,3 @@
-# pylint: disable=W0622,R0903,R0902,R0913,W0633
-
 """Functions and objects to manipulate materials.
 
 A material is an object with a refractive index function.

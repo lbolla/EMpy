@@ -1,5 +1,3 @@
-# pylint: disable=R0913,R0914,W0201,W0622,C0302,R0902,R0903,W1001,W0612,W0613
-
 """Useful functions and objects used more or less everywhere."""
 
 __author__ = "Lorenzo Bolla"

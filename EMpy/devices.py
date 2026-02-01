@@ -1,5 +1,3 @@
-# pylint: disable=C0302,W0622,W1001,R0902,R0903,W0201,R0913,R0914,C0325,W0221
-
 """Set of objects and functions to describe the behaviour of some
 widely known devices and build new ones.
 

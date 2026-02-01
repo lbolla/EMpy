@@ -1,7 +1,3 @@
-# pylint: disable=line-too-long,too-many-locals,too-many-statements,too-many-branches
-# pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-# pylint: disable=attribute-defined-outside-init,too-many-instance-attributes
-# pylint: disable=arguments-differ,too-many-arguments
 """Finite Difference Modesolver.
 
 @see: Fallahkhair, "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides",

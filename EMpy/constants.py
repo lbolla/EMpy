@@ -1,5 +1,3 @@
-# pylint: disable=C0301
-
 """Useful constants.
 
 Constants used in mathematics and electromagnetism.
