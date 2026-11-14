@@ -39,8 +39,8 @@ class IsotropicTransferMatrix(TransferMatrix):
 
         INPUT
         multilayer = Multilayer obj describing the sequence of layers.
-        theta_inc = angle of the incident wave (in radiant) wrt the
-        normal.
+        theta_inc = angle of the incident wave (in radians) wrt the
+        normal, measured in the first layer (multilayer[0]).
         """
         if not multilayer.isIsotropic():
             raise ValueError(
@@ -118,12 +118,14 @@ class IsotropicTransferMatrix(TransferMatrix):
 
             Rs[iwl] = np.absolute(rs) ** 2
             Ts[iwl] = (
-                np.absolute((n[-1] * np.cos(theta[-1])) / (n[0] * np.cos(theta[0])))
+                np.real(n[-1] * np.cos(theta[-1]))
+                / np.real(n[0] * np.cos(theta[0]))
                 * np.absolute(ts) ** 2
             )
             Rp[iwl] = np.absolute(rp) ** 2
             Tp[iwl] = (
-                np.absolute((n[-1] * np.cos(theta[-1])) / (n[0] * np.cos(theta[0])))
+                np.real(np.conj(n[-1]) * np.cos(theta[-1]))
+                / np.real(np.conj(n[0]) * np.cos(theta[0]))
                 * np.absolute(tp) ** 2
             )
 
@@ -160,7 +162,9 @@ class AnisotropicTransferMatrix(TransferMatrix):
         INPUT
         multilayer = Multilayer obj describing the sequence of layers.
         theta_inc_x and theta_inc_y = angles of the incident wave (in
-        radiant) wrt the normal.
+        radians) wrt the normal in vacuum, i.e. kx = k0 * sin(theta_inc_x)
+        and ky = k0 * sin(theta_inc_y) (unlike IsotropicTransferMatrix,
+        where theta_inc is measured in multilayer[0]).
         """
         TransferMatrix.__init__(self, multilayer)
         self.theta_inc_x = theta_inc_x
