@@ -40,6 +40,6 @@ clean-repo:
 	git pull --ff-only  # latest code
 
 release: clean-repo  ## Make a release (specify: PART=[major|minor|patch])
-	bump2version ${PART}
+	$(UV) run bump2version ${PART}
 	git push
 	git push --tags
