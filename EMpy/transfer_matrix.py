@@ -12,7 +12,7 @@ __author__ = "Lorenzo Bolla"
 
 import numpy as np
 from scipy.linalg import inv
-from EMpy.utils import snell, norm
+from EMpy.utils import snell
 from EMpy.constants import c, mu0
 
 # import Gnuplot
@@ -274,9 +274,37 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 - K[2, 0] * K[0, 2] * K[1, 1],
             ]
 
-            gamma = np.roots(coeff)
-            tmp = np.sort_complex(gamma)
-            gamma = tmp[[3, 0, 2, 1]]  # convention
+            if np.allclose(K, K[0, 0] * np.eye(3), rtol=1e-12, atol=1e-12):
+                g = np.sqrt(K[0, 0] - alpha2 - beta2 + 0j)
+                if g.real < -1e-12 or (abs(g.real) <= 1e-12 and g.imag < 0):
+                    g = -g
+                gamma = np.array([g, -g, g, -g], dtype=complex)
+            else:
+                gamma = np.roots(coeff)
+                # Classify roots into 2 forward (+z) and 2 backward (-z) modes:
+                # propagating modes have Re(gamma) > 0 (forward) / < 0 (backward);
+                # evanescent modes (|Re(gamma)| <= tol) decay in +z when Im(gamma) >= 0.
+                tol = 1e-6 * max(1.0, float(np.max(np.abs(gamma))))
+                fwd_idx = [
+                    idx
+                    for idx, g in enumerate(gamma)
+                    if g.real > tol or (abs(g.real) <= tol and g.imag >= 0)
+                ]
+                bwd_idx = [idx for idx in range(len(gamma)) if idx not in fwd_idx]
+                if len(fwd_idx) == 2 and len(bwd_idx) == 2:
+                    fwd = sorted(
+                        (gamma[idx] for idx in fwd_idx),
+                        key=lambda g: (g.real, g.imag),
+                        reverse=True,
+                    )
+                    bwd = sorted(
+                        (gamma[idx] for idx in bwd_idx),
+                        key=lambda g: (g.real, g.imag),
+                    )
+                    gamma = np.array([fwd[0], bwd[0], fwd[1], bwd[1]], dtype=complex)
+                else:
+                    tmp = np.sort_complex(gamma)
+                    gamma = tmp[[3, 0, 2, 1]]  # convention
 
             k = (
                 k0
@@ -284,33 +312,38 @@ class AnisotropicTransferMatrix(TransferMatrix):
                     [alpha * np.ones(gamma.shape), beta * np.ones(gamma.shape), gamma]
                 ).T
             )
-            v = np.zeros((4, 3), dtype=complex)
+            p = np.zeros((4, 3), dtype=complex)
 
-            for i, g in enumerate(gamma):
-                # H = K + [
-                #     [-beta2 - g ** 2, alpha * beta, alpha * g],
-                #     [alpha * beta, -alpha2 - g ** 2, beta * g],
-                #     [alpha * g, beta * g, -alpha2 - beta2],
-                # ]
-                v[i, :] = [
-                    (K[1, 1] - alpha2 - g**2) * (K[2, 2] - alpha2 - beta2)
-                    - (K[1, 2] + beta * g) ** 2,
-                    (K[1, 2] + beta * g) * (K[2, 0] + alpha * g)
-                    - (K[0, 1] + alpha * beta) * (K[2, 2] - alpha2 - beta2),
-                    (K[0, 1] + alpha * beta) * (K[1, 2] + beta * g)
-                    - (K[0, 2] + alpha * g) * (K[1, 1] - alpha2 - g**2),
-                ]
+            deg_tol = 1e-5 * max(1.0, float(np.max(np.abs(gamma))))
+            if (
+                abs(gamma[0] - gamma[2]) < deg_tol
+                and abs(gamma[1] - gamma[3]) < deg_tol
+            ):
+                # Degenerate (e.g. isotropic) layer: construct orthogonal s and p basis
+                if abs(alpha) + abs(beta) > 1e-12:
+                    p_s = np.array([-beta, alpha, 0.0], dtype=complex)
+                else:
+                    p_s = np.array([0.0, 1.0, 0.0], dtype=complex)
+                p_s /= np.linalg.norm(p_s)
+                p_p_fwd = np.cross(p_s, k[0, :])
+                p_p_fwd /= np.linalg.norm(p_p_fwd)
+                p_p_bwd = np.cross(p_s, k[1, :])
+                p_p_bwd /= np.linalg.norm(p_p_bwd)
+                p = np.array([p_s, p_s, p_p_fwd, p_p_bwd], dtype=complex)
+            else:
+                for i, g in enumerate(gamma):
+                    H = K + np.array(
+                        [
+                            [-beta2 - g**2, alpha * beta, alpha * g],
+                            [alpha * beta, -alpha2 - g**2, beta * g],
+                            [alpha * g, beta * g, -alpha2 - beta2],
+                        ],
+                        dtype=complex,
+                    )
+                    _, _, vh = np.linalg.svd(H)
+                    p[i, :] = vh[-1, :].conj()
+                    p[i, :] /= np.linalg.norm(p[i, :])
 
-            p3 = v[0, :]
-            p3 /= norm(p3)
-            p4 = v[1, :]
-            p4 /= norm(p4)
-            p1 = np.cross(p3, k[0, :])
-            p1 /= norm(p1)
-            p2 = np.cross(p4, k[1, :])
-            p2 /= norm(p2)
-
-            p = np.array([p1, p2, p3, p4])
             q = wl / (2.0 * np.pi * mu0 * c) * np.cross(k, p)
 
             return k, p, q
@@ -405,11 +438,28 @@ class AnisotropicTransferMatrix(TransferMatrix):
             # t = [tss tsp; tps tpp]
             t = np.array([[M[2, 2], -M[2, 0]], [-M[0, 2], M[0, 0]]]) / deltaM
 
-            # P_t/P_inc = |E_t|**2/|E_inc|**2 . k_t_z/k_inc_z
-            T[:, :, iwl] = (np.absolute(t) ** 2 * k[0, 2, -1] / k[0, 2, 0]).real
+            # Compute power reflectance and transmittance from z-Poynting flux:
+            # Sz_j = 0.5 * Re(Ex_j * Hy_j^* - Ey_j * Hx_j^*)
+            def _sz(p_vec, q_vec):
+                return 0.5 * np.real(
+                    p_vec[0] * np.conj(q_vec[1]) - p_vec[1] * np.conj(q_vec[0])
+                )
 
-            # P_r/P_inc = |E_r|**2/|E_inc|**2
-            R[:, :, iwl] = np.absolute(r) ** 2
+            sz_inc = np.array(
+                [_sz(p[0, :, 0], q[0, :, 0]), _sz(p[2, :, 0], q[2, :, 0])]
+            )
+            sz_ref = np.array(
+                [-_sz(p[1, :, 0], q[1, :, 0]), -_sz(p[3, :, 0], q[3, :, 0])]
+            )
+            sz_tr = np.maximum(
+                np.array(
+                    [_sz(p[0, :, -1], q[0, :, -1]), _sz(p[2, :, -1], q[2, :, -1])]
+                ),
+                0.0,
+            )
+
+            R[:, :, iwl] = np.absolute(r) ** 2 * (sz_ref[None, :] / sz_inc[:, None])
+            T[:, :, iwl] = np.absolute(t) ** 2 * (sz_tr[None, :] / sz_inc[:, None])
 
         self.R = R
         self.T = T
