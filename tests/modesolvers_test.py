@@ -44,6 +44,39 @@ class VFDModeSolverTest(TestCase):
         numpy.testing.assert_allclose(O11, numpy.eye(2), atol=1e-6)
         numpy.testing.assert_allclose(O12, numpy.eye(2), atol=1e-6)
 
+    def test_svfd_symmetry_matches_full_domain(self):
+        def epsfunc(x_, y_):
+            xx, yy = numpy.meshgrid(x_, y_)
+            return numpy.where(
+                (numpy.abs(xx.T) <= 0.25e-6) * (numpy.abs(yy.T) <= 0.12e-6),
+                3.48**2,
+                1.44**2,
+            )
+
+        wl = 1.55e-6
+        x_full = numpy.linspace(-1.0e-6, 1.0e-6, 41)
+        y_full = numpy.linspace(-1.0e-6, 1.0e-6, 41)
+        x_q = x_full[20:]
+        y_q = y_full[20:]
+
+        # Fundamental Ex mode: Hx antisymmetric, Hy symmetric ('A' on S/W walls)
+        sv_ex_full = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl, x_full, y_full, epsfunc, "0000", method="Ex"
+        ).solve(1, 1e-10)
+        sv_ex_q = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl, x_q, y_q, epsfunc, "0A0A", method="Ex"
+        ).solve(1, 1e-10)
+        self.assertAlmostEqual(sv_ex_q.neff[0].real, sv_ex_full.neff[0].real, places=9)
+
+        # Fundamental Ey mode: Hx symmetric, Hy antisymmetric ('S' on S/W walls)
+        sv_ey_full = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl, x_full, y_full, epsfunc, "0000", method="Ey"
+        ).solve(1, 1e-10)
+        sv_ey_q = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl, x_q, y_q, epsfunc, "0S0S", method="Ey"
+        ).solve(1, 1e-10)
+        self.assertAlmostEqual(sv_ey_q.neff[0].real, sv_ey_full.neff[0].real, places=9)
+
 
 class FMMModeSolverTest(TestCase):
 

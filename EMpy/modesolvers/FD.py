@@ -193,41 +193,22 @@ class SVFDModeSolver(ModeSolver):
 
         ii = numpy.arange(nx * ny).reshape(nx, ny)
 
-        # north boundary
-        ib = ii[:, -1]
-        if boundary[0] == "S":
-            Ap[ib] += An[ib]
-        elif boundary[0] == "A":
-            Ap[ib] -= An[ib]
-        # else:
-        #     raise ValueError('unknown boundary')
+        # Boundary docstring defines 'S'/'A' in terms of (Hx, Hy):
+        #   'S': Hx symmetric, Hy antisymmetric -> Ex antisymmetric (-1), Ey/scalar symmetric (+1)
+        #   'A': Hx antisymmetric, Hy symmetric -> Ex symmetric (+1), Ey/scalar antisymmetric (-1)
+        def _bc_sign(b):
+            if b == "S":
+                return -1 if method == "Ex" else 1
+            if b == "A":
+                return 1 if method == "Ex" else -1
+            if b == "0":
+                return 0
+            raise ValueError("unknown boundary conditions")
 
-        # south
-        ib = ii[:, 0]
-        if boundary[1] == "S":
-            Ap[ib] += As[ib]
-        elif boundary[1] == "A":
-            Ap[ib] -= As[ib]
-        # else:
-        #     raise ValueError('unknown boundary')
-
-        # east
-        ib = ii[-1, :]
-        if boundary[2] == "S":
-            Ap[ib] += Ae[ib]
-        elif boundary[2] == "A":
-            Ap[ib] -= Ae[ib]
-        # else:
-        #     raise ValueError('unknown boundary')
-
-        # west
-        ib = ii[0, :]
-        if boundary[3] == "S":
-            Ap[ib] += Aw[ib]
-        elif boundary[3] == "A":
-            Ap[ib] -= Aw[ib]
-        # else:
-        #     raise ValueError('unknown boundary')
+        Ap[ii[:, -1]] += _bc_sign(boundary[0]) * An[ii[:, -1]]
+        Ap[ii[:, 0]] += _bc_sign(boundary[1]) * As[ii[:, 0]]
+        Ap[ii[-1, :]] += _bc_sign(boundary[2]) * Ae[ii[-1, :]]
+        Ap[ii[0, :]] += _bc_sign(boundary[3]) * Aw[ii[0, :]]
 
         iall = ii.flatten()
         i_n = ii[:, 1:].flatten()
