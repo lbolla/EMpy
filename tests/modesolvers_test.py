@@ -1,8 +1,12 @@
 from unittest import TestCase
 
+import matplotlib
 import numpy
 
-import EMpy.modesolvers
+matplotlib.use("Agg")
+from matplotlib import pyplot as plt  # noqa: E402
+
+import EMpy.modesolvers  # noqa: E402
 
 
 class VFDModeSolverTest(TestCase):
@@ -51,6 +55,14 @@ class FMMModeSolverTest(TestCase):
         self.assertEqual(len(solver.modes), 2)
         self.assertTrue(numpy.iscomplexobj(solver.modes[0].sl))
         self.assertTrue(numpy.isfinite(solver.modes[0].keff).all())
+        y_grid = numpy.linspace(Uy[0], Uy[-1], 21)
+        plt.figure()
+        solver.modes[0].plot(y_grid)
+        _, line_imag = plt.gca().get_lines()
+        numpy.testing.assert_allclose(
+            line_imag.get_ydata(), numpy.imag(solver.modes[0].eval(y_grid))
+        )
+        plt.close("all")
 
     def test_fmm2d_lossy_channel_waveguide(self):
         wl = 1.55
@@ -77,6 +89,12 @@ class FMMModeSolverTest(TestCase):
         )
         O11, _, _, _ = EMpy.modesolvers.interface.interface_matrix(simul, simul)
         self.assertEqual(O11.shape, (2, 2))
+        te_frac = m0.TEfrac_old(
+            numpy.linspace(Ux[0], Ux[-1], 11), numpy.linspace(Uy[0], Uy[-1], 11)
+        )
+        self.assertTrue(0.0 <= te_frac <= 1.0)
+        m0.plot(numpy.linspace(Ux[0], Ux[-1], 11), numpy.linspace(Uy[0], Uy[-1], 11))
+        plt.close("all")
 
 
 class GeometriesTest(TestCase):

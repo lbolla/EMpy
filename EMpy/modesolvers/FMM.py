@@ -247,7 +247,7 @@ class FMMMode1dy(FMMMode1d):
 
     def plot(self, y):
         f = self.eval(y)
-        plt.plot(y, numpy.real(f), y, numpy.imag(y))
+        plt.plot(y, numpy.real(f), y, numpy.imag(f))
         plt.legend(("real", "imag"))
         plt.xlabel("y")
         plt.ylabel("mode1d")
@@ -508,7 +508,7 @@ class FMMMode2d(Mode):
         else:
             y = numpy.atleast_1d(y_)
 
-        Ex, Ey, Ez, cBx, cBy, cBz, cSz = self.fields(x, y)
+        Ex, Ey, Ez, cBx, cBy, cBz = self.fields(x, y)
         cSTE = 0.5 * EMpy.utils.trapz2(Ex * numpy.conj(cBy), y, x)
         cSTM = 0.5 * EMpy.utils.trapz2(-Ey * numpy.conj(cBx), y, x)
         return numpy.abs(cSTE) / (numpy.abs(cSTE) + numpy.abs(cSTM))
@@ -859,7 +859,7 @@ class FMMMode2d(Mode):
 
         # power
         plt.figure()
-        plt.contour(x, y, numpy.abs(f[-1]))
+        plt.contour(x, y, numpy.abs(self.intensity(x, y)))
         plt.xlabel("x")
         plt.ylabel("y")
         plt.title("cSz")
