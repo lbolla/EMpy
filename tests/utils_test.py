@@ -122,3 +122,62 @@ class UtilsTest(TestCase):
             U.LiquidCrystalCell(
                 lc, voltage=1.0, t_tot=10e-6, t_anchoring=1e-6, nlayers=5
             )
+
+    def test_symmetric_double_grating_fourier_coeffs(self):
+        import scipy.integrate
+
+        n1, n2, n3 = 1.5, 2.5, 1.0
+        m1 = EMpy.materials.IsotropicMaterial(
+            "m1", n0=EMpy.materials.RefractiveIndex(n0_const=n1)
+        )
+        m2 = EMpy.materials.IsotropicMaterial(
+            "m2", n0=EMpy.materials.RefractiveIndex(n0_const=n2)
+        )
+        m3 = EMpy.materials.IsotropicMaterial(
+            "m3", n0=EMpy.materials.RefractiveIndex(n0_const=n3)
+        )
+        dc1, dc2 = 0.2, 0.3
+        dcM = (1.0 - dc1 - dc2) / 2.0
+        wl = 1.55e-6
+        n_orders = 3
+
+        sdg = U.SymmetricDoubleGrating(m1, m2, m3, dc1, dc2, 1.0e-6, 0.2e-6)
+        adg = U.AsymmetricDoubleGrating(m1, m2, m3, dc1, dc2, dcM, 1.0e-6, 0.2e-6)
+
+        eps_s, eps1_s = sdg.getEPSFourierCoeffs(wl, n_orders, anisotropic=False)
+        eps_a, eps1_a = adg.getEPSFourierCoeffs(wl, n_orders, anisotropic=False)
+        numpy.testing.assert_allclose(eps_s, eps_a)
+        numpy.testing.assert_allclose(eps1_s, eps1_a)
+
+        # Direct numerical integration of piecewise-constant eps(x) on [-0.5, 0.5]
+        def eps_of_x(x):
+            if -dc1 - dcM / 2.0 <= x <= -dcM / 2.0:
+                return n1**2
+            if dcM / 2.0 <= x <= dc2 + dcM / 2.0:
+                return n2**2
+            return n3**2
+
+        hmax = 2 * n_orders
+        h = numpy.arange(-hmax, hmax + 1)
+        pts = [-dc1 - dcM / 2.0, -dcM / 2.0, dcM / 2.0, dc2 + dcM / 2.0]
+        for idx, hh in enumerate(h):
+            re_val, _ = scipy.integrate.quad(
+                lambda x: eps_of_x(x) * numpy.cos(2 * numpy.pi * hh * x),
+                -0.5,
+                0.5,
+                points=pts,
+            )
+            im_val, _ = scipy.integrate.quad(
+                lambda x: eps_of_x(x) * numpy.sin(2 * numpy.pi * hh * x),
+                -0.5,
+                0.5,
+                points=pts,
+            )
+            numpy.testing.assert_allclose(eps_s[idx], re_val + 1j * im_val, atol=1e-10)
+
+        # Identical ridges with symmetric spacers must have zero odd harmonics
+        sdg_eq = U.SymmetricDoubleGrating(m1, m1, m3, 0.25, 0.25, 1.0e-6, 0.2e-6)
+        eps_eq, _ = sdg_eq.getEPSFourierCoeffs(wl, n_orders, anisotropic=True)
+        for idx, hh in enumerate(h):
+            if hh % 2 != 0:
+                numpy.testing.assert_allclose(eps_eq[:, :, idx], 0.0, atol=1e-14)

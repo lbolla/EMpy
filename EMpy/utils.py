@@ -177,10 +177,11 @@ class SymmetricDoubleGrating:
             rix3 = self.mat3.n(wl)
             f1 = self.dc1
             f2 = self.dc2
+            fM = (1.0 - f1 - f2) / 2.0
             h = numpy.arange(-hmax, hmax + 1)
             N = len(h)
-            A = -N * f1 / 2.0
-            B = N * f2 / 2.0
+            A = -N * (f1 + fM) / 2.0
+            B = N * (f2 + fM) / 2.0
             EPS = (
                 rix3**2 * (h == 0)
                 + (rix1**2 - rix3**2)
@@ -213,10 +214,11 @@ class SymmetricDoubleGrating:
             eps3 = numpy.squeeze(self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
             f1 = self.dc1
             f2 = self.dc2
+            fM = (1.0 - f1 - f2) / 2.0
             h = numpy.arange(-hmax, hmax + 1)
             N = len(h)
-            A = -N * f1 / 2.0
-            B = N * f2 / 2.0
+            A = -N * (f1 + fM) / 2.0
+            B = N * (f2 + fM) / 2.0
             for ih, hh in enumerate(h):
                 EPS[:, :, ih] = (
                     (eps1 - eps3)
