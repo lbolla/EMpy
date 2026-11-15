@@ -71,3 +71,21 @@ class UtilsTest(TestCase):
         self.assertIn("50%", pb.progBar)
         pb.updateAmount(100)
         self.assertIn("100%", pb.progBar)
+
+    def test_find_peaks(self):
+        x = numpy.linspace(0.0, 10.0, 1001)
+        y = 1.0 * numpy.exp(-((x - 3.0) ** 2) / 0.2) + 2.0 * numpy.exp(
+            -((x - 7.0) ** 2) / 0.2
+        )
+        peaks = U.find_peaks(x, y)
+        self.assertEqual(len(peaks), 2)
+        # Sorted descending by peak height
+        self.assertAlmostEqual(peaks[0].x, 7.0, places=4)
+        self.assertAlmostEqual(peaks[0].y, 2.0, places=4)
+        self.assertAlmostEqual(peaks[1].x, 3.0, places=4)
+        self.assertAlmostEqual(peaks[1].y, 1.0, places=4)
+
+        # Monotonic curve falls back to boundary max
+        mono_peaks = U.find_peaks(x, x)
+        self.assertEqual(len(mono_peaks), 1)
+        self.assertAlmostEqual(mono_peaks[0].x, 10.0)

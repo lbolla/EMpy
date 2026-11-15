@@ -1118,11 +1118,13 @@ def f2wl(f0, df):
 
 
 def find_peaks(x, y, threshold=1e-6):
+    x = numpy.asarray(x)
+    y = numpy.asarray(y)
+
     # find peaks' candidates
     dy = numpy.diff(y)
     ddy = numpy.diff(numpy.sign(dy))
-    # idxs = numpy.where(ddy < 0)[0] + 1
-    idxs = numpy.where(ddy < 0)
+    idxs = numpy.where(ddy < 0)[0] + 1
 
     if len(idxs) == 0:
         # there is only 1 min in f, so the max is on either boundary
@@ -1166,15 +1168,7 @@ def find_peaks(x, y, threshold=1e-6):
             p = Peak(xopt, yopt, idx, x[idx], y[idx], xFWHM_1, xFWHM_2)
             peaks.append(p)
 
-    def cmp_y(x_, y_):
-        # to sort in descending order
-        if x_.y == y_.y:
-            return 0
-        if x_.y > y_.y:
-            return -1
-        return 1
-
-    peaks.sort(cmp=cmp_y)
+    peaks.sort(key=lambda p: p.y, reverse=True)
 
     return peaks
 
