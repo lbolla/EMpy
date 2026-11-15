@@ -181,3 +181,22 @@ class UtilsTest(TestCase):
         for idx, hh in enumerate(h):
             if hh % 2 != 0:
                 numpy.testing.assert_allclose(eps_eq[:, :, idx], 0.0, atol=1e-14)
+
+    def test_rix_loss_roundtrip(self):
+        wl = 1.55e-6
+        n_real = 3.48
+
+        n_m = U.loss_m2rix(n_real, 200.0, wl)
+        nr, ni, alpha, alpha_cm1, alpha_dBcm1 = U.rix2losses(n_m, wl)
+        self.assertAlmostEqual(nr, n_real)
+        self.assertLess(ni, 0.0)
+        self.assertAlmostEqual(alpha, 200.0)
+        self.assertAlmostEqual(alpha_cm1, 2.0)
+
+        n_cm = U.loss_cm2rix(n_real, 10.0, wl)
+        _, _, _, alpha_cm1_rt, _ = U.rix2losses(n_cm, wl)
+        self.assertAlmostEqual(alpha_cm1_rt, 10.0)
+
+        n_db = U.loss_dBcm2rix(n_real, 3.0, wl)
+        _, _, _, _, alpha_dBcm1_rt = U.rix2losses(n_db, wl)
+        self.assertAlmostEqual(alpha_dBcm1_rt, 3.0)

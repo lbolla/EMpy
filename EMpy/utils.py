@@ -1079,7 +1079,8 @@ def rix2losses(n, wl):
     complex refractive index.  Power goes as: P = P0 exp(-alpha*z)."""
     nr = numpy.real(n)
     ni = numpy.imag(n)
-    alpha = 4 * numpy.pi * ni / wl
+    # EMpy uses exp(+i*omega*t - i*k*z) / n = nr - 1j * k, so loss corresponds to imag(n) < 0.
+    alpha = -4 * numpy.pi * ni / wl
     alpha_cm1 = alpha / 100.0
     alpha_dBcm1 = 10 * numpy.log10(numpy.exp(1)) * alpha_cm1
     return nr, ni, alpha, alpha_cm1, alpha_dBcm1
