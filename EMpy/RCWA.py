@@ -19,6 +19,7 @@ import numpy as np
 from scipy.linalg import toeplitz, inv, eig, solve as linsolve
 from numpy import pi
 
+from EMpy.constants import eps0
 from EMpy.utils import (
     cond,
     warning,
@@ -42,11 +43,11 @@ def dispersion_relation_ordinary(kx, ky, k, nO):
         raise ValueError("kx and ky must have the same length")
 
     delta = (k * nO) ** 2 - (kx**2 + ky**2)
-    kz = np.sqrt(delta)
+    kz = np.sqrt(np.asarray(delta, dtype=complex))
 
     # Adjust sign of real/imag part
-    kz.real = abs(kz.real)
-    kz.imag = -abs(kz.imag)
+    kz.real = np.abs(kz.real)
+    kz.imag = -np.abs(kz.imag)
 
     return kz
 
@@ -66,7 +67,7 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
             "kx and ky must have the same length and c must have 3 components"
         )
 
-    kz = np.empty_like(kx)
+    kz = np.empty(kx.shape, dtype=complex)
 
     for ii in range(0, kx.size):
         alpha = nE**2 - nO**2
@@ -83,14 +84,14 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
             ]
         )
 
-        # two solutions of type +x or -x, purely real or purely imag
         tmp_kz = k * np.roots(C)
-
-        # get the negative imaginary part or the positive real one
-        if np.any(np.isreal(tmp_kz)):
-            kz[ii] = np.absolute(tmp_kz[0])
+        tol = 1e-12 * max(1.0, float(np.max(np.abs(tmp_kz))))
+        if np.all(np.abs(tmp_kz.imag) <= tol):
+            # Propagating roots: select the forward (+z) root
+            kz[ii] = max(tmp_kz, key=lambda z: float(z.real)).real
         else:
-            kz[ii] = -1j * np.absolute(tmp_kz[0])
+            # Evanescent / lossy roots: select the decaying (-Im) root
+            kz[ii] = min(tmp_kz, key=lambda z: float(z.imag))
 
     return kz
 
@@ -115,9 +116,9 @@ class RCWA:
     psi:    angle between the D vector of the plane wave and the xy plane,
             in radians, TM: 0, TE: numpy.pi / 2
 
-    phi:    angle between the grating vector K and y axis (in the xy plane),
+    phi:    angle between the grating vector K and z axis (in the xz plane),
             in radians, the grating is modulated in the direction of the
-            grating vector.
+            grating vector (phi = pi/2 corresponds to K along x).
 
     """
 
@@ -527,9 +528,22 @@ class AnisotropicRCWA(RCWA):
 
         dlt = (i == 0).astype(int)
 
+        def _end_layer_indices(mat, wl):
+            if hasattr(mat, "n"):
+                n_val = mat.n(wl).item()
+                return n_val, n_val
+            eps_rel = mat.epsilonTensor(wl)[:, :, 0] / eps0
+            if not np.allclose(eps_rel, np.diag(np.diag(eps_rel))) or not np.isclose(
+                eps_rel[1, 1], eps_rel[2, 2]
+            ):
+                raise NotImplementedError(
+                    "AnisotropicRCWA end layers only support isotropic or x-axis uniaxial materials."
+                )
+            return np.sqrt(eps_rel[1, 1] + 0j), np.sqrt(eps_rel[0, 0] + 0j)
+
         for iwl, wl in enumerate(self.wls):
-            nO1 = nE1 = multilayer[0].mat.n(wl).item()
-            nO3 = nE3 = multilayer[-1].mat.n(wl).item()
+            nO1, nE1 = _end_layer_indices(multilayer[0].mat, wl)
+            nO3, nE3 = _end_layer_indices(multilayer[-1].mat, wl)
 
             # wavevectors
             k = 2 * pi / wl
