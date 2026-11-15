@@ -1021,7 +1021,11 @@ class T_TCRR(Device):
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
-        neff, K, q, l, coupling = (self.neff, self.K, self.q, self.l, self.coupling)
+        neff = self.neff
+        K = numpy.array(self.K, dtype=float, copy=True)
+        q = self.q
+        l = numpy.array(self.l, dtype=float, copy=True)
+        coupling = self.coupling
 
         # transform the input in ndarrays
         wls = numpy.asarray(wls)
@@ -1169,7 +1173,11 @@ class T_CTCRR(Device):
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
-        neff, K, q, l, coupling = (self.neff, self.K, self.q, self.l, self.coupling)
+        neff = self.neff
+        K = numpy.array(self.K, dtype=float, copy=True)
+        q = self.q
+        l = numpy.array(self.l, dtype=float, copy=True)
+        coupling = self.coupling
 
         # transform the input in ndarrays
         wls = numpy.asarray(wls)

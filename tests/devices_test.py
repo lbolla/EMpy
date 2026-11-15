@@ -99,3 +99,34 @@ class EtalonTest(TestCase):
         etalon_scalar = EMpy.devices.Etalon(layer, 0.9, 0.0).solve(1.55e-6)
         self.assertEqual(etalon_scalar.Te.shape, (1,))
         self.assertEqual(etalon_scalar.FWHMwl.shape, (1,))
+
+
+class TunableRingTest(TestCase):
+
+    def test_t_tcrr_and_t_ctcrr_do_not_mutate_inputs(self):
+        wls = numpy.linspace(1.53e-6, 1.57e-6, 5)
+        neff = numpy.full_like(wls, 2.5)
+        K_in = numpy.array([0.3, 0.5, 0.7])
+        l_in = numpy.array([10e-6, 12e-6, 14e-6, 16e-6])
+        K_orig = K_in.copy()
+        l_orig = l_in.copy()
+
+        tcrr = EMpy.devices.T_TCRR(neff, K_in, 1.0, l_in, coupling="optimum").solve(wls)
+        numpy.testing.assert_array_equal(K_in, K_orig)
+        numpy.testing.assert_array_equal(l_in, l_orig)
+        numpy.testing.assert_array_equal(tcrr.K, K_orig)
+        numpy.testing.assert_array_equal(tcrr.l, l_orig)
+        numpy.testing.assert_allclose(
+            numpy.abs(tcrr.THRU) ** 2 + numpy.abs(tcrr.DROP) ** 2, 1.0, atol=1e-12
+        )
+
+        ctcrr = EMpy.devices.T_CTCRR(neff, K_in, 1.0, l_in, coupling="optimum").solve(
+            wls
+        )
+        numpy.testing.assert_array_equal(K_in, K_orig)
+        numpy.testing.assert_array_equal(l_in, l_orig)
+        numpy.testing.assert_array_equal(ctcrr.K, K_orig)
+        numpy.testing.assert_array_equal(ctcrr.l, l_orig)
+        numpy.testing.assert_allclose(
+            numpy.abs(ctcrr.THRU) ** 2 + numpy.abs(ctcrr.DROP) ** 2, 1.0, atol=1e-12
+        )
