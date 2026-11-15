@@ -20,7 +20,7 @@ class Input:
     def __str__(self):
         """Return a representation of the input file."""
 
-        dftmon_str = "%g ! #timemonitors \n" % len(self.dftmonitors)
+        dftmon_str = "%g ! #dftmonitors \n" % len(self.dftmonitors)
         if len(self.dftmonitors) > 0:
             dftmon_str += "".join(
                 [
@@ -39,8 +39,8 @@ class Input:
                 ]
             )
 
-        timemon_str = "%g ! #timemonitors \n" % len(self.dftmonitors)
-        if len(timemon_str) > 0:
+        timemon_str = "%g ! #timemonitors \n" % len(self.timemonitors)
+        if len(self.timemonitors) > 0:
             timemon_str += "%g %g \n %s" % (
                 self.timemonitors_time_interval[0],
                 self.timemonitors_time_interval[1],
@@ -55,7 +55,7 @@ class Input:
         return (
             "%g %g %g %g ! dx dy dz cfl \n"
             "%g %g %g %g %g %g %s %g %g ! xmax ymax zmax pmlx pmly pmlz pmltype pmlsmooth pmlref \n"
-            "%g %g %g %g ! xmax ymax zmax pmlx pmly pmlz \n"
+            "%g %g %g %g ! start end slides snapshot \n"
             "%g ! output3deps? \n"
             "%g ! number diel slices \n"
             "%s \n"
@@ -280,9 +280,9 @@ class FDTD:
         remote_dir = fixdir(remote_dir_)
         directory = fixdir(directory_)
         # input file
-        os.system("scp -C" + directory + input_file + " bollalo001@pico:" + remote_dir)
+        os.system("scp -C " + directory + input_file + " bollalo001@pico:" + remote_dir)
         # .dat modesolver's files
-        os.system("scp -C" + directory + "*.dat bollalo001@pico:" + remote_dir)
+        os.system("scp -C " + directory + "*.dat bollalo001@pico:" + remote_dir)
 
     def load(
         self, directory_="./", input_file="inp.txt", param_file="param", remote_dir_=""
@@ -330,7 +330,7 @@ class FDTD:
         inp.output3deps = numpy.fromstring(strip_comment(f.readline()), sep=" ")
 
         # dielslices
-        ndielslices = numpy.fromstring(strip_comment(f.readline()), sep=" ")
+        ndielslices = int(numpy.fromstring(strip_comment(f.readline()), sep=" ").item())
         inp.dielslices = []
         for i in range(ndielslices):
             inp.dielslices.append(
@@ -338,7 +338,9 @@ class FDTD:
             )
 
         # fieldslices
-        nfieldslices = numpy.fromstring(strip_comment(f.readline()), sep=" ")
+        nfieldslices = int(
+            numpy.fromstring(strip_comment(f.readline()), sep=" ").item()
+        )
         inp.fieldslices = []
         for i in range(nfieldslices):
             inp.fieldslices.append(
@@ -357,7 +359,9 @@ class FDTD:
         inp.smoothing_method = numpy.fromstring(strip_comment(f.readline()), sep=" ")
 
         # sources
-        nsources = numpy.fromstring(strip_comment(f.readline()), dtype=int, sep=" ")
+        nsources = int(
+            numpy.fromstring(strip_comment(f.readline()), dtype=int, sep=" ").item()
+        )
         inp.sources = []
         #        (inp.time_dependence, inp.wls, inp.pwidth, inp.shift) = numpy.fromstring(strip_comment(f.readline()), sep = ' ')
         for i in range(nsources):
@@ -374,7 +378,9 @@ class FDTD:
         inp.lambdamin, inp.lambdamax, inp.dlambda = numpy.fromstring(
             strip_comment(f.readline()), sep=" "
         )
-        ndftmonitors = numpy.fromstring(strip_comment(f.readline()), dtype=int, sep=" ")
+        ndftmonitors = int(
+            numpy.fromstring(strip_comment(f.readline()), dtype=int, sep=" ").item()
+        )
         inp.dftmonitors = []
         for i in range(ndftmonitors):
             inp.dftmonitors.append(
@@ -385,7 +391,9 @@ class FDTD:
             )
 
         # time monitors
-        ntimemonitors = numpy.fromstring(strip_comment(f.readline()), sep=" ")
+        ntimemonitors = int(
+            numpy.fromstring(strip_comment(f.readline()), sep=" ").item()
+        )
         inp.timemonitors_time_interval = numpy.fromstring(
             strip_comment(f.readline()), sep=" "
         )
@@ -630,11 +638,11 @@ class FDTD:
         #        os.environ['OMP_NUM_THREAD'] = str(ncpu)
         #        cmd = 'dplace -x6 ' + exe_file + ' > ' + output_file
         cmd = (
-            "cd"
+            "cd "
             + directory
-            + "; setenv OMP_NUM_THREAD"
+            + "; setenv OMP_NUM_THREAD "
             + str(ncpu)
-            + "dplace -x6 "
+            + "; dplace -x6 "
             + exe_file
             + " > "
             + output_file
@@ -661,8 +669,8 @@ def load_fortran_unformatted(filename):
     except Exception:
         print("ERROR")
         return
-    nbytes = numpy.fromfile(f, dtype=numpy.int32, count=1)
-    n = nbytes / numpy.float32().nbytes
+    nbytes = int(numpy.fromfile(f, dtype=numpy.int32, count=1).item())
+    n = nbytes // numpy.float32().nbytes
     data = numpy.fromfile(f, dtype=numpy.float32, count=n)
     f.close()
     return data
@@ -728,10 +736,10 @@ def overlap_f(sensors, solver, nwl):
             )
             ju[isens, imode] = 0.5 * (
                 EMpy.utils.trapz2(
-                    sens.H2[1:-1, :, nwl] * Ey, dx=sens.dx1 * 1e-6, dy=sens.dx1 * 1e-6
+                    sens.H2[1:-1, :, nwl] * Ey, dx=sens.dx1 * 1e-6, dy=sens.dx2 * 1e-6
                 )
                 - EMpy.utils.trapz2(
-                    sens.H1[:, 1:-1, nwl] * Ex, dx=sens.dx1 * 1e-6, dy=sens.dx1 * 1e-6
+                    sens.H1[:, 1:-1, nwl] * Ex, dx=sens.dx1 * 1e-6, dy=sens.dx2 * 1e-6
                 )
             )
     A = (vu + ju) / 2.0

@@ -17,7 +17,7 @@ l22 = EMpy.utils.Layer(mat2, 0.1e-6)
 
 w = 0.5e-6
 
-d = EMpy.utils.EMpy.utils.CrossSection(
+d = EMpy.utils.CrossSection(
     [
         EMpy.utils.Slice(2e-6, [l1]),
         EMpy.utils.Slice(w, [l21, l22, l21]),
