@@ -1298,7 +1298,7 @@ class SWG(Device):
             pf = SWG.pf488_125
         elif (self.w, self.T) == (488, 225):
             pf = SWG.pf488_225
-        elif (self.w, self.T) == (400, 225):
+        elif (self.w, self.T) == (400, 25):
             pf = SWG.pf400_25
         elif (self.w, self.T) == (400, 125):
             pf = SWG.pf400_125
@@ -1309,21 +1309,19 @@ class SWG(Device):
         else:
             import scipy.interpolate
 
-            pf_ = numpy.zeros((2, 3, 3))
-            [w_, T_] = numpy.meshgrid([400, 488], [25, 125, 225])
-            pf_[0, 0, :] = SWG.pf400_25
-            pf_[0, 1, :] = SWG.pf400_125
-            pf_[0, 2, :] = SWG.pf400_225
-            pf_[1, 0, :] = SWG.pf488_25
-            pf_[1, 1, :] = SWG.pf488_125
-            pf_[1, 2, :] = SWG.pf488_225
-            pf = [
-                scipy.interpolate.interp2d(w_.T, T_.T, pf_[:, :, i])(self.w, self.T)[0]
-                for i in range(3)
-            ]
+            pf_ = numpy.array(
+                [
+                    [SWG.pf400_25, SWG.pf400_125, SWG.pf400_225],
+                    [SWG.pf488_25, SWG.pf488_125, SWG.pf488_225],
+                ]
+            )
+            interp = scipy.interpolate.RegularGridInterpolator(
+                ([400, 488], [25, 125, 225]), pf_, method="linear"
+            )
+            pf = interp((self.w, self.T))
 
         # transform the input in an ndarray
-        wls = numpy.asarray(wls)
+        wls = numpy.atleast_1d(wls)
 
         wls_nm = wls * 1e9
         neff = numpy.polyval(pf, wls_nm)
@@ -1350,10 +1348,10 @@ class Etalon(Device):
     """
 
     def __init__(self, layer, R, theta):
-        self.FWHMwl = self.FSRwl / self.FINESSE
         self.layer = layer
         self.R = R
         self.theta = theta
+        self.sanity_check()
 
     def sanity_check(self):
         pass
@@ -1362,7 +1360,7 @@ class Etalon(Device):
         """Compute the frequency response of the etalon."""
 
         # transform the input in an ndarray
-        wls = numpy.asarray(wls)
+        wls = numpy.atleast_1d(wls)
 
         n = self.layer.mat.n(wls)
         l = self.layer.thickness
@@ -1384,6 +1382,7 @@ class Etalon(Device):
         # self.FINESSE = numpy.pi * numpy.sqrt(self.F) / 2.
         # self.FINESSE = numpy.pi * numpy.sqrt(self.R) / (1 - self.R)
 
+        self.FWHMwl = self.FSRwl / self.FINESSE
         self.FWHM = self.FSR / self.FINESSE
 
         return self

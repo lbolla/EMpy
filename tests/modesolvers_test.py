@@ -18,7 +18,8 @@ class VFDModeSolverTest(TestCase):
             """
             xx, yy = numpy.meshgrid(x_, y_)
             return numpy.where(
-                (numpy.abs(xx.T - 1.24e-6) <= 0.24e-6) * (numpy.abs(yy.T - 1.11e-6) <= 0.11e-6),
+                (numpy.abs(xx.T - 1.24e-6) <= 0.24e-6)
+                * (numpy.abs(yy.T - 1.11e-6) <= 0.11e-6),
                 3.4757**2,
                 1.446**2,
             )
@@ -34,3 +35,33 @@ class VFDModeSolverTest(TestCase):
         )
         self.assertEqual(len(solver.modes), 2)
         self.assertAlmostEqual(solver.modes[0].neff, 2.4179643622942937)
+
+
+class FMMModeSolverTest(TestCase):
+
+    def test_fmm1d_uniform_lossy_tm(self):
+        Uy = numpy.array([0.0, 2.0, 2.22, 4.22])
+        n1 = 3.4757 - 1e-4j
+        ny = numpy.array([n1, n1, n1])
+        solver = EMpy.modesolvers.FMM.FMM1d(Uy, ny, "AA").solve(1.55, 2, "TM")
+        self.assertEqual(len(solver.modes), 2)
+        self.assertTrue(numpy.iscomplexobj(solver.modes[0].sl))
+        self.assertTrue(numpy.isfinite(solver.modes[0].keff).all())
+
+    def test_fmm2d_lossy_channel_waveguide(self):
+        wl = 1.55
+        Ux = numpy.array([0.0, 2.0, 2.4, 4.4])
+        Uy = numpy.array([0.0, 2.0, 2.22, 4.22])
+        boundary = EMpy.modesolvers.FMM.Boundary(
+            xleft="Electric Wall",
+            yleft="Magnetic Wall",
+            xright="Electric Wall",
+            yright="Magnetic Wall",
+        )
+        n2 = 1.446
+        n1 = 3.4757 - 1e-4j
+        refindex = numpy.array([[n2, n2, n2], [n2, n1, n2], [n2, n2, n2]])
+        simul = EMpy.modesolvers.FMM.FMM2d(Ux, Uy, refindex, boundary).solve(wl, 2, 2)
+        self.assertEqual(len(simul.modes), 2)
+        self.assertTrue(numpy.isfinite(simul.modes[0].keff))
+        self.assertTrue(numpy.isfinite(simul.modes[0].norm()))
