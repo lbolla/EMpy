@@ -19,13 +19,11 @@ class Field:
 
     """
 
-    def __init__(
-        self, E=numpy.zeros((3, 1)), H=numpy.zeros((3, 1)), r=numpy.zeros((3, 1))
-    ):
+    def __init__(self, E=None, H=None, r=None):
         """Initialize the Field object with an Electric, Magnetic and Position vectors."""
-        self.E = E
-        self.H = H
-        self.r = r
+        self.E = numpy.zeros((3, 1)) if E is None else E
+        self.H = numpy.zeros((3, 1)) if H is None else H
+        self.r = numpy.zeros((3, 1)) if r is None else r
 
 
 """

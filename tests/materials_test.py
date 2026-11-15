@@ -58,3 +58,36 @@ class RefractiveIndexTest(TestCase):
         n0_known = {test_wl: test_rix}
         a = mat.RefractiveIndex(n0_known=n0_known)
         self.assertEqual(a.get_rix(test_wl)[0], array([test_rix]))
+
+
+class EpsilonTensorTest(TestCase):
+
+    def test_multi_wavelength_known(self):
+        import numpy as np
+
+        eps_const = 2.0 * np.eye(3)
+        eps_wl1 = (3.0 - 0.1j) * np.eye(3)
+        et = mat.EpsilonTensor(
+            epsilon_tensor_const=eps_const,
+            epsilon_tensor_known={1.55e-6: eps_wl1},
+        )
+        res = et([1.50e-6, 1.55e-6, 1.60e-6])
+        self.assertEqual(res.shape, (3, 3, 3))
+        assert_almost_equal(res[:, :, 0], eps_const)
+        assert_almost_equal(res[:, :, 1], eps_wl1)
+        assert_almost_equal(res[:, :, 2], eps_const)
+
+    def test_no_shared_mutable_defaults(self):
+        import EMpy.scattering
+
+        m1 = mat.AnisotropicMaterial("a")
+        m2 = mat.AnisotropicMaterial("b")
+        m1.epsilonTensor.epsilon_tensor_known[1.55e-6] = 4.0 * array(
+            [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        )
+        self.assertEqual(m2.epsilonTensor.epsilon_tensor_known, {})
+
+        f1 = EMpy.scattering.Field()
+        f2 = EMpy.scattering.Field()
+        f1.E[0, 0] = 5.0
+        self.assertEqual(f2.E[0, 0], 0.0)

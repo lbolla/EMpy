@@ -136,7 +136,7 @@ class RefractiveIndex:
     def __from_known(n0_known, wls):
         wls = numpy.atleast_1d(wls)
         # Note: we should interpolate...
-        return numpy.array([n0_known.get(wl, 0) for wl in wls])
+        return numpy.array([n0_known.get(wl.item(), 0) for wl in wls.ravel()])
 
     def __call__(self, wls):
         return self.get_rix(wls)
@@ -170,12 +170,14 @@ class IsotropicMaterial(Material):
     In all the member functions, wls must be an ndarray.
     """
 
-    def __init__(
-        self, name="", n0=RefractiveIndex(n0_const=1.0), toc=ThermalOpticCoefficient()
-    ):
+    def __init__(self, name="", n0=None, toc=None):
         """Set name, default temperature, refractive index and TOC
         (thermal optic coefficient)."""
         Material.__init__(self, name)
+        if n0 is None:
+            n0 = RefractiveIndex(n0_const=1.0)
+        if toc is None:
+            toc = ThermalOpticCoefficient()
         self.n0 = n0
         self.toc = toc
 
@@ -209,9 +211,9 @@ class IsotropicMaterial(Material):
 
 
 class EpsilonTensor:
-    def __init__(
-        self, epsilon_tensor_const=eps0 * numpy.eye(3), epsilon_tensor_known=None
-    ):
+    def __init__(self, epsilon_tensor_const=None, epsilon_tensor_known=None):
+        if epsilon_tensor_const is None:
+            epsilon_tensor_const = eps0 * numpy.eye(3)
         if epsilon_tensor_known is None:
             epsilon_tensor_known = {}
         self.epsilon_tensor_const = epsilon_tensor_const
@@ -220,10 +222,18 @@ class EpsilonTensor:
     def __call__(self, wls):
         """Return the epsilon tensor as a [3 x 3 x wls.size] matrix."""
         wls = numpy.atleast_1d(wls)
-        if wls.size == 1:
-            if wls.item() in self.epsilon_tensor_known:
-                return self.epsilon_tensor_known[wls.item()][:, :, numpy.newaxis]
-        return self.epsilon_tensor_const[:, :, numpy.newaxis] * numpy.ones_like(wls)
+        if not self.epsilon_tensor_known:
+            return self.epsilon_tensor_const[:, :, numpy.newaxis] * numpy.ones_like(wls)
+        dtype = numpy.result_type(
+            self.epsilon_tensor_const,
+            *(numpy.asarray(v).dtype for v in self.epsilon_tensor_known.values()),
+        )
+        out = numpy.empty((3, 3, wls.size), dtype=dtype)
+        for i, wl in enumerate(wls.ravel()):
+            out[:, :, i] = self.epsilon_tensor_known.get(
+                wl.item(), self.epsilon_tensor_const
+            )
+        return out
 
 
 class AnisotropicMaterial(Material):
@@ -234,9 +244,11 @@ class AnisotropicMaterial(Material):
 
     """
 
-    def __init__(self, name="", epsilon_tensor=EpsilonTensor()):
+    def __init__(self, name="", epsilon_tensor=None):
         """Set name and default epsilon tensor."""
         Material.__init__(self, name)
+        if epsilon_tensor is None:
+            epsilon_tensor = EpsilonTensor()
         self.epsilonTensor = epsilon_tensor
 
     @staticmethod
