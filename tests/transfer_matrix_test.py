@@ -132,3 +132,26 @@ class TransferMatrixTest(TestCase):
         assert_allclose(sol_iso.Ts, sol_aniso.T[0, 0, :], rtol=1e-6)
         assert_allclose(sol_iso.Rp, sol_aniso.R[1, 1, :], rtol=1e-6)
         assert_allclose(sol_iso.Tp, sol_aniso.T[1, 1, :], rtol=1e-6)
+
+    def test_scalar_wavelength(self):
+        wl = 1.55e-6
+        iso_layers = _make_iso_multilayer([1.0, 1.5, 1.0], [np.inf, 0.3e-6, np.inf])
+        aniso_layers = _make_aniso_multilayer([1.0, 1.5, 1.0], [np.inf, 0.3e-6, np.inf])
+
+        sol_iso_scalar = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            iso_layers, 0.2
+        ).solve(wl)
+        sol_iso_arr = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            iso_layers, 0.2
+        ).solve([wl])
+        assert_allclose(sol_iso_scalar.Rs, sol_iso_arr.Rs)
+        assert_allclose(sol_iso_scalar.Ts, sol_iso_arr.Ts)
+
+        sol_aniso_scalar = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            aniso_layers, 0.2, 0.0
+        ).solve(wl)
+        sol_aniso_arr = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            aniso_layers, 0.2, 0.0
+        ).solve([wl])
+        assert_allclose(sol_aniso_scalar.R, sol_aniso_arr.R)
+        assert_allclose(sol_aniso_scalar.T, sol_aniso_arr.T)

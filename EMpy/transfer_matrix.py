@@ -60,7 +60,7 @@ class IsotropicTransferMatrix(TransferMatrix):
         transmitted on s and p polarizations.
         """
 
-        self.wls = np.asarray(wls)
+        self.wls = np.atleast_1d(wls)
 
         multilayer = self.multilayer
         theta_inc = self.theta_inc
@@ -180,7 +180,7 @@ class AnisotropicTransferMatrix(TransferMatrix):
         self.R, self.T = power reflected and transmitted.
         """
 
-        self.wls = np.asarray(wls)
+        self.wls = np.atleast_1d(wls)
 
         multilayer = self.multilayer
         theta_inc_x = self.theta_inc_x
