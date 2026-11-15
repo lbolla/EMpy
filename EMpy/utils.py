@@ -446,6 +446,8 @@ class LiquidCrystalCell:
         self.totaltwist = totaltwist
         self.nlayers = nlayers
         self.data_file = data_file
+        if self.nlayers < 3:
+            raise ValueError("nlayers must be at least 3.")
         # thicknesses of internal layers
         tlc_internal = (
             (self.t_tot - 2.0 * self.t_anchoring)
@@ -578,7 +580,13 @@ class LiquidCrystalCell:
         """Inspiration from:
         U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
-        from scikits.bvp1lg import colnew  # type: ignore
+        try:
+            from scikits.bvp1lg import colnew  # type: ignore
+        except ImportError as exc:
+            raise ImportError(
+                "scikits.bvp1lg is required to solve the LiquidCrystalCell BVP; "
+                "use voltage=0 or provide data_file instead."
+            ) from exc
 
         boundary_points = numpy.array([0, 0, 0, 1, 1, 1])
         tol = 1e-6 * numpy.ones_like(boundary_points)
@@ -624,6 +632,10 @@ class LiquidCrystalCell:
         return angles.squeeze()
 
     def _get_angles_from_bvp(self):
+        if self.voltage == 0:
+            return numpy.full_like(
+                self.normalized_sample_points, self.pretilt, dtype=float
+            )
         # solve bvp
         self.__apply_tension()
         z_ = self.normalized_sample_points
@@ -705,24 +717,18 @@ class Multilayer:
         del self.data[i]
 
     def __getitem__(self, i):
-        """Get an item of the list of layers."""
+        """Get an item or slice of the list of layers."""
+        if isinstance(i, slice):
+            return Multilayer(self.data[i])
         return self.data[i]
-
-    def __getslice__(self, i, j):
-        """Get a Multilayer from a slice of layers."""
-        return Multilayer(self.data[i:j])
 
     def __len__(self):
         """Return the number of layers."""
         return len(self.data)
 
     def __setitem__(self, i, item):
-        """Set an item of the list of layers."""
+        """Set an item or slice of the list of layers."""
         self.data[i] = item
-
-    def __setslice__(self, i, j, other):
-        """Set a slice of layers."""
-        self.data[i:j] = other
 
     def append(self, item):
         """Append a layer to the layers list."""

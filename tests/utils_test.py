@@ -89,3 +89,36 @@ class UtilsTest(TestCase):
         mono_peaks = U.find_peaks(x, x)
         self.assertEqual(len(mono_peaks), 1)
         self.assertAlmostEqual(mono_peaks[0].x, 10.0)
+
+    def test_multilayer_slicing(self):
+        l1 = U.Layer(EMpy.materials.Air, 1.0)
+        l2 = U.Layer(EMpy.materials.SiO2, 2.0)
+        l3 = U.Layer(EMpy.materials.Si, 3.0)
+        m = U.Multilayer([l1, l2, l3])
+
+        sub = m[1:3]
+        self.assertIsInstance(sub, U.Multilayer)
+        self.assertEqual(len(sub), 2)
+        self.assertTrue(sub.isIsotropic())
+        self.assertIs(m[0], l1)
+
+        m[0:2] = [l3, l1]
+        self.assertIs(m[0], l3)
+        self.assertIs(m[1], l1)
+
+    def test_liquid_crystal_cell_nlayers_guard(self):
+        lc = EMpy.materials.LiquidCrystal()
+        with self.assertRaises(ValueError):
+            U.LiquidCrystalCell(
+                lc, voltage=0.0, t_tot=10e-6, t_anchoring=1e-6, nlayers=2
+            )
+        cell = U.LiquidCrystalCell(
+            lc, voltage=0.0, t_tot=10e-6, t_anchoring=1e-6, nlayers=5
+        )
+        m = cell.createMultilayer()
+        self.assertIsInstance(m, U.Multilayer)
+        self.assertEqual(len(m), 5)
+        with self.assertRaises(ImportError):
+            U.LiquidCrystalCell(
+                lc, voltage=1.0, t_tot=10e-6, t_anchoring=1e-6, nlayers=5
+            )
