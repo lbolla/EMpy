@@ -769,7 +769,7 @@ class FMMMode2d(Mode):
 
         return (Sx, Sy)
 
-    def overlap(self, mode):
+    def overlap(self, mode, x=None, y=None):
         Sx, Sy = self.__overlap(mode)
         return Sx - Sy
 

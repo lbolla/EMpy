@@ -36,6 +36,10 @@ class VFDModeSolverTest(TestCase):
         self.assertEqual(len(solver.modes), 2)
         self.assertAlmostEqual(solver.modes[0].neff, 2.4179643622942937)
 
+        O11, O22, O12, O21 = EMpy.modesolvers.interface.interface_matrix(solver, solver)
+        numpy.testing.assert_allclose(O11, numpy.eye(2), atol=1e-6)
+        numpy.testing.assert_allclose(O12, numpy.eye(2), atol=1e-6)
+
 
 class FMMModeSolverTest(TestCase):
 
@@ -65,6 +69,14 @@ class FMMModeSolverTest(TestCase):
         self.assertEqual(len(simul.modes), 2)
         self.assertTrue(numpy.isfinite(simul.modes[0].keff))
         self.assertTrue(numpy.isfinite(simul.modes[0].norm()))
+
+        m0 = simul.modes[0]
+        m0.normalize()
+        self.assertAlmostEqual(
+            EMpy.modesolvers.interface.overlap(m0, m0, None, None), 1.0, places=5
+        )
+        O11, _, _, _ = EMpy.modesolvers.interface.interface_matrix(simul, simul)
+        self.assertEqual(O11.shape, (2, 2))
 
 
 class GeometriesTest(TestCase):

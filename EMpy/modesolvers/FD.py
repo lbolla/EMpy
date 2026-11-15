@@ -2216,16 +2216,17 @@ class FDMode(Mode):
         if y is None:
             y = y2
 
-        # Interpolates m1 onto m2 grid:
+        # Interpolates m1 and centered m2 fields onto (x, y) grid:
         Ex1 = EMpy.utils.interp2(x, y, x1, y1, self.Ex)
         Ey1 = EMpy.utils.interp2(x, y, x1, y1, self.Ey)
-        Hx2 = EMpy.utils.interp2(x, y, x2, y2, m.Hx)
-        Hy2 = EMpy.utils.interp2(x, y, x2, y2, m.Hy)
+        Hx2_c = EMpy.utils.interp2(
+            x, y, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hx))
+        )
+        Hy2_c = EMpy.utils.interp2(
+            x, y, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hy))
+        )
 
-        intensity = (
-            Ex1 * EMpy.utils.centered2d(numpy.conj(Hy2))
-            - Ey1 * EMpy.utils.centered2d(numpy.conj(Hx2))
-        ) / 2.0
+        intensity = (Ex1 * Hy2_c - Ey1 * Hx2_c) / 2.0
 
         return EMpy.utils.trapz2(intensity, x=x, y=y)
 
