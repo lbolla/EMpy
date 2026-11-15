@@ -802,31 +802,31 @@ class FMMMode2d(Mode):
         # Ex: ignores y = 0, max
         x_Ex_FDTD = EMpy.utils.centered1d(x)
         y_Ex_FDTD = y[1:-1]
-        Ex_FDTD = EMpy.utils.interp2(x_Ex_FDTD, y_Ex_FDTD, x0, y0, Ex)
+        Ex_FDTD = EMpy.utils.interp2(x_Ex_FDTD, y_Ex_FDTD, x0, y0, Ex.T)
         # Ey: ignores x = 0, max
         x_Ey_FDTD = x[1:-1]
         y_Ey_FDTD = EMpy.utils.centered1d(y)
-        Ey_FDTD = EMpy.utils.interp2(x_Ey_FDTD, y_Ey_FDTD, x0, y0, Ey)
+        Ey_FDTD = EMpy.utils.interp2(x_Ey_FDTD, y_Ey_FDTD, x0, y0, Ey.T)
         # Ez: ignores x, y = 0, max
         x_Ez_FDTD = x[1:-1]
         y_Ez_FDTD = y[1:-1]
-        Ez_FDTD = EMpy.utils.interp2(x_Ez_FDTD, y_Ez_FDTD, x0, y0, Ez)
+        Ez_FDTD = EMpy.utils.interp2(x_Ez_FDTD, y_Ez_FDTD, x0, y0, Ez.T)
         # Hx: ignores x = 0, max, /120pi, reverse direction
         x_Hx_FDTD = x[1:-1]
         y_Hx_FDTD = EMpy.utils.centered1d(y)
-        Hx_FDTD = EMpy.utils.interp2(x_Hx_FDTD, y_Hx_FDTD, x0, y0, cBx) / (
+        Hx_FDTD = EMpy.utils.interp2(x_Hx_FDTD, y_Hx_FDTD, x0, y0, cBx.T) / (
             -120.0 * numpy.pi
         )  # OKKIO!
         # Hy: ignores y = 0, max, /120pi, reverse direction
         x_Hy_FDTD = EMpy.utils.centered1d(x)
         y_Hy_FDTD = y[1:-1]
-        Hy_FDTD = EMpy.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x0, y0, cBy) / (
+        Hy_FDTD = EMpy.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x0, y0, cBy.T) / (
             -120.0 * numpy.pi
         )
         # Hz: /120pi, reverse direction
         x_Hz_FDTD = EMpy.utils.centered1d(x)
         y_Hz_FDTD = EMpy.utils.centered1d(y)
-        Hz_FDTD = EMpy.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x0, y0, cBz) / (
+        Hz_FDTD = EMpy.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x0, y0, cBz.T) / (
             -120.0 * numpy.pi
         )
 
