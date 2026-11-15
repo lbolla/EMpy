@@ -1816,7 +1816,7 @@ def creaTeThSeSh(kz, slices):
     kxh = numpy.emath.sqrt(kh**2 - kz**2)
     kxe = numpy.emath.sqrt(ke**2 - kz**2)
 
-    if slices[-1].boundary.xleft == "Electric Wall":
+    if slices[-1].boundary.xright == "Electric Wall":
         # ah = 0
         Thright = -((k0 / kh) ** 2) * kxh * numpy.tan(kxh * d[-1])
         Teright = Te[:, -1]

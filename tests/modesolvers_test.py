@@ -96,6 +96,41 @@ class FMMModeSolverTest(TestCase):
         m0.plot(numpy.linspace(Ux[0], Ux[-1], 11), numpy.linspace(Uy[0], Uy[-1], 11))
         plt.close("all")
 
+    def test_fmm2d_asymmetric_x_boundaries(self):
+        """Mirrored (Electric, Magnetic) vs (Magnetic, Electric) x-walls on a symmetric waveguide must give identical neff."""
+        wl = 1.55
+        Ux = numpy.array([0.0, 0.1, 0.6, 0.7])
+        Uy = numpy.array([0.0, 0.5, 1.0, 1.5])
+        n2, n1 = 1.446, 3.4757
+        refindex = numpy.array([[n2, n2, n2], [n2, n1, n2], [n2, n2, n2]])
+
+        b_em = EMpy.modesolvers.FMM.Boundary(
+            xleft="Electric Wall",
+            yleft="Magnetic Wall",
+            xright="Magnetic Wall",
+            yright="Magnetic Wall",
+        )
+        b_me = EMpy.modesolvers.FMM.Boundary(
+            xleft="Magnetic Wall",
+            yleft="Magnetic Wall",
+            xright="Electric Wall",
+            yright="Magnetic Wall",
+        )
+        b_ee = EMpy.modesolvers.FMM.Boundary(
+            xleft="Electric Wall",
+            yleft="Magnetic Wall",
+            xright="Electric Wall",
+            yright="Magnetic Wall",
+        )
+        s_em = EMpy.modesolvers.FMM.FMM2d(Ux, Uy, refindex, b_em).solve(wl, 6, 1)
+        s_me = EMpy.modesolvers.FMM.FMM2d(Ux, Uy, refindex, b_me).solve(wl, 6, 1)
+        s_ee = EMpy.modesolvers.FMM.FMM2d(Ux, Uy, refindex, b_ee).solve(wl, 6, 1)
+        numpy.testing.assert_allclose(s_em.modes[0].neff, s_me.modes[0].neff, rtol=1e-3)
+        self.assertGreater(
+            abs(s_em.modes[0].neff - s_ee.modes[0].neff),
+            1e-3,
+        )
+
 
 class GeometriesTest(TestCase):
 
