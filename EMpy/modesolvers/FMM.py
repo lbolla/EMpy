@@ -1079,7 +1079,7 @@ def FMMshootingTM(kz_, FMMpars):
 
     Nregions = len(betay)
     d = numpy.diff(Uy)
-    Delta = numpy.zeros_like(kz)
+    Delta = numpy.zeros(kz.shape, dtype=complex)
 
     sl = numpy.zeros(Nregions, dtype=complex)
     sr = numpy.zeros_like(sl)
@@ -1181,7 +1181,7 @@ def FMMshooting(kz_, FMMpars):
 
     Nregions = len(betay)
     d = numpy.diff(Uy)
-    Delta = numpy.zeros_like(kz)
+    Delta = numpy.zeros(kz.shape, dtype=complex)
 
     sl = numpy.zeros(Nregions, dtype=complex)
     sr = numpy.zeros_like(sl)

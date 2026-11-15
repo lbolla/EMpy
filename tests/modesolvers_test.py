@@ -64,6 +64,35 @@ class FMMModeSolverTest(TestCase):
         )
         plt.close("all")
 
+    def test_fmm_shooting_complex_delta(self):
+        wl = 1.55
+        k0 = 2.0 * numpy.pi / wl
+        Uy = numpy.array([0.0, 2.0, 2.22, 4.22])
+        n2 = 1.446
+        n1 = 3.4757 - 1e-3j
+        ny = numpy.array([n2, n1, n2])
+        pars = {
+            "beta": k0 * ny,
+            "epsilon": ny**2,
+            "Uy": Uy,
+            "boundary": "AA",
+        }
+        kz_real = numpy.linspace(k0 * 1.5, k0 * 3.4, 5)
+        delta_te, _ = EMpy.modesolvers.FMM.FMMshooting(kz_real, pars)
+        delta_tm, _ = EMpy.modesolvers.FMM.FMMshootingTM(kz_real, pars)
+        self.assertTrue(numpy.iscomplexobj(delta_te))
+        self.assertTrue(numpy.iscomplexobj(delta_tm))
+        self.assertGreater(numpy.max(numpy.abs(numpy.imag(delta_te))), 0.0)
+        self.assertGreater(numpy.max(numpy.abs(numpy.imag(delta_tm))), 0.0)
+
+        for pol, shoot_fn in [
+            ("TE", EMpy.modesolvers.FMM.FMMshooting),
+            ("TM", EMpy.modesolvers.FMM.FMMshootingTM),
+        ]:
+            sol = EMpy.modesolvers.FMM.FMM1d(Uy, ny, "AA").solve(wl, 1, pol)
+            delta_root, _ = shoot_fn(sol.modes[0].keff, pars)
+            self.assertLess(abs(delta_root[0]), 1e-4)
+
     def test_fmm2d_lossy_channel_waveguide(self):
         wl = 1.55
         Ux = numpy.array([0.0, 2.0, 2.4, 4.4])
