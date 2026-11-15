@@ -64,15 +64,17 @@ def stack(X, Y, Z):
     @rtype: numpy.ndarray of shape (3, Nx*Ny*Nz)
 
     """
-    Nx = numpy.size(X, axis=0)
-    Ny = numpy.size(Y, axis=0)
-    Nz = numpy.size(Z, axis=0)
+    X = numpy.asarray(X).ravel()
+    Y = numpy.asarray(Y).ravel()
+    Z = numpy.asarray(Z).ravel()
 
-    XX = numpy.reshape(numpy.transpose(numpy.ones((Ny * Nz, 1)) * X), (1, Ny * Nz * Nx))
-    YY = numpy.tile(
-        numpy.reshape(numpy.transpose(numpy.ones((Nz, 1)) * Y), (1, Ny * Nz)), (1, Nx)
-    )
-    ZZ = numpy.tile(Z, (1, Nx * Ny))
+    Nx = X.size
+    Ny = Y.size
+    Nz = Z.size
+
+    XX = numpy.repeat(X, Ny * Nz)
+    YY = numpy.tile(numpy.repeat(Y, Nz), Nx)
+    ZZ = numpy.tile(Z, Nx * Ny)
 
     return numpy.vstack((XX, YY, ZZ))
 
@@ -143,25 +145,32 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
 
 
     """
+    P = numpy.asarray(P)
+    Q = numpy.asarray(Q)
+    J = numpy.asarray(J)
+    M = numpy.asarray(M)
+    dS = numpy.asarray(dS)
+
     # test if the parameters size are correct
     if (
-        numpy.size(P, axis=0) != 3
-        or numpy.size(Q, axis=0) != 3
-        or numpy.size(J, axis=0) != 3
-        or numpy.size(M, axis=0) != 3
+        P.ndim != 2
+        or Q.ndim != 2
+        or J.ndim != 2
+        or M.ndim != 2
+        or P.shape[0] != 3
+        or Q.shape[0] != 3
+        or J.shape[0] != 3
+        or M.shape[0] != 3
     ):
-        EMpy.utils.warning(
-            "Bad parameters size : number of rows must be 3 for vectors P,Q,J,M"
-        )
+        raise ValueError("Bad parameters size : P, Q, J, M must have shape (3, N).")
 
-    if (
-        not numpy.size(Q, axis=1)
-        == numpy.size(J, axis=1)
-        == numpy.size(M, axis=1)
-        == numpy.size(dS, axis=1)
-    ):
-        EMpy.utils.warning(
-            "Bad parameters size : number of columns between Q,J,M and dS must be equal"
+    if dS.ndim > 2 or (dS.ndim == 2 and 1 not in dS.shape):
+        raise ValueError("Bad parameters size : dS must be 1D or shape (1, NbQ).")
+    dS = dS.ravel()
+
+    if not (Q.shape[1] == J.shape[1] == M.shape[1] == dS.size):
+        raise ValueError(
+            "Bad parameters size : number of columns between Q, J, M and dS must be equal."
         )
 
     lambda0 = EMpy.constants.c / f
@@ -170,7 +179,6 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
     km = 2 * numpy.pi / lambdam
     Z0 = 120 * numpy.pi
     NbP = numpy.size(P, axis=1)
-    NbQ = numpy.size(Q, axis=1)
 
     # preallocation
     EMF_P = Field(
@@ -181,20 +189,27 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
     # PB = EMpy.utils.ProgressBar()
     for ind in numpy.arange(NbP):
         # distance between scattering and observation point
-        QP = P[:, ind].reshape((3, 1)) * numpy.ones((1, NbQ)) - Q
+        QP = P[:, ind : ind + 1] - Q
         r = numpy.sqrt(numpy.sum(QP**2, axis=0))
+        mask = r > 0
+        if not numpy.any(mask):
+            continue
+        r_nz = r[mask]
         # unit vector
-        r1 = QP / r
-        # integrand expression shorcuts
-        kmr = km * r
+        r1 = QP[:, mask] / r_nz
+        J_nz = J[:, mask]
+        M_nz = M[:, mask]
+        dS_nz = dS[mask]
+        # integrand expression shortcuts
+        kmr = km * r_nz
         kmr_1 = 1 / kmr
         kmr_2 = kmr_1**2
         aa = 1 - 1j * kmr_1 - kmr_2
         bb = -1 + 3 * 1j * kmr_1 + 3 * kmr_2
         cc = 1 - 1j * kmr_1
         # scalar product
-        r1dotJ = matlab_dot(r1, J)
-        r1dotM = matlab_dot(r1, -M)
+        r1dotJ = matlab_dot(r1, J_nz)
+        r1dotM = matlab_dot(r1, -M_nz)
         # Kottler EM fields
         EMF_P.E[:, ind] = (
             km
@@ -203,12 +218,12 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
                 (
                     Z0
                     / numpy.sqrt(epsr)
-                    * (aa * J + bb * (r1dotJ * numpy.ones((3, 1))) * r1)
-                    + cc * numpy.cross(r1, -M, axis=0)
+                    * (aa * J_nz + bb * (r1dotJ * numpy.ones((3, 1))) * r1)
+                    + cc * numpy.cross(r1, -M_nz, axis=0)
                 )
-                * numpy.exp(-1j * km * r)
-                / r
-                * dS,
+                * numpy.exp(-1j * kmr)
+                / r_nz
+                * dS_nz,
                 axis=1,
             )
         )
@@ -219,12 +234,12 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
                 (
                     numpy.sqrt(epsr)
                     / Z0
-                    * (-aa * M + bb * (r1dotM * numpy.ones((3, 1))) * r1)
-                    - cc * numpy.cross(r1, J, axis=0)
+                    * (-aa * M_nz + bb * (r1dotM * numpy.ones((3, 1))) * r1)
+                    - cc * numpy.cross(r1, J_nz, axis=0)
                 )
-                * numpy.exp(-1j * km * r)
-                / r
-                * dS,
+                * numpy.exp(-1j * kmr)
+                / r_nz
+                * dS_nz,
                 axis=1,
             )
         )
