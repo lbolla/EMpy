@@ -309,8 +309,14 @@ class IsotropicRCWA(RCWA):
                 # trattare separatamente (analiticamente) questi casi
                 if cond(A) > 1e10:
                     warning("BAD CONDITIONING: randomization of kx")
-                    while cond(A) > 1e10:
-                        Kx = Kx * (1 + 1e-9 * np.rand())
+                    rng = np.random.default_rng()
+                    for _ in range(100):
+                        if cond(A) <= 1e10:
+                            break
+                        kx = kx * (1 + 1e-9 * rng.random(kx.shape)) + (
+                            1e-9 * k * rng.random(kx.shape)
+                        )
+                        Kx = np.diag(kx / k)
                         B = kx[:, np.newaxis] / k * linsolve(E, Kx) - I
                         A = np.diag((kx / k) ** 2) - E
 
@@ -395,7 +401,9 @@ class IsotropicRCWA(RCWA):
                     )
 
                 else:
-                    ValueError("Second Order Helmholtz Operator not implemented, yet!")
+                    raise ValueError(
+                        "Second Order Helmholtz Operator not implemented, yet!"
+                    )
 
             # M = np.asarray(np.bmat([-MR, MT]))
             M = np.c_[-MR, MT]
