@@ -38,7 +38,7 @@ class Layer:
             # isotropic
             EPS = numpy.zeros(2 * hmax + 1, dtype=complex)
             EPS1 = numpy.zeros_like(EPS)
-            rix = self.mat.n(wl)
+            rix = numpy.asarray(self.mat.n(wl)).item()
             EPS[hmax] = rix**2
             EPS1[hmax] = rix**-2
             return EPS, EPS1
@@ -817,8 +817,8 @@ class Slice(Multilayer):
         # ytot = sum([l.thickness for l in self])
         for l in self:
             y1 = y0 + l.thickness
-            n = l.mat.n(wl)
-            r = 1.0 - (1.0 * (n - nmin) / (nmax - nmin))
+            n = numpy.real(numpy.asarray(l.mat.n(wl)).item())
+            r = 0.5 if nmax == nmin else 1.0 - (n - nmin) / (nmax - nmin)
             plt.fill(
                 [x0, x1, x1, x0], [y0, y0, y1, y1], ec="yellow", fc=(r, r, r), alpha=0.5
             )
@@ -896,7 +896,7 @@ class CrossSection(list):
 
     def _epsfunc(self, x, y, wl):
         if numpy.isscalar(x) and numpy.isscalar(y):
-            return self.find_slice(x).find_layer(y).mat.n(wl) ** 2
+            return numpy.asarray(self.find_slice(x).find_layer(y).mat.n(wl)).item() ** 2
         else:
             raise ValueError("only scalars, please!")
 
@@ -909,7 +909,7 @@ class CrossSection(list):
 
     def plot(self, wl=1.55e-6):
         x0 = 0
-        ns = [[l.mat.n(wl) for l in s] for s in self]
+        ns = [[numpy.real(numpy.asarray(l.mat.n(wl)).item()) for l in s] for s in self]
         nmax = max(max(ns))
         nmin = min(min(ns))
         for s in self:
