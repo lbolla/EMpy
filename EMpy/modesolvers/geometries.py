@@ -7,7 +7,7 @@ from EMpy.modesolvers.interface import interface_matrix
 
 
 def S2T(S):
-    dim = S.shape[0] / 2.0
+    dim = S.shape[0] // 2
     s11 = S[:dim, :dim]
     s22 = S[dim:, dim:]
     s12 = S[:dim, dim:]
@@ -22,7 +22,7 @@ def S2T(S):
 
 
 def T2S(T):
-    dim = T.shape[0] / 2.0
+    dim = T.shape[0] // 2
     t11 = T[:dim, :dim]
     t22 = T[dim:, dim:]
     t12 = T[:dim, dim:]
@@ -208,7 +208,7 @@ class GenericDevice:
             outputLHS = d.inputRHS
 
     def build_matrix(self):
-        dim = self.devlist[0].solver.nmodes
+        dim = self.devlist[0].T.shape[0] // 2
         T = numpy.eye(2 * dim, dtype=complex)
         for d in self.devlist:
             T = numpy.dot(d.T, T)

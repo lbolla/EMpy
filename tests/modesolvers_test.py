@@ -65,3 +65,26 @@ class FMMModeSolverTest(TestCase):
         self.assertEqual(len(simul.modes), 2)
         self.assertTrue(numpy.isfinite(simul.modes[0].keff))
         self.assertTrue(numpy.isfinite(simul.modes[0].norm()))
+
+
+class GeometriesTest(TestCase):
+
+    def test_s2t_t2s_roundtrip_and_generic_device(self):
+        rng = numpy.random.default_rng(0)
+        s = rng.normal(size=(4, 4)) + 1j * rng.normal(size=(4, 4))
+        t = EMpy.modesolvers.geometries.S2T(s)
+        s_rt = EMpy.modesolvers.geometries.T2S(t)
+        numpy.testing.assert_allclose(s_rt, s)
+
+        # GenericDevice whose first element has no .solver attribute (like SimpleJoint)
+        class _DummyDevice:
+            def __init__(self, mat):
+                self.T = mat
+                self.inputLHS = numpy.array([1.0, 0.0])
+                self.inputRHS = numpy.array([0.0, 0.0])
+
+        d1 = _DummyDevice(numpy.eye(4, dtype=complex))
+        d2 = _DummyDevice(numpy.diag([1.0, 1.0, 1.0, 1.0]).astype(complex))
+        gd = EMpy.modesolvers.geometries.GenericDevice([d1, d2])
+        numpy.testing.assert_allclose(gd.T, numpy.eye(4, dtype=complex))
+        numpy.testing.assert_allclose(gd.outputRHS, numpy.array([1.0, 0.0]))

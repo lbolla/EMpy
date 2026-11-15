@@ -63,3 +63,11 @@ class UtilsTest(TestCase):
         plt.figure()
         cs.plot(wl=wl)
         plt.close("all")
+
+    def test_progress_bar(self):
+        pb = U.ProgressBar(0, 100, 40)
+        self.assertIn("0%", pb.progBar)
+        pb.updateAmount(50)
+        self.assertIn("50%", pb.progBar)
+        pb.updateAmount(100)
+        self.assertIn("100%", pb.progBar)

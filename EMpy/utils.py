@@ -1292,7 +1292,7 @@ class ProgressBar:
             )
 
         # figure out where to put the percentage, roughly centered
-        percentPlace = (len(self.progBar) / 2) - len(str(percentDone))
+        percentPlace = (len(self.progBar) // 2) - len(str(percentDone))
         percentString = " " + str(percentDone) + "% "
 
         elapsed_time = time.time() - self.start_time
