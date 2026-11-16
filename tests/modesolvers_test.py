@@ -146,15 +146,18 @@ class FMMModeSolverTest(TestCase):
 
         m0 = simul.modes[0]
         m0.normalize()
-        self.assertAlmostEqual(
-            EMpy.modesolvers.interface.overlap(m0, m0, None, None), 1.0, places=5
-        )
+        ov_m0 = EMpy.modesolvers.interface.overlap(m0, m0, None, None)
+        self.assertAlmostEqual(numpy.real(ov_m0), 1.0, places=10)
+        self.assertLess(abs(numpy.imag(ov_m0)), 1e-4)
         O11, _, _, _ = EMpy.modesolvers.interface.interface_matrix(simul, simul)
         self.assertEqual(O11.shape, (2, 2))
-        te_frac = m0.TEfrac_old(
-            numpy.linspace(Ux[0], Ux[-1], 11), numpy.linspace(Uy[0], Uy[-1], 11)
+        te_frac_old = m0.TEfrac_old(
+            numpy.linspace(Ux[0], Ux[-1], 51), numpy.linspace(Uy[0], Uy[-1], 51)
         )
+        te_frac = m0.TEfrac()
         self.assertTrue(0.0 <= te_frac <= 1.0)
+        self.assertTrue(0.0 <= te_frac_old <= 1.0)
+        self.assertAlmostEqual(te_frac, te_frac_old, delta=5e-2)
         m0.plot(numpy.linspace(Ux[0], Ux[-1], 11), numpy.linspace(Uy[0], Uy[-1], 11))
         plt.close("all")
 
@@ -206,6 +209,233 @@ class FMMModeSolverTest(TestCase):
             abs(s_em.modes[0].neff - s_ee.modes[0].neff),
             1e-3,
         )
+
+    def test_fmm2d_overlap_tefrac_cross_waveguide_and_lossless_limit(self):
+        """Verify FMMMode2d TEfrac, TM norm, cross-waveguide overlap, and kappa -> 0+ continuity."""
+        wl = 1.55
+        Ux1 = numpy.array([0.0, 1.0, 1.5, 2.5])
+        Uy1 = numpy.array([0.0, 1.0, 1.22, 2.22])
+        boundary = EMpy.modesolvers.FMM.Boundary(
+            xleft="Electric Wall",
+            yleft="Magnetic Wall",
+            xright="Electric Wall",
+            yright="Magnetic Wall",
+        )
+        rix_lossless = numpy.array(
+            [[1.45, 1.45, 1.45], [1.45, 3.45, 1.45], [1.45, 1.45, 1.45]]
+        )
+        s0 = EMpy.modesolvers.FMM.FMM2d(Ux1, Uy1, rix_lossless, boundary).solve(
+            wl, 2, 2
+        )
+
+        # Both quasi-TE (mode 0) and quasi-TM (mode 1) must have real positive norm and TEfrac in [0, 1]
+        for m in s0.modes:
+            n_val = m.norm()
+            self.assertAlmostEqual(numpy.imag(n_val), 0.0, places=12)
+            self.assertGreater(numpy.real(n_val), 0.0)
+            m.normalize()
+
+        xg = numpy.unique(
+            numpy.r_[
+                numpy.linspace(0.0, 1.0, 81),
+                numpy.linspace(1.0001, 1.4999, 61),
+                numpy.linspace(1.5, 2.5, 81),
+            ]
+        )
+        yg = numpy.unique(
+            numpy.r_[
+                numpy.linspace(0.0, 1.0, 81),
+                numpy.linspace(1.0001, 1.2199, 41),
+                numpy.linspace(1.22, 2.22, 81),
+            ]
+        )
+
+        self.assertGreater(s0.modes[0].TEfrac(), 0.9)
+        self.assertLess(s0.modes[1].TEfrac(), 0.1)
+        self.assertAlmostEqual(
+            s0.modes[0].TEfrac(), s0.modes[0].TEfrac_old(xg, yg), delta=5e-3
+        )
+        self.assertAlmostEqual(
+            s0.modes[1].TEfrac(), s0.modes[1].TEfrac_old(xg, yg), delta=5e-3
+        )
+
+        # Orthonormality on lossless waveguide: O11 == I_2
+        O11, _, _, _ = EMpy.modesolvers.interface.interface_matrix(s0, s0)
+        numpy.testing.assert_allclose(O11, numpy.eye(2), atol=1e-10)
+
+        # Cross-waveguide overlap with distinct (Ux, Uy, n_core) must satisfy |O12| < 1 and match quadrature
+        Ux2 = numpy.array([0.0, 0.7, 1.8, 2.5])
+        Uy2 = numpy.array([0.0, 0.9, 1.32, 2.22])
+        rix2 = numpy.array([[1.45, 1.45, 1.45], [1.45, 2.50, 1.45], [1.45, 1.45, 1.45]])
+        s2 = EMpy.modesolvers.FMM.FMM2d(Ux2, Uy2, rix2, boundary).solve(wl, 2, 1)
+        s2.modes[0].normalize()
+
+        ov_ana = s0.modes[0].overlap(s2.modes[0])
+        xg_both = numpy.unique(numpy.r_[xg, Ux2])
+        yg_both = numpy.unique(numpy.r_[yg, Uy2])
+        ov_quad = s0.modes[0].overlap_old(s2.modes[0], xg_both, yg_both)
+        self.assertLess(abs(ov_ana), 1.0)
+        self.assertGreater(ov_ana.real, 0.5)
+        numpy.testing.assert_allclose(ov_ana, ov_quad, atol=5e-3)
+
+        # Lossy -> non-lossy degenerate limit (kappa = 1e-3, 1e-6, 0.0+0j -> lossless)
+        neff_errs = []
+        tefrac_errs = []
+        s_lossy_ref = None
+        for kap in [1e-3, 1e-6, 0.0]:
+            nc = complex(3.45, -kap)
+            rk = numpy.array([[1.45, 1.45, 1.45], [1.45, nc, 1.45], [1.45, 1.45, 1.45]])
+            sk = EMpy.modesolvers.FMM.FMM2d(Ux1, Uy1, rk, boundary).solve(wl, 2, 2)
+            if kap > 0:
+                self.assertLess(sk.modes[0].neff.imag, 0.0)
+                self.assertLess(sk.modes[1].neff.imag, 0.0)
+            sk.modes[0].normalize()
+            sk.modes[1].normalize()
+            if kap == 1e-3:
+                s_lossy_ref = sk
+            self.assertAlmostEqual(
+                sk.modes[0].overlap(sk.modes[0]).real, 1.0, places=10
+            )
+            self.assertAlmostEqual(
+                sk.modes[1].overlap(sk.modes[1]).real, 1.0, places=10
+            )
+            neff_errs.append(float(abs(sk.modes[0].neff - s0.modes[0].neff)))
+            tefrac_errs.append(float(abs(sk.modes[0].TEfrac() - s0.modes[0].TEfrac())))
+
+        self.assertLess(neff_errs[1], neff_errs[0])
+        self.assertLess(neff_errs[2], 1e-8)
+        self.assertLess(tefrac_errs[1], tefrac_errs[0])
+        self.assertLess(tefrac_errs[2], 1e-8)
+
+        # Independent Proof 1: Black-box 2D Gauss-Legendre integration of fields(x, y)
+        # on smooth sub-cells shares zero code with __overlap / scalarprod / _refine_mode1d
+        # and must match analytical (Sx, Sy) and overlap() to near machine precision (~1e-13).
+        assert s_lossy_ref is not None
+        xi, wi = numpy.polynomial.legendre.leggauss(18)
+
+        def _gl_poynting(ma, mb):
+            ux = numpy.unique(numpy.r_[Ux1, Ux2])
+            uy = numpy.unique(numpy.r_[Uy1, Uy2])
+            x_pts = numpy.concatenate(
+                [
+                    0.5 * (ux[i + 1] - ux[i]) * xi + 0.5 * (ux[i + 1] + ux[i])
+                    for i in range(len(ux) - 1)
+                ]
+            )
+            w_x = numpy.concatenate(
+                [0.5 * (ux[i + 1] - ux[i]) * wi for i in range(len(ux) - 1)]
+            )
+            y_pts = numpy.concatenate(
+                [
+                    0.5 * (uy[j + 1] - uy[j]) * xi + 0.5 * (uy[j + 1] + uy[j])
+                    for j in range(len(uy) - 1)
+                ]
+            )
+            w_y = numpy.concatenate(
+                [0.5 * (uy[j + 1] - uy[j]) * wi for j in range(len(uy) - 1)]
+            )
+            Ex1, Ey1, _, _, _, _ = ma.fields(x_pts, y_pts)
+            _, _, _, cBx2, cBy2, _ = mb.fields(x_pts, y_pts)
+            w2d = w_y[:, None] * w_x[None, :]
+            return (
+                0.5 * numpy.sum(w2d * Ex1 * numpy.conj(cBy2)),
+                0.5 * numpy.sum(w2d * (-Ey1) * numpy.conj(cBx2)),
+            )
+
+        for ma, mb in [
+            (s_lossy_ref.modes[0], s_lossy_ref.modes[0]),
+            (s_lossy_ref.modes[1], s_lossy_ref.modes[1]),
+            (s_lossy_ref.modes[0], s2.modes[0]),
+            (s2.modes[0], s_lossy_ref.modes[1]),
+        ]:
+            sx_gl, sy_gl = _gl_poynting(ma, mb)
+            numpy.testing.assert_allclose(
+                ma.overlap(mb), sx_gl + sy_gl, rtol=1e-12, atol=1e-13
+            )
+
+        # Independent Proof 2: Pointwise Maxwell curl and divergence equations inside
+        # lossy core and cladding cells (verifies exact du/dx consistency in eval()).
+        k0 = 2.0 * numpy.pi / wl
+        m_chk = s_lossy_ref.modes[0]
+        kz = m_chk.keff
+        h = 1e-6
+        for x0, y0, n_cell in [
+            (1.25, 1.11, 3.45 - 1e-3j),
+            (0.45, 0.45, 1.45 + 0.0j),
+        ]:
+            eps_c = n_cell**2
+
+            def _f_at(px, py):
+                vals = m_chk.fields(numpy.array([px]), numpy.array([py]))
+                return numpy.array([v[0, 0] for v in vals])
+
+            f0 = _f_at(x0, y0)
+            dfdx = (_f_at(x0 + h, y0) - _f_at(x0 - h, y0)) / (2.0 * h)
+            dfdy = (_f_at(x0, y0 + h) - _f_at(x0, y0 - h)) / (2.0 * h)
+            dfdz = -1j * kz * f0
+            E_v, cB_v = f0[:3], f0[3:]
+            curlE = numpy.array(
+                [dfdy[2] - dfdz[1], dfdz[0] - dfdx[2], dfdx[1] - dfdy[0]]
+            )
+            curlB = numpy.array(
+                [dfdy[5] - dfdz[4], dfdz[3] - dfdx[5], dfdx[4] - dfdy[3]]
+            )
+            divD = eps_c * (dfdx[0] + dfdy[1] + dfdz[2])
+            divB = dfdx[3] + dfdy[4] + dfdz[5]
+            self.assertLess(
+                numpy.linalg.norm(curlE + 1j * k0 * cB_v)
+                / numpy.linalg.norm(k0 * cB_v),
+                1e-9,
+            )
+            self.assertLess(
+                numpy.linalg.norm(curlB - 1j * k0 * eps_c * E_v)
+                / numpy.linalg.norm(k0 * eps_c * E_v),
+                1e-9,
+            )
+            self.assertLess(abs(divD) / numpy.linalg.norm(k0 * eps_c * E_v), 1e-9)
+            self.assertLess(abs(divB) / numpy.linalg.norm(k0 * cB_v), 1e-9)
+
+        # Independent Proof 3: Cross-solver agreement against VFDModeSolver on an interface-aligned grid.
+        xfd = numpy.unique(
+            numpy.r_[
+                numpy.linspace(0.0, 1.0, 41),
+                numpy.linspace(1.0, 1.5, 26),
+                numpy.linspace(1.5, 2.5, 41),
+            ]
+        )
+        yfd = numpy.unique(
+            numpy.r_[
+                numpy.linspace(0.0, 1.0, 41),
+                numpy.linspace(1.0, 1.22, 16),
+                numpy.linspace(1.22, 2.22, 41),
+            ]
+        )
+
+        def _eps_vfd(x_, y_):
+            return numpy.where(
+                (x_[:, None] > 1.0)
+                & (x_[:, None] < 1.5)
+                & (y_[None, :] > 1.0)
+                & (y_[None, :] < 1.22),
+                3.45**2,
+                1.45**2,
+            )
+
+        vfd_sol = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xfd, yfd, _eps_vfd, "0000"
+        ).solve(2, 1e-10)
+        self.assertAlmostEqual(
+            s0.modes[0].TEfrac(), vfd_sol.modes[0].TEfrac(), delta=3e-2
+        )
+        self.assertAlmostEqual(
+            s0.modes[1].TEfrac(), vfd_sol.modes[1].TEfrac(), delta=3e-2
+        )
+        xc_fd = EMpy.utils.centered1d(xfd)
+        yc_fd = EMpy.utils.centered1d(yfd)
+        for im in range(2):
+            cross_solver_ov = abs(s0.modes[im].overlap(vfd_sol.modes[im], xc_fd, yc_fd))
+            self.assertGreater(cross_solver_ov, 0.95)
+            self.assertLessEqual(cross_solver_ov, 1.01)
 
 
 class GeometriesTest(TestCase):
