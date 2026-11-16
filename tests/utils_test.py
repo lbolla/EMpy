@@ -200,3 +200,39 @@ class UtilsTest(TestCase):
         n_db = U.loss_dBcm2rix(n_real, 3.0, wl)
         _, _, _, _, alpha_dBcm1_rt = U.rix2losses(n_db, wl)
         self.assertAlmostEqual(alpha_dBcm1_rt, 3.0)
+
+    def test_snell_propagating_tir_and_lossy_limit(self):
+        # Propagating lossless stack preserves real dtype and Snell's invariant
+        theta0 = U.deg2rad(30.0)
+        n_prop = numpy.array([1.0, 1.45, 2.4])
+        theta_prop = U.snell(theta0, n_prop)
+        self.assertFalse(numpy.iscomplexobj(theta_prop))
+        numpy.testing.assert_allclose(
+            n_prop * numpy.sin(theta_prop), n_prop[0] * numpy.sin(theta0), atol=1e-15
+        )
+        self.assertTrue(numpy.all((n_prop * numpy.cos(theta_prop)) > 0))
+
+        # Lossless TIR on both real float64 and complex (n + 0j) inputs must select
+        # the passive decaying branch Im(n * cos(theta)) < 0 and match kappa -> 0+
+        theta_tir_inc = U.deg2rad(60.0)
+        n_tir_real = numpy.array([1.5, 1.0])
+        n_tir_cplx0 = numpy.array([1.5 + 0.0j, 1.0 + 0.0j])
+        th_real = U.snell(theta_tir_inc, n_tir_real)
+        th_cplx0 = U.snell(theta_tir_inc, n_tir_cplx0)
+        numpy.testing.assert_allclose(th_real, th_cplx0, atol=1e-15)
+        numpy.testing.assert_allclose(
+            n_tir_real * numpy.sin(th_real),
+            n_tir_real[0] * numpy.sin(theta_tir_inc),
+            atol=1e-15,
+        )
+        qz_tir = n_tir_real[1] * numpy.cos(th_real[1])
+        self.assertLess(qz_tir.imag, -0.8)
+
+        # Continuous limit kappa -> 0+ in passive TIR medium n = 1.0 - i*kappa
+        th_k4 = U.snell(theta_tir_inc, numpy.array([1.5, 1.0 - 1e-4j]))
+        th_k8 = U.snell(theta_tir_inc, numpy.array([1.5, 1.0 - 1e-8j]))
+        numpy.testing.assert_allclose(th_k8, th_real, atol=1e-7)
+        self.assertLess(
+            abs(th_k8[1] - th_real[1]),
+            abs(th_k4[1] - th_real[1]),
+        )

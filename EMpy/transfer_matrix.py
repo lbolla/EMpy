@@ -89,24 +89,36 @@ class IsotropicTransferMatrix(TransferMatrix):
             n = ntot[iwl, :]
             theta = snell(theta_inc, n)
 
-            k[:, 0] = 2 * np.pi * n / wl * np.cos(theta)
+            # Compute kz / k0 = n * cos(theta) directly from the radical on the
+            # passive forward (+z) branch (Im <= 0, or Re >= 0 when Im == 0) to
+            # avoid ~6e-17 real-part rounding from cos(pi/2 + i*eta) in lossless TIR.
+            qz = np.sqrt(n**2 - (n[0] * np.sin(theta_inc)) ** 2 + 0j)
+            im_tol = 1e-12 * np.maximum(1.0, np.abs(qz))
+            flip = (qz.imag > im_tol) | ((np.abs(qz.imag) <= im_tol) & (qz.real < 0))
+            qz = np.where(flip, -qz, qz)
+            qz[0] = n[0] * np.cos(theta_inc)
+            cos_t = qz / n
+
+            k[:, 0] = 2 * np.pi / wl * qz
             k[:, 1] = 2 * np.pi * n / wl * np.sin(theta)
 
-            Ds = [[1.0, 1.0], [n[0] * np.cos(theta[0]), -n[0] * np.cos(theta[0])]]
-            Dp = [[np.cos(theta[0]), np.cos(theta[0])], [n[0], -n[0]]]
+            Ds = [[1.0, 1.0], [qz[0], -qz[0]]]
+            Dp = [[cos_t[0], cos_t[0]], [n[0], -n[0]]]
             Ms = inv(Ds)
             Mp = inv(Dp)
 
-            for nn, dd, tt, kk in zip(n[1:-1], d[1:-1], theta[1:-1], k[1:-1, 0]):
-                Ds = [[1.0, 1.0], [nn * np.cos(tt), -nn * np.cos(tt)]]
-                Dp = [[np.cos(tt), np.cos(tt)], [nn, -nn]]
+            for nn, dd, ct, qzz, kk in zip(
+                n[1:-1], d[1:-1], cos_t[1:-1], qz[1:-1], k[1:-1, 0]
+            ):
+                Ds = [[1.0, 1.0], [qzz, -qzz]]
+                Dp = [[ct, ct], [nn, -nn]]
                 phi = kk * dd
                 P = [[np.exp(1j * phi), 0], [0, np.exp(-1j * phi)]]
                 Ms = np.dot(Ms, np.dot(Ds, np.dot(P, inv(Ds))))
                 Mp = np.dot(Mp, np.dot(Dp, np.dot(P, inv(Dp))))
 
-            Ds = [[1.0, 1.0], [n[-1] * np.cos(theta[-1]), -n[-1] * np.cos(theta[-1])]]
-            Dp = [[np.cos(theta[-1]), np.cos(theta[-1])], [n[-1], -n[-1]]]
+            Ds = [[1.0, 1.0], [qz[-1], -qz[-1]]]
+            Dp = [[cos_t[-1], cos_t[-1]], [n[-1], -n[-1]]]
             Ms = np.dot(Ms, Ds)
             Mp = np.dot(Mp, Dp)
 
@@ -117,15 +129,11 @@ class IsotropicTransferMatrix(TransferMatrix):
             tp = 1.0 / Mp[0, 0]
 
             Rs[iwl] = np.absolute(rs) ** 2
-            Ts[iwl] = (
-                np.real(n[-1] * np.cos(theta[-1]))
-                / np.real(n[0] * np.cos(theta[0]))
-                * np.absolute(ts) ** 2
-            )
+            Ts[iwl] = np.real(qz[-1]) / np.real(qz[0]) * np.absolute(ts) ** 2
             Rp[iwl] = np.absolute(rp) ** 2
             Tp[iwl] = (
-                np.real(np.conj(n[-1]) * np.cos(theta[-1]))
-                / np.real(np.conj(n[0]) * np.cos(theta[0]))
+                np.real(np.conj(n[-1]) * cos_t[-1])
+                / np.real(np.conj(n[0]) * cos_t[0])
                 * np.absolute(tp) ** 2
             )
 
@@ -276,35 +284,77 @@ class AnisotropicTransferMatrix(TransferMatrix):
 
             if np.allclose(K, K[0, 0] * np.eye(3), rtol=1e-12, atol=1e-12):
                 g = np.sqrt(K[0, 0] - alpha2 - beta2 + 0j)
-                if g.real < -1e-12 or (abs(g.real) <= 1e-12 and g.imag < 0):
+                im_tol = 1e-12 * max(1.0, abs(g))
+                if g.imag > im_tol or (abs(g.imag) <= im_tol and g.real < 0):
                     g = -g
                 gamma = np.array([g, -g, g, -g], dtype=complex)
+                raw_p = None
             else:
-                gamma = np.roots(coeff)
-                # Classify roots into 2 forward (+z) and 2 backward (-z) modes:
-                # propagating modes have Re(gamma) > 0 (forward) / < 0 (backward);
-                # evanescent modes (|Re(gamma)| <= tol) decay in +z when Im(gamma) >= 0.
-                tol = 1e-6 * max(1.0, float(np.max(np.abs(gamma))))
-                fwd_idx = [
-                    idx
-                    for idx, g in enumerate(gamma)
-                    if g.real > tol or (abs(g.real) <= tol and g.imag >= 0)
-                ]
-                bwd_idx = [idx for idx in range(len(gamma)) if idx not in fwd_idx]
-                if len(fwd_idx) == 2 and len(bwd_idx) == 2:
-                    fwd = sorted(
-                        (gamma[idx] for idx in fwd_idx),
-                        key=lambda g: (g.real, g.imag),
-                        reverse=True,
+                raw_gamma = np.roots(coeff)
+                raw_k = (
+                    k0
+                    * np.array(
+                        [
+                            alpha * np.ones(raw_gamma.shape),
+                            beta * np.ones(raw_gamma.shape),
+                            raw_gamma,
+                        ]
+                    ).T
+                )
+                raw_p = np.zeros((4, 3), dtype=complex)
+                for i, g in enumerate(raw_gamma):
+                    H = K + np.array(
+                        [
+                            [-beta2 - g**2, alpha * beta, alpha * g],
+                            [alpha * beta, -alpha2 - g**2, beta * g],
+                            [alpha * g, beta * g, -alpha2 - beta2],
+                        ],
+                        dtype=complex,
                     )
-                    bwd = sorted(
-                        (gamma[idx] for idx in bwd_idx),
-                        key=lambda g: (g.real, g.imag),
-                    )
-                    gamma = np.array([fwd[0], bwd[0], fwd[1], bwd[1]], dtype=complex)
-                else:
-                    tmp = np.sort_complex(gamma)
-                    gamma = tmp[[3, 0, 2, 1]]  # convention
+                    _, _, vh = np.linalg.svd(H)
+                    raw_p[i, :] = vh[-1, :].conj()
+                    raw_p[i, :] /= np.linalg.norm(raw_p[i, :])
+                raw_q = wl / (2.0 * np.pi * mu0 * c) * np.cross(raw_k, raw_p)
+                raw_sz = 0.5 * np.real(
+                    raw_p[:, 0] * np.conj(raw_q[:, 1])
+                    - raw_p[:, 1] * np.conj(raw_q[:, 0])
+                )
+
+                # Classify roots into 2 forward (+z) and 2 backward (-z) modes
+                # under exp(+i*w*t - i*k*z):
+                # - Modes with |Im(gamma)| > im_tol decay in +z iff Im(gamma) < 0
+                #   (even in tilted birefringent TIR where Re(gamma) != 0).
+                # - Propagating modes (|Im(gamma)| <= im_tol) carry flux in +z iff Sz > 0.
+                im_tol = 1e-6 * max(1.0, float(np.max(np.abs(raw_gamma))))
+                sz_tol = 1e-9 / (mu0 * c)
+
+                def _fwd_rank(idx):
+                    g = raw_gamma[idx]
+                    sz = float(raw_sz[idx])
+                    if abs(g.imag) > im_tol:
+                        return (
+                            1 if g.imag < 0 else -1,
+                            -float(g.imag),
+                            sz,
+                            float(g.real),
+                        )
+                    if abs(sz) > sz_tol:
+                        return (0, 1 if sz > 0 else -1, sz, float(g.real - g.imag))
+                    return (0, 0, float(g.real - g.imag), -float(g.imag))
+
+                ranked = sorted(range(4), key=_fwd_rank, reverse=True)
+                fwd = sorted(
+                    ranked[:2],
+                    key=lambda idx: (raw_gamma[idx].real, -raw_gamma[idx].imag),
+                    reverse=True,
+                )
+                bwd = sorted(
+                    ranked[2:],
+                    key=lambda idx: (raw_gamma[idx].real, -raw_gamma[idx].imag),
+                )
+                order = [fwd[0], bwd[0], fwd[1], bwd[1]]
+                gamma = raw_gamma[order]
+                raw_p = raw_p[order, :]
 
             k = (
                 k0
@@ -331,18 +381,8 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 p_p_bwd /= np.linalg.norm(p_p_bwd)
                 p = np.array([p_s, p_s, p_p_fwd, p_p_bwd], dtype=complex)
             else:
-                for i, g in enumerate(gamma):
-                    H = K + np.array(
-                        [
-                            [-beta2 - g**2, alpha * beta, alpha * g],
-                            [alpha * beta, -alpha2 - g**2, beta * g],
-                            [alpha * g, beta * g, -alpha2 - beta2],
-                        ],
-                        dtype=complex,
-                    )
-                    _, _, vh = np.linalg.svd(H)
-                    p[i, :] = vh[-1, :].conj()
-                    p[i, :] /= np.linalg.norm(p[i, :])
+                assert raw_p is not None
+                p = raw_p
 
             q = wl / (2.0 * np.pi * mu0 * c) * np.cross(k, p)
 

@@ -1022,10 +1022,30 @@ def snell(theta_inc, n):
     theta = 1D numpy.array.
     """
 
-    theta = numpy.zeros_like(n)
+    n_arr = numpy.asarray(n)
+    is_complex_input = numpy.iscomplexobj(n_arr) or numpy.iscomplexobj(theta_inc)
+    n_c = numpy.asarray(n_arr, dtype=complex)
+    sin_inc = n_c[0] * numpy.sin(theta_inc)
+
+    sin_theta = numpy.empty_like(n_c)
+    sin_theta[0] = numpy.sin(theta_inc)
+    sin_theta[1:] = sin_inc / n_c[1:]
+
+    theta = numpy.arcsin(sin_theta)
     theta[0] = theta_inc
-    for i in range(1, n.size):
-        theta[i] = numpy.arcsin(n[i - 1] / n[i] * numpy.sin(theta[i - 1]))
+
+    # Enforce passive forward (+z) branch under exp(+i*w*t - i*k*z):
+    # kz / k0 = n * cos(theta) must satisfy Im(kz) <= 0 (decaying) and
+    # Re(kz) >= 0 when propagating. Replacing theta -> pi - theta preserves
+    # sin(theta) while negating cos(theta).
+    for i in range(1, n_c.size):
+        qz = n_c[i] * numpy.cos(theta[i])
+        im_tol = 1e-12 * max(1.0, abs(qz))
+        if qz.imag > im_tol or (abs(qz.imag) <= im_tol and qz.real < 0):
+            theta[i] = numpy.pi - theta[i]
+
+    if not is_complex_input and numpy.all(numpy.abs(theta.imag) == 0):
+        return theta.real
     return theta
 
 

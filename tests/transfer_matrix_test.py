@@ -258,3 +258,236 @@ class TransferMatrixTest(TestCase):
             1.0,
             atol=1e-12,
         )
+
+    def test_kretschmann_spr_tir_and_degenerate_limits(self):
+        """Verify passive evanescent branch in TIR across isotropic/anisotropic and lossy->lossless limits."""
+        wl = np.array([1.55e-6])
+        n_prism = 1.5
+        n_au = 0.18 - 3.5j
+        n_water = 1.33
+        d_au = 0.045e-6
+        theta_prism = EMpy.utils.deg2rad(70.0)
+        theta_vac = np.arcsin(n_prism * np.sin(theta_prism) + 0j)
+
+        # Unambiguous physical reference 1: finite thick water layer (10 um) backed by propagating glass
+        iso_thick = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            _make_iso_multilayer(
+                [n_prism, n_au, n_water, n_prism], [np.inf, d_au, 10.0e-6, np.inf]
+            ),
+            theta_prism,
+        ).solve(wl)
+
+        # Unambiguous physical reference 2: 0th-order IsotropicRCWA on homogeneous stack
+        spr_iso_stack = _make_iso_multilayer(
+            [n_prism, n_au, n_water], [np.inf, d_au, np.inf]
+        )
+        rcwa_te = EMpy.RCWA.IsotropicRCWA(
+            spr_iso_stack, theta_prism, 0.0, np.pi / 2, np.pi / 2, 0
+        ).solve(wl)
+        rcwa_tm = EMpy.RCWA.IsotropicRCWA(
+            spr_iso_stack, theta_prism, 0.0, 0.0, np.pi / 2, 0
+        ).solve(wl)
+
+        # Semi-infinite lossless TIR in IsotropicTransferMatrix & AnisotropicTransferMatrix
+        iso_0 = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            spr_iso_stack, theta_prism
+        ).solve(wl)
+        aniso_0 = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            _make_aniso_multilayer([n_prism, n_au, n_water], [np.inf, d_au, np.inf]),
+            theta_vac,
+            0.0,
+        ).solve(wl)
+
+        assert_allclose(iso_0.Rs, iso_thick.Rs, atol=1e-12)
+        assert_allclose(iso_0.Rp, iso_thick.Rp, atol=1e-12)
+        assert_allclose(iso_0.Rs, rcwa_te.DE1[0, :], atol=1e-12)
+        assert_allclose(iso_0.Rp, rcwa_tm.DE1[0, :], atol=1e-12)
+        assert_allclose(iso_0.Ts, [0.0], atol=1e-15)
+        assert_allclose(iso_0.Tp, [0.0], atol=1e-15)
+        assert_allclose(aniso_0.R[0, 0, :], iso_0.Rs, atol=1e-12)
+        assert_allclose(aniso_0.R[1, 1, :], iso_0.Rp, atol=1e-12)
+        assert_allclose(aniso_0.T, 0.0, atol=1e-14)
+
+        # Lossy -> non-lossy continuous limit (kappa = 1e-4, 1e-8, 0.0j -> 0)
+        errs_iso = []
+        errs_aniso = []
+        for kap in [1e-4, 1e-8, 0.0]:
+            nw = complex(n_water, -kap)
+            s_i = EMpy.transfer_matrix.IsotropicTransferMatrix(
+                _make_iso_multilayer([n_prism, n_au, nw], [np.inf, d_au, np.inf]),
+                theta_prism,
+            ).solve(wl)
+            s_a = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                _make_aniso_multilayer([n_prism, n_au, nw], [np.inf, d_au, np.inf]),
+                theta_vac,
+                0.0,
+            ).solve(wl)
+            self.assertLessEqual(s_i.Rs[0] + s_i.Ts[0], 1.0)
+            self.assertLessEqual(s_i.Rp[0] + s_i.Tp[0], 1.0)
+            assert_allclose(s_a.R[0, 0, :], s_i.Rs, atol=1e-11)
+            assert_allclose(s_a.R[1, 1, :], s_i.Rp, atol=1e-11)
+            errs_iso.append(float(abs(s_i.Rp[0] - iso_0.Rp[0])))
+            errs_aniso.append(float(abs(s_a.R[1, 1, 0] - iso_0.Rp[0])))
+
+        self.assertLess(errs_iso[1], errs_iso[0])
+        self.assertLess(errs_iso[2], 1e-14)
+        self.assertLess(errs_aniso[1], errs_aniso[0])
+        self.assertLess(errs_aniso[2], 1e-12)
+
+        # Weak-birefringence limit (dn = 1e-4, 1e-8, 0) with Euler-rotated substrate tensor
+        mat_prism = _make_aniso_multilayer([n_prism], [np.inf])[0].mat
+        mat_au = _make_aniso_multilayer([n_au], [d_au])[0].mat
+        dn_errs = []
+        for dn, tol in [(1e-4, 5e-3), (1e-8, 1e-6), (0.0, 1e-12)]:
+            eps_rot = EMpy.utils.euler_rotate(
+                np.diag([n_water**2, n_water**2, (n_water + dn) ** 2])
+                * EMpy.constants.eps0,
+                EMpy.utils.deg2rad(28.0),
+                EMpy.utils.deg2rad(41.0),
+                EMpy.utils.deg2rad(19.0),
+            )
+            mat_sub = EMpy.materials.AnisotropicMaterial(
+                "sub_rot",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps_rot
+                ),
+            )
+            st = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(mat_prism, np.inf),
+                    EMpy.utils.Layer(mat_au, d_au),
+                    EMpy.utils.Layer(mat_sub, np.inf),
+                ]
+            )
+            sol_dn = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                st, theta_vac, 0.0
+            ).solve(wl)
+            assert_allclose(sol_dn.R[0, 0, :] + sol_dn.R[0, 1, :], iso_0.Rs, atol=tol)
+            assert_allclose(sol_dn.R[1, 0, :] + sol_dn.R[1, 1, :], iso_0.Rp, atol=tol)
+            dn_errs.append(
+                float(abs((sol_dn.R[1, 0, 0] + sol_dn.R[1, 1, 0]) - iso_0.Rp[0]))
+            )
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], dn_errs[1])
+
+    def test_tilted_birefringent_tir_and_partial_tir_limits(self):
+        """Verify tilted-optic-axis TIR (Re(gamma) != 0), partial TIR, and optic-axis degeneracy."""
+        wl = np.array([1.55e-6])
+        n_prism = 1.8
+        n_au = 0.18 - 3.5j
+        mat_prism = _make_aniso_multilayer([n_prism], [np.inf])[0].mat
+        mat_au = _make_aniso_multilayer([n_au], [0.045e-6])[0].mat
+
+        # 1. Tilted uniaxial crystal in full TIR (kx/k0 = 1.8*sin(65 deg) = 1.631 > nE = 1.6 > nO = 1.3)
+        th_vac_tir = np.arcsin(n_prism * np.sin(EMpy.utils.deg2rad(65.0)) + 0j)
+        for kap in [0.0, 1e-8, 1e-4]:
+            nO = 1.3 - 1j * kap
+            nE = 1.6 - 1j * kap
+            eps_tilt = EMpy.utils.euler_rotate(
+                np.diag([nO**2, nO**2, nE**2]) * EMpy.constants.eps0,
+                np.pi / 2,
+                EMpy.utils.deg2rad(35.0),
+                0.0,
+            )
+            mat_tilt = EMpy.materials.AnisotropicMaterial(
+                "tilt",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps_tilt
+                ),
+            )
+            sol_semi = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                EMpy.utils.Multilayer(
+                    [
+                        EMpy.utils.Layer(mat_prism, np.inf),
+                        EMpy.utils.Layer(mat_au, 0.045e-6),
+                        EMpy.utils.Layer(mat_tilt, np.inf),
+                    ]
+                ),
+                th_vac_tir,
+                0.0,
+            ).solve(wl)
+            sol_thick = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                EMpy.utils.Multilayer(
+                    [
+                        EMpy.utils.Layer(mat_prism, np.inf),
+                        EMpy.utils.Layer(mat_au, 0.045e-6),
+                        EMpy.utils.Layer(mat_tilt, 10.0e-6),
+                        EMpy.utils.Layer(mat_prism, np.inf),
+                    ]
+                ),
+                th_vac_tir,
+                0.0,
+            ).solve(wl)
+            assert_allclose(sol_semi.R, sol_thick.R, atol=1e-7)
+
+            if kap == 0.0:
+                # Without the Au film, lossless tilted-crystal TIR must reflect 100% of power
+                sol_lossless_tir = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                    EMpy.utils.Multilayer(
+                        [
+                            EMpy.utils.Layer(mat_prism, np.inf),
+                            EMpy.utils.Layer(mat_tilt, np.inf),
+                        ]
+                    ),
+                    th_vac_tir,
+                    0.0,
+                ).solve(wl)
+                assert_allclose(
+                    sol_lossless_tir.R[0, 0, :] + sol_lossless_tir.R[0, 1, :],
+                    1.0,
+                    atol=1e-12,
+                )
+                assert_allclose(
+                    sol_lossless_tir.R[1, 0, :] + sol_lossless_tir.R[1, 1, :],
+                    1.0,
+                    atol=1e-12,
+                )
+                assert_allclose(sol_lossless_tir.T, 0.0, atol=1e-14)
+
+        # 2. Partial TIR (Glan-Thompson regime: nO = 1.3 < kx/k0 = 1.45 < nE = 1.6)
+        th_vac_partial = np.arcsin(1.45 + 0j)
+        eps_gt = EMpy.utils.euler_rotate(
+            np.diag([1.3**2, 1.3**2, 1.6**2]) * EMpy.constants.eps0,
+            EMpy.utils.deg2rad(20.0),
+            EMpy.utils.deg2rad(30.0),
+            0.0,
+        )
+        mat_gt = EMpy.materials.AnisotropicMaterial(
+            "gt",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps_gt),
+        )
+        sol_gt = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(mat_prism, np.inf),
+                    EMpy.utils.Layer(mat_gt, np.inf),
+                ]
+            ),
+            th_vac_partial,
+            0.0,
+        ).solve(wl)
+        assert_allclose(sol_gt.R[0, :].sum() + sol_gt.T[0, :].sum(), 1.0, atol=1e-12)
+        assert_allclose(sol_gt.R[1, :].sum() + sol_gt.T[1, :].sum(), 1.0, atol=1e-12)
+
+        # 3. Normal incidence along c-axis (k || c): ordinary and extraordinary roots coalesce
+        eps_c_z = np.diag([1.6**2, 1.6**2, 1.9**2]) * EMpy.constants.eps0
+        mat_c_z = EMpy.materials.AnisotropicMaterial(
+            "cz",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps_c_z),
+        )
+        sol_cz = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            EMpy.utils.Multilayer(
+                [
+                    _make_aniso_multilayer([1.0], [np.inf])[0],
+                    EMpy.utils.Layer(mat_c_z, 0.4e-6),
+                    _make_aniso_multilayer([1.5], [np.inf])[0],
+                ]
+            ),
+            0.0,
+            0.0,
+        ).solve(wl)
+        sol_iso_16 = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            _make_iso_multilayer([1.0, 1.6, 1.5], [np.inf, 0.4e-6, np.inf]), 0.0
+        ).solve(wl)
+        assert_allclose(sol_cz.R[0, 0, :], sol_iso_16.Rs, atol=1e-8)
+        assert_allclose(sol_cz.R[1, 1, :], sol_iso_16.Rp, atol=1e-8)
