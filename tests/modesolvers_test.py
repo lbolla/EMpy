@@ -335,6 +335,127 @@ class VFDModeSolverTest(TestCase):
         ).solve(1, 1e-12, guess=2.3)
         self.assertAlmostEqual(s_ani_l.modes[0].neff, s_iso_l.modes[0].neff, places=9)
 
+    def test_fdtd_overlap_f_forward_backward_units_and_limits(self):
+        """Verify scripts.FDTD.overlap_f extracts exact (A, B, Pm) across SI/micron grids and aniso/lossy limits."""
+        import importlib.util
+        from pathlib import Path
+
+        fdtd_path = Path(__file__).resolve().parent.parent / "scripts" / "FDTD.py"
+        spec = importlib.util.spec_from_file_location("_empy_fdtd_script", fdtd_path)
+        assert spec is not None and spec.loader is not None
+        FDTD_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(FDTD_mod)
+
+        z0_imp = 120.0 * numpy.pi
+        sqrt_z0 = numpy.sqrt(z0_imp)
+
+        def _make_sensor(
+            mode, dx_um, dy_um, nx_nodes, ny_nodes, a_amp, b_amp, unit_scale
+        ):
+            x_g = dx_um * unit_scale * numpy.arange(nx_nodes)
+            y_g = dy_um * unit_scale * numpy.arange(ny_nodes)
+            Ex_f, Ey_f, _, Hx_f, Hy_f, _ = mode.get_fields_for_FDTD(x_g, y_g)
+            n1 = nx_nodes - 1
+            n2 = ny_nodes - 1
+            sens = FDTD_mod.Sensor()
+            sens.dx1 = dx_um
+            sens.dx2 = dy_um
+            sens.E1 = numpy.zeros((n1, n2 + 1, 1), dtype=complex)
+            sens.H1 = numpy.zeros((n1, n2 + 1, 1), dtype=complex)
+            sens.E2 = numpy.zeros((n1 + 1, n2, 1), dtype=complex)
+            sens.H2 = numpy.zeros((n1 + 1, n2, 1), dtype=complex)
+            sens.E1[:, 1:-1, 0] = (a_amp + b_amp) * sqrt_z0 * Ex_f
+            sens.E2[1:-1, :, 0] = (a_amp + b_amp) * sqrt_z0 * Ey_f
+            sens.H1[:, 1:-1, 0] = (a_amp - b_amp) * sqrt_z0 * Hy_f
+            sens.H2[1:-1, :, 0] = (a_amp - b_amp) * sqrt_z0 * Hx_f
+            return sens
+
+        # 1. SI-meter VFDModeSolver: counter-propagating complex amplitudes (A, B) and Parseval power Pm
+        wl = 1.55e-6
+        nx_n, ny_n = 61, 41
+        dx_um, dy_um = 0.05, 0.05
+        xg = dx_um * 1e-6 * numpy.arange(nx_n)
+        yg = dy_um * 1e-6 * numpy.arange(ny_n)
+
+        def _eps_si(kap=0.0):
+            def _f(xc, yc):
+                nc = complex(3.45, -kap) if kap > 0 else 3.45
+                return numpy.where(
+                    (numpy.abs(xc[:, None] - 1.5e-6) <= 0.25e-6)
+                    & (numpy.abs(yc[None, :] - 1.0e-6) <= 0.11e-6),
+                    nc**2,
+                    1.45**2,
+                )
+
+            return _f
+
+        s_si = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_si(0.0), "0000"
+        ).solve(1, 1e-12)
+        a0 = 1.4 * numpy.exp(0.5j)
+        b0 = -0.6 * numpy.exp(-0.3j)
+        sens_si = _make_sensor(s_si.modes[0], dx_um, dy_um, nx_n, ny_n, a0, b0, 1e-6)
+        vu, ju, A, B, Pm, P = FDTD_mod.overlap_f([sens_si], s_si, 0)
+        self.assertAlmostEqual(A[0, 0], a0, places=3)
+        self.assertAlmostEqual(B[0, 0], b0, places=3)
+        self.assertAlmostEqual(Pm[0, 0], abs(a0) ** 2 - abs(b0) ** 2, places=3)
+        self.assertAlmostEqual(P[0], Pm[0, 0], places=12)
+
+        # 2. Micron-unit FMM2d solver (wl = 1.55): consistent micron grid & integration without 1e-12 scaling error
+        fmm = EMpy.modesolvers.FMM.FMM2d(
+            numpy.array([0.0, 1.25, 1.75, 3.0]),
+            numpy.array([0.0, 0.89, 1.11, 2.0]),
+            numpy.array([[1.45, 1.45, 1.45], [1.45, 3.45, 1.45], [1.45, 1.45, 1.45]]),
+            EMpy.modesolvers.FMM.Boundary(
+                xleft="Electric Wall",
+                yleft="Magnetic Wall",
+                xright="Electric Wall",
+                yright="Magnetic Wall",
+            ),
+        ).solve(1.55, 2, 1)
+        fmm.modes[0].normalize()
+        sens_fmm = _make_sensor(fmm.modes[0], dx_um, dy_um, nx_n, ny_n, a0, b0, 1.0)
+        _, _, A_fmm, B_fmm, Pm_fmm, _ = FDTD_mod.overlap_f([sens_fmm], fmm, 0)
+        self.assertAlmostEqual(A_fmm[0, 0], a0, delta=3e-2)
+        self.assertAlmostEqual(B_fmm[0, 0], b0, delta=3e-2)
+        self.assertAlmostEqual(Pm_fmm[0, 0], abs(a0) ** 2 - abs(b0) ** 2, delta=5e-2)
+
+        # 3. Lossy kappa -> 0+ and 5-component rotated anisotropic dn -> 0 limits in overlap_f
+        k_errs = []
+        for kap in (1e-2, 1e-5, 0.0):
+            sk = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xg, yg, _eps_si(kap), "0000"
+            ).solve(1, 1e-12)
+            sens_k = _make_sensor(sk.modes[0], dx_um, dy_um, nx_n, ny_n, a0, b0, 1e-6)
+            _, _, Ak, Bk, _, _ = FDTD_mod.overlap_f([sens_k], sk, 0)
+            k_errs.append(abs(Ak[0, 0] - A[0, 0]) + abs(Bk[0, 0] - B[0, 0]))
+        self.assertLess(k_errs[1], k_errs[0])
+        self.assertLess(k_errs[2], 1e-9)
+
+        ph = EMpy.utils.deg2rad(31.0)
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+
+            def _eps_ani(xc, yc, dn_=dn):
+                core = (numpy.abs(xc[:, None] - 1.5e-6) <= 0.25e-6) & (
+                    numpy.abs(yc[None, :] - 1.0e-6) <= 0.11e-6
+                )
+                n_o = numpy.where(core, 3.45, 1.45)
+                n_e = numpy.where(core, 3.45 + dn_, 1.45 + dn_)
+                exx = n_e**2 * numpy.cos(ph) ** 2 + n_o**2 * numpy.sin(ph) ** 2
+                eyy = n_e**2 * numpy.sin(ph) ** 2 + n_o**2 * numpy.cos(ph) ** 2
+                exy = (n_e**2 - n_o**2) * numpy.sin(ph) * numpy.cos(ph)
+                return numpy.stack([exx, exy, exy, eyy, n_o**2], axis=-1)
+
+            sa = EMpy.modesolvers.FD.VFDModeSolver(wl, xg, yg, _eps_ani, "0000").solve(
+                1, 1e-12
+            )
+            sens_a = _make_sensor(sa.modes[0], dx_um, dy_um, nx_n, ny_n, a0, b0, 1e-6)
+            _, _, Aa, Ba, _, _ = FDTD_mod.overlap_f([sens_a], sa, 0)
+            dn_errs.append(abs(Aa[0, 0] - A[0, 0]) + abs(Ba[0, 0] - B[0, 0]))
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-9)
+
 
 class FMMModeSolverTest(TestCase):
 

@@ -712,34 +712,42 @@ def fixdir(str, sep="/"):
 
 
 def overlap_f(sensors, solver, nwl):
+    z0_imp = 120.0 * numpy.pi
+    sqrt_z0 = numpy.sqrt(z0_imp)
+    # Sensor spacings dx1, dx2 are in microns; match solver's spatial units (meters if wl < 1e-3, else microns).
+    unit_scale = 1e-6 if float(numpy.real(solver.wl)) < 1e-3 else 1.0
     vu = numpy.zeros((len(sensors), len(solver.modes)), dtype=complex)
     ju = numpy.zeros((len(sensors), len(solver.modes)), dtype=complex)
     for isens, sens in enumerate(sensors):
-        x = sens.dx1 * numpy.arange(sens.E2.shape[0])
-        y = sens.dx2 * numpy.arange(sens.E1.shape[1])
+        dx = sens.dx1 * unit_scale
+        dy = sens.dx2 * unit_scale
+        x = dx * numpy.arange(sens.E2.shape[0])
+        y = dy * numpy.arange(sens.E1.shape[1])
         for imode, mode in enumerate(solver.modes):
-            # resample the mode to the sensor's grid
+            # Resample mode to the sensor's staggered Yee grid (get_fields_for_FDTD scales H by -1 / z0_imp).
             Ex, Ey, Ez, Hx, Hy, Hz = mode.get_fields_for_FDTD(x, y)
-            #            vu[isens, imode] = 0.5 * (
-            #                        numpy.trapz(numpy.trapz(sens.E1[:,1:-1,nwl] * Hy, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
-            #                        numpy.trapz(numpy.trapz(sens.E2[1:-1,:,nwl] * Hx, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
-            #            ju[isens, imode] = 0.5 * (
-            #                        numpy.trapz(numpy.trapz(sens.H2[1:-1,:,nwl] * Ey, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6) -
-            #                        numpy.trapz(numpy.trapz(sens.H1[:,1:-1,nwl] * Ex, dx=sens.dx2*1e-6), dx=sens.dx1*1e-6))
-            vu[isens, imode] = 0.5 * (
-                EMpy.utils.trapz2(
-                    sens.E1[:, 1:-1, nwl] * Hy, dx=sens.dx1 * 1e-6, dy=sens.dx2 * 1e-6
-                )
-                - EMpy.utils.trapz2(
-                    sens.E2[1:-1, :, nwl] * Hx, dx=sens.dx1 * 1e-6, dy=sens.dx2 * 1e-6
+            vu[isens, imode] = (
+                -0.5
+                * sqrt_z0
+                * (
+                    EMpy.utils.trapz2(
+                        sens.E1[:, 1:-1, nwl] * numpy.conj(Hy), dx=dx, dy=dy
+                    )
+                    - EMpy.utils.trapz2(
+                        sens.E2[1:-1, :, nwl] * numpy.conj(Hx), dx=dx, dy=dy
+                    )
                 )
             )
-            ju[isens, imode] = 0.5 * (
-                EMpy.utils.trapz2(
-                    sens.H2[1:-1, :, nwl] * Ey, dx=sens.dx1 * 1e-6, dy=sens.dx2 * 1e-6
-                )
-                - EMpy.utils.trapz2(
-                    sens.H1[:, 1:-1, nwl] * Ex, dx=sens.dx1 * 1e-6, dy=sens.dx2 * 1e-6
+            ju[isens, imode] = (
+                0.5
+                * sqrt_z0
+                * (
+                    EMpy.utils.trapz2(
+                        sens.H2[1:-1, :, nwl] * numpy.conj(Ey), dx=dx, dy=dy
+                    )
+                    - EMpy.utils.trapz2(
+                        sens.H1[:, 1:-1, nwl] * numpy.conj(Ex), dx=dx, dy=dy
+                    )
                 )
             )
     A = (vu + ju) / 2.0
