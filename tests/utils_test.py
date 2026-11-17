@@ -236,3 +236,95 @@ class UtilsTest(TestCase):
             abs(th_k8[1] - th_real[1]),
             abs(th_k4[1] - th_real[1]),
         )
+
+    def test_group_delay_and_dispersion(self):
+        import scipy.integrate
+        import EMpy.constants as C
+        import EMpy.devices
+
+        with self.assertRaises(ValueError):
+            U.group_delay_and_dispersion(numpy.ones(5), numpy.ones(6))
+
+        # 1. Dispersionless line (n = 2.5, L = 0.5 mm) on coarse 50-pt grid (|dphi| ~ 1.33 rad in (pi/4, pi))
+        #    and on a non-uniform wavelength grid: exact tau = n*L/c, exact D = 0 ps/nm
+        n0 = 2.5
+        length = 0.5e-3
+        tau_exact_ps = n0 * length / C.c * 1e12
+        for wls in (
+            numpy.linspace(1.54e-6, 1.56e-6, 50),
+            1.54e-6 + 2.0e-8 * numpy.linspace(0.0, 1.0, 75) ** 1.7,
+        ):
+            y = numpy.exp(-1j * 2.0 * numpy.pi * n0 / wls * length)
+            phi, tau, dpsnm = U.group_delay_and_dispersion(wls, y)
+            self.assertEqual(phi.shape, wls.shape)
+            self.assertEqual(tau.shape, (len(wls) - 1,))
+            self.assertEqual(dpsnm.shape, (len(wls) - 2,))
+            numpy.testing.assert_allclose(tau, tau_exact_ps, rtol=1e-10, atol=1e-10)
+            numpy.testing.assert_allclose(dpsnm, 0.0, atol=1e-7)
+
+        # 2. Linear-chirp transfer function tau(wl) = tau0 + D0 * (wl - wl0): verify exact sign & magnitude
+        wls_c = numpy.linspace(1.545e-6, 1.555e-6, 1001)
+        wl0 = 1.55e-6
+        for d0_psnm in (5.0, -3.5):
+            tau_s = 10.0e-12 + (d0_psnm * 1e-12 / 1e-9) * (wls_c - wl0)
+            dphi_dwl = 2.0 * numpy.pi * C.c / wls_c**2 * tau_s
+            phi_in = scipy.integrate.cumulative_trapezoid(dphi_dwl, wls_c, initial=0.0)
+            _, tau_c, dpsnm_c = U.group_delay_and_dispersion(
+                wls_c, numpy.exp(1j * phi_in)
+            )
+            wls_mid = 0.5 * (wls_c[:-1] + wls_c[1:])
+            tau_expected = 10.0 + d0_psnm * (wls_mid - wl0) * 1e9
+            numpy.testing.assert_allclose(tau_c, tau_expected, rtol=1e-5, atol=1e-5)
+            numpy.testing.assert_allclose(dpsnm_c, d0_psnm, rtol=1e-4, atol=1e-4)
+
+        # 3. Dispersive Silicon waveguide (1 mm) vs analytical ng = n - wl*dn/dwl and D = -(wl*L/c)*d2n/dwl2
+        wls_si = numpy.linspace(1.54e-6, 1.56e-6, 201)
+        l_si = 1.0e-3
+        n_si = EMpy.materials.Si.n(wls_si)
+        h = 1.0e-11
+        dn_dwl = (EMpy.materials.Si.n(wls_si + h) - EMpy.materials.Si.n(wls_si - h)) / (
+            2.0 * h
+        )
+        d2n_dwl2 = (
+            EMpy.materials.Si.n(wls_si + h)
+            - 2.0 * n_si
+            + EMpy.materials.Si.n(wls_si - h)
+        ) / h**2
+        ng_si = n_si - wls_si * dn_dwl
+        tau_si_exact = 0.5 * (ng_si[:-1] + ng_si[1:]) * l_si / C.c * 1e12
+        d_si_exact = -wls_si[1:-1] * l_si / C.c * d2n_dwl2[1:-1] * 1e3
+
+        y_si = numpy.exp(-1j * 2.0 * numpy.pi * n_si / wls_si * l_si)
+        _, tau_si, d_si = U.group_delay_and_dispersion(wls_si, y_si)
+        numpy.testing.assert_allclose(tau_si, tau_si_exact, rtol=1e-7, atol=1e-7)
+        numpy.testing.assert_allclose(d_si, d_si_exact, rtol=1e-4, atol=1e-6)
+
+        # 4. 2D batched input shape (2, N) and lossy -> non-lossy limit on ring resonator (APRR)
+        wls_2d = numpy.vstack([wls_si, wls_si])
+        y_2d = numpy.vstack(
+            [y_si, numpy.exp(-1j * 2.0 * numpy.pi * (n_si - 1e-4j) / wls_si * l_si)]
+        )
+        phi_2d, tau_2d, d_2d = U.group_delay_and_dispersion(wls_2d, y_2d)
+        self.assertEqual(phi_2d.shape, (2, len(wls_si)))
+        self.assertEqual(tau_2d.shape, (2, len(wls_si) - 1))
+        self.assertEqual(d_2d.shape, (2, len(wls_si) - 2))
+        numpy.testing.assert_allclose(tau_2d[1], tau_2d[0], rtol=1e-10, atol=1e-10)
+        numpy.testing.assert_allclose(d_2d[1], d_2d[0], rtol=1e-8, atol=1e-10)
+
+        # Lossy APRR -> lossless APRR limit (kappa -> 0+)
+        wls_r = numpy.linspace(1.5495e-6, 1.5505e-6, 401)
+        l_ring = 50.0e-6
+        coupler = EMpy.devices.Coupler(wls_r, numpy.sqrt(0.2), 1.0)
+        aprr_ll = EMpy.devices.APRR(coupler, 2.4 + 0.0 * wls_r, l_ring).solve()
+        _, tau_ll, _ = U.group_delay_and_dispersion(wls_r, aprr_ll.THRU)
+        self.assertTrue(numpy.all(tau_ll > 0.0))
+
+        aprr_errs = []
+        for kap in (1e-3, 1e-6, 0.0):
+            aprr_k = EMpy.devices.APRR(
+                coupler, (2.4 - 1j * kap) + 0.0 * wls_r, l_ring
+            ).solve()
+            _, tau_k, _ = U.group_delay_and_dispersion(wls_r, aprr_k.THRU)
+            aprr_errs.append(float(numpy.max(numpy.abs(tau_k - tau_ll))))
+        self.assertLess(aprr_errs[1], aprr_errs[0])
+        self.assertLess(aprr_errs[2], 1e-10)

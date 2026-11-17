@@ -1077,19 +1077,17 @@ def group_delay_and_dispersion(wls, y):
         raise ValueError("wls and y must have the same shape.")
 
     f = EMpy.constants.c / wls
-
-    df = numpy.diff(f)
-    toPSNM = 1e12 / 1e9
-    cnmps = EMpy.constants.c / toPSNM
+    df = numpy.diff(f, axis=-1)
 
     # phase
-    phi = numpy.unwrap(4.0 * numpy.angle(y)) / 4.0
+    phi = numpy.unwrap(numpy.angle(y), axis=-1)
 
-    # group delay
-    tau = -0.5 / numpy.pi * numpy.diff(phi) / df * 1e12
+    # group delay in ps: tau = -d(phi)/d(omega) = -(1 / 2*pi) * d(phi)/df
+    tau = -0.5 / numpy.pi * numpy.diff(phi, axis=-1) / df * 1e12
 
-    # dispersion in ps/nm
-    Dpsnm = -0.5 / numpy.pi / cnmps * f[1:-1] ** 2 * numpy.diff(phi, 2) / df[0:-1] ** 2
+    # dispersion in ps/nm: D = d(tau)/d(wl_nm) evaluated across midpoint wavelengths
+    wls_mid = 0.5 * (wls[..., :-1] + wls[..., 1:])
+    Dpsnm = numpy.diff(tau, axis=-1) / (numpy.diff(wls_mid, axis=-1) * 1e9)
 
     return phi, tau, Dpsnm
 
