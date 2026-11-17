@@ -202,6 +202,9 @@ class IsotropicRCWA(RCWA):
         psi = self.psi
         phi = self.phi
 
+        if not np.isclose(np.cos(phi), 0.0, atol=1e-10):
+            raise ValueError("First Order Helmholtz Operator not implemented, yet!")
+
         nlayers = len(multilayer)
         i = np.arange(-n, n + 1)
         nood = 2 * n + 1
@@ -485,6 +488,9 @@ class AnisotropicRCWA(RCWA):
         psi = self.psi
         phi = self.phi
 
+        if not np.isclose(np.cos(phi), 0.0, atol=1e-10):
+            raise ValueError("First Order Helmholtz Operator not implemented, yet!")
+
         nlayers = len(multilayer)
         i = np.arange(-n, n + 1)
         nood = 2 * n + 1
@@ -551,14 +557,29 @@ class AnisotropicRCWA(RCWA):
             eps1 = np.diag(np.asarray([nE1, nO1, nO1]) ** 2)
             eps3 = np.diag(np.asarray([nE3, nO3, nO3]) ** 2)
 
-            # ordinary wave
+            # ordinary and extraordinary incident wavevector magnitudes in region 1
             abskO1 = k * nO1
-            # abskO3 = k * nO3
-            # extraordinary wave
-            # abskE1 = k * nO1 *nE1 / np.sqrt(nO1**2 + (nE1**2 - nO1**2) * np.dot(-c1, dirk1)**2)
-            # abskE3 = k * nO3 *nE3 / np.sqrt(nO3**2 + (nE3**2 - nO3**2) * np.dot(-c3, dirk1)**2)
+            abskE1 = (
+                k
+                * nO1
+                * nE1
+                / np.sqrt(nO1**2 + (nE1**2 - nO1**2) * np.dot(c1, dirk1) ** 2)
+            )
 
-            k1 = abskO1 * dirk1
+            c_cross_s = np.cross(c1, dirk1)
+            norm_cs = float(np.linalg.norm(c_cross_s))
+            aniso_superstrate = (
+                not np.isclose(nO1, nE1, rtol=1e-12, atol=1e-14) and norm_cs > 1e-12
+            )
+            if aniso_superstrate:
+                dO_hat = c_cross_s / norm_cs
+                dE_hat = np.cross(dirk1, dO_hat)
+                aO = np.dot(dO_hat, u)
+                aE = np.dot(dE_hat, u)
+                absk_eff = np.abs(aO) ** 2 * abskO1 + np.abs(aE) ** 2 * abskE1
+                k1 = absk_eff * dirk1
+            else:
+                k1 = abskO1 * dirk1
 
             kO1i[0, :] = k1[0] - i * K[0]
             kO1i[1, :] = k1[1] * np.ones_like(i)
@@ -622,11 +643,32 @@ class AnisotropicRCWA(RCWA):
             ETE = c3[2] * Kx - c3[0] * KE3z
             FTE = c3[0] * Ky - c3[1] * Kx
 
+            if aniso_superstrate:
+                kO1_inc = np.array([kx[n], ky, -kO1i[2, n]], dtype=complex)
+                kE1_inc = np.array([kx[n], ky, -kE1i[2, n]], dtype=complex)
+                c_cross_kO = np.cross(c1, kO1_inc)
+                EO_inc = aO * (c_cross_kO / np.linalg.norm(c_cross_kO))
+                HO_inc = np.cross(kO1_inc / k, EO_inc)
+
+                dE_k = np.cross(kE1_inc, np.cross(c1, kE1_inc))
+                dE_k_hat = dE_k / np.linalg.norm(dE_k)
+                EE_inc = aE * np.array(
+                    [(nO1 / nE1) ** 2 * dE_k_hat[0], dE_k_hat[1], dE_k_hat[2]],
+                    dtype=complex,
+                )
+                HE_inc = np.cross(kE1_inc / k, EE_inc)
+
+                E_inc = EO_inc + EE_inc
+                H_inc = HO_inc + HE_inc
+            else:
+                E_inc = u.astype(complex)
+                H_inc = np.cross(k1 / k, E_inc)
+
             b = np.r_[
-                u[0] * dlt,
-                u[1] * dlt,
-                (k1[1] / k * u[2] - k1[2] / k * u[1]) * dlt,
-                (k1[2] / k * u[0] - k1[0] / k * u[2]) * dlt,
+                E_inc[0] * dlt,
+                E_inc[1] * dlt,
+                H_inc[0] * dlt,
+                H_inc[1] * dlt,
             ]
             Ky_CRO_1 = ky / k * CRO_1
             Ky_CRE_1 = ky / k * CRE_1
@@ -677,36 +719,89 @@ class AnisotropicRCWA(RCWA):
             Mp.fill(0.0)
             M.fill(0.0)
 
+            def _li_transform(eps):
+                inv_exx = 1.0 / eps[0, 0]
+                L = np.empty((3, 3), dtype=complex)
+                L[0, 0] = inv_exx
+                L[0, 1] = eps[0, 1] * inv_exx
+                L[0, 2] = eps[0, 2] * inv_exx
+                L[1, 0] = eps[1, 0] * inv_exx
+                L[2, 0] = eps[2, 0] * inv_exx
+                L[1, 1] = eps[1, 1] - eps[1, 0] * eps[0, 1] * inv_exx
+                L[1, 2] = eps[1, 2] - eps[1, 0] * eps[0, 2] * inv_exx
+                L[2, 1] = eps[2, 1] - eps[2, 0] * eps[0, 1] * inv_exx
+                L[2, 2] = eps[2, 2] - eps[2, 0] * eps[0, 2] * inv_exx
+                return L
+
+            def _toep(arr):
+                return toeplitz(arr[hmax::-1], arr[hmax:])
+
             for nlayer in range(nlayers - 2, 0, -1):  # internal layers
                 layer = multilayer[nlayer]
                 thickness = layer.thickness
 
-                EPS2, EPS21 = layer.getEPSFourierCoeffs(wl, n, anisotropic=True)
+                # Lifeng Li's anisotropic Fourier factorization (J. Opt. A 5, 345, 2003)
+                # enforces continuity of (D_x, E_y, E_z) across x-interfaces and reduces
+                # identically to the exact 3x3 permittivity tensor on homogeneous layers.
+                h_idx = np.arange(-hmax, hmax + 1)
+                if isinstance(layer, BinaryGrating):
+                    e1 = layer.mat1.epsilonTensor(wl)[:, :, 0] / eps0
+                    e2 = layer.mat2.epsilonTensor(wl)[:, :, 0] / eps0
+                    L1, L2 = _li_transform(e1), _li_transform(e2)
+                    f_dc = layer.dc
+                    LF = (L1 - L2)[:, :, None] * (f_dc * np.sinc(h_idx * f_dc))[
+                        None, None, :
+                    ] + L2[:, :, None] * (h_idx == 0)[None, None, :]
+                elif isinstance(layer, SymmetricDoubleGrating):
+                    e1 = layer.mat1.epsilonTensor(wl)[:, :, 0] / eps0
+                    e2 = layer.mat2.epsilonTensor(wl)[:, :, 0] / eps0
+                    e3 = layer.mat3.epsilonTensor(wl)[:, :, 0] / eps0
+                    L1, L2, L3 = _li_transform(e1), _li_transform(e2), _li_transform(e3)
+                    f1, f2 = layer.dc1, layer.dc2
+                    fM = (
+                        layer.dcM
+                        if isinstance(layer, AsymmetricDoubleGrating)
+                        else (1.0 - f1 - f2) / 2.0
+                    )
+                    nh = len(h_idx)
+                    sh_a = -nh * (f1 + fM) / 2.0
+                    sh_b = nh * (f2 + fM) / 2.0
+                    w1 = f1 * np.sinc(h_idx * f1) * np.exp(2j * pi * h_idx / nh * sh_a)
+                    w2 = f2 * np.sinc(h_idx * f2) * np.exp(2j * pi * h_idx / nh * sh_b)
+                    LF = (
+                        (L1 - L3)[:, :, None] * w1[None, None, :]
+                        + (L2 - L3)[:, :, None] * w2[None, None, :]
+                        + L3[:, :, None] * (h_idx == 0)[None, None, :]
+                    )
+                else:
+                    EPS2, EPS21 = layer.getEPSFourierCoeffs(wl, n, anisotropic=True)
+                    if hmax == 0 or np.all(EPS2[:, :, :hmax] == 0):
+                        LF = np.zeros_like(EPS2)
+                        LF[:, :, hmax] = _li_transform(EPS2[:, :, hmax])
+                    else:
+                        LF = None
 
-                # Exx = np.squeeze(EPS2[0, 0, :])
-                # Exx = toeplitz(np.flipud(Exx[0:hmax + 1]), Exx[hmax:])
-                Exy = np.squeeze(EPS2[0, 1, :])
-                Exy = toeplitz(np.flipud(Exy[0 : hmax + 1]), Exy[hmax:])
-                Exz = np.squeeze(EPS2[0, 2, :])
-                Exz = toeplitz(np.flipud(Exz[0 : hmax + 1]), Exz[hmax:])
-
-                Eyx = np.squeeze(EPS2[1, 0, :])
-                Eyx = toeplitz(np.flipud(Eyx[0 : hmax + 1]), Eyx[hmax:])
-                Eyy = np.squeeze(EPS2[1, 1, :])
-                Eyy = toeplitz(np.flipud(Eyy[0 : hmax + 1]), Eyy[hmax:])
-                Eyz = np.squeeze(EPS2[1, 2, :])
-                Eyz = toeplitz(np.flipud(Eyz[0 : hmax + 1]), Eyz[hmax:])
-
-                Ezx = np.squeeze(EPS2[2, 0, :])
-                Ezx = toeplitz(np.flipud(Ezx[0 : hmax + 1]), Ezx[hmax:])
-                Ezy = np.squeeze(EPS2[2, 1, :])
-                Ezy = toeplitz(np.flipud(Ezy[0 : hmax + 1]), Ezy[hmax:])
-                Ezz = np.squeeze(EPS2[2, 2, :])
-                Ezz = toeplitz(np.flipud(Ezz[0 : hmax + 1]), Ezz[hmax:])
-
-                Exx_1 = np.squeeze(EPS21[0, 0, :])
-                Exx_1 = toeplitz(np.flipud(Exx_1[0 : hmax + 1]), Exx_1[hmax:])
-                Exx_1_1 = inv(Exx_1)
+                if LF is not None:
+                    LT = [[_toep(LF[r, c, :]) for c in range(3)] for r in range(3)]
+                    Exx_1_1 = inv(LT[0][0])
+                    Exy = np.dot(Exx_1_1, LT[0][1])
+                    Exz = np.dot(Exx_1_1, LT[0][2])
+                    Eyx = np.dot(LT[1][0], Exx_1_1)
+                    Ezx = np.dot(LT[2][0], Exx_1_1)
+                    Eyy = LT[1][1] + np.dot(Eyx, LT[0][1])
+                    Eyz = LT[1][2] + np.dot(Eyx, LT[0][2])
+                    Ezy = LT[2][1] + np.dot(Ezx, LT[0][1])
+                    Ezz = LT[2][2] + np.dot(Ezx, LT[0][2])
+                else:
+                    Exy = _toep(EPS2[0, 1, :])
+                    Exz = _toep(EPS2[0, 2, :])
+                    Eyx = _toep(EPS2[1, 0, :])
+                    Eyy = _toep(EPS2[1, 1, :])
+                    Eyz = _toep(EPS2[1, 2, :])
+                    Ezx = _toep(EPS2[2, 0, :])
+                    Ezy = _toep(EPS2[2, 1, :])
+                    Ezz = _toep(EPS2[2, 2, :])
+                    Exx_1_1 = inv(_toep(EPS21[0, 0, :]))
 
                 # lalanne
                 Ezz_1 = inv(Ezz)
@@ -843,7 +938,9 @@ class AnisotropicRCWA(RCWA):
             TOz = -np.dot(CTO_1, (np.dot(ATO, TOx) + np.dot(BTO, TOy)))
             TEz = -np.dot(CTE_1, (np.dot(ATE, TEx) + np.dot(BTE, TEy)))
 
-            denom = (k1[2] - np.dot(u, k1) * u[2]).real
+            denom = (
+                E_inc[0] * np.conj(k * H_inc[1]) - E_inc[1] * np.conj(k * H_inc[0])
+            ).real
             DEO1[:, iwl] = (
                 -(
                     (
@@ -852,7 +949,11 @@ class AnisotropicRCWA(RCWA):
                         + np.absolute(ROz) ** 2
                     )
                     * np.conj(kO1i[2, :])
-                    - (ROx * kO1i[0, :] + ROy * kO1i[1, :] + ROz * kO1i[2, :])
+                    - (
+                        ROx * np.conj(kO1i[0, :])
+                        + ROy * np.conj(kO1i[1, :])
+                        + ROz * np.conj(kO1i[2, :])
+                    )
                     * np.conj(ROz)
                 ).real
                 / denom
@@ -865,7 +966,11 @@ class AnisotropicRCWA(RCWA):
                         + np.absolute(REz) ** 2
                     )
                     * np.conj(kE1i[2, :])
-                    - (REx * kE1i[0, :] + REy * kE1i[1, :] + REz * kE1i[2, :])
+                    - (
+                        REx * np.conj(kE1i[0, :])
+                        + REy * np.conj(kE1i[1, :])
+                        + REz * np.conj(kE1i[2, :])
+                    )
                     * np.conj(REz)
                 ).real
                 / denom
@@ -873,13 +978,21 @@ class AnisotropicRCWA(RCWA):
             DEO3[:, iwl] = (
                 (np.absolute(TOx) ** 2 + np.absolute(TOy) ** 2 + np.absolute(TOz) ** 2)
                 * np.conj(kO3i[2, :])
-                - (TOx * kO3i[0, :] + TOy * kO3i[1, :] + TOz * kO3i[2, :])
+                - (
+                    TOx * np.conj(kO3i[0, :])
+                    + TOy * np.conj(kO3i[1, :])
+                    + TOz * np.conj(kO3i[2, :])
+                )
                 * np.conj(TOz)
             ).real / denom
             DEE3[:, iwl] = (
                 (np.absolute(TEx) ** 2 + np.absolute(TEy) ** 2 + np.absolute(TEz) ** 2)
                 * np.conj(kE3i[2, :])
-                - (TEx * kE3i[0, :] + TEy * kE3i[1, :] + TEz * kE3i[2, :])
+                - (
+                    TEx * np.conj(kE3i[0, :])
+                    + TEy * np.conj(kE3i[1, :])
+                    + TEz * np.conj(kE3i[2, :])
+                )
                 * np.conj(TEz)
             ).real / denom
 

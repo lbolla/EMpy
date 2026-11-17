@@ -121,3 +121,332 @@ class IsotropicRCWATest(TestCase):
             EMpy.RCWA.AnisotropicRCWA(
                 m_bad, alpha=0.0, delta=0.0, psi=0.0, phi=np.pi / 2, n=1
             ).solve([1.55e-6])
+
+    def test_anisotropic_rcwa_phi_guard_and_n0_homogeneous_limit(self):
+        """Verify phi != pi/2 raises ValueError and n = 0 / homogeneous rotated gratings match Berreman TMM."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        air = EMpy.materials.Air
+        rot_biax = EMpy.materials.AnisotropicMaterial(
+            "biax",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0
+                * EMpy.utils.euler_rotate(
+                    np.diag([1.8**2, 2.0**2, 2.25**2]), 0.3, 0.4, 0.5
+                )
+            ),
+        )
+        sio2 = EMpy.materials.IsotropicMaterial(
+            "sio2", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+        ml_grat = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(rot_biax, sio2, 0.5, 1.0e-6, 0.3e-6),
+                EMpy.utils.Layer(sio2, np.inf),
+            ]
+        )
+        for cls in (EMpy.RCWA.IsotropicRCWA, EMpy.RCWA.AnisotropicRCWA):
+            ml_2 = EMpy.utils.Multilayer(
+                [EMpy.utils.Layer(air, np.inf), EMpy.utils.Layer(sio2, np.inf)]
+            )
+            with self.assertRaises(ValueError):
+                cls(ml_2, alpha=0.0, delta=0.0, psi=0.0, phi=np.pi / 3, n=1).solve([wl])
+        with self.assertRaises(ValueError):
+            EMpy.RCWA.AnisotropicRCWA(
+                ml_grat, alpha=0.0, delta=0.0, psi=0.0, phi=np.pi / 3, n=1
+            ).solve([wl])
+
+        # n = 0 must not fail on Layer, BinaryGrating, SymmetricDoubleGrating, or AsymmetricDoubleGrating
+        for internal in (
+            EMpy.utils.Layer(rot_biax, 0.35e-6),
+            EMpy.utils.BinaryGrating(rot_biax, rot_biax, 0.4, 1.0e-6, 0.35e-6),
+            EMpy.utils.SymmetricDoubleGrating(
+                rot_biax, rot_biax, rot_biax, 0.2, 0.3, 1.0e-6, 0.35e-6
+            ),
+            EMpy.utils.AsymmetricDoubleGrating(
+                rot_biax, rot_biax, rot_biax, 0.2, 0.3, 0.15, 1.0e-6, 0.35e-6
+            ),
+        ):
+            ml_h = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(air, np.inf),
+                    internal,
+                    EMpy.utils.Layer(sio2, np.inf),
+                ]
+            )
+            alpha = EMpy.utils.deg2rad(20.0)
+            delta = EMpy.utils.deg2rad(28.0)
+            r0 = EMpy.RCWA.AnisotropicRCWA(
+                ml_h, alpha=alpha, delta=delta, psi=0.0, phi=np.pi / 2, n=0
+            ).solve([wl])
+            r2 = EMpy.RCWA.AnisotropicRCWA(
+                ml_h, alpha=alpha, delta=delta, psi=0.0, phi=np.pi / 2, n=2
+            ).solve([wl])
+            dirk = np.array(
+                [np.sin(alpha) * np.cos(delta), np.sin(alpha) * np.sin(delta)]
+            )
+            tmm = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                EMpy.utils.Multilayer(
+                    [
+                        EMpy.utils.Layer(air, np.inf),
+                        EMpy.utils.Layer(rot_biax, 0.35e-6),
+                        EMpy.utils.Layer(sio2, np.inf),
+                    ]
+                ),
+                np.arcsin(dirk[0]),
+                np.arcsin(dirk[1]),
+            ).solve([wl])
+            self.assertAlmostEqual(
+                float((r0.DEO1 + r0.DEE1).sum()),
+                float(tmm.R[1, :, 0].sum()),
+                places=13,
+            )
+            self.assertAlmostEqual(
+                float((r2.DEO3 + r2.DEE3).sum()),
+                float(tmm.T[1, :, 0].sum()),
+                places=13,
+            )
+
+    def test_anisotropic_rcwa_birefringent_superstrate_and_berreman_tmm(self):
+        """Verify uniaxial superstrate excitation: zero reflection in homogeneous crystal & exact match to Berreman TMM."""
+        wl = 1.55e-6
+        k = 2.0 * np.pi / wl
+        eps0 = EMpy.constants.eps0
+        nO1, nE1 = 1.5, 1.7
+        nO3, nE3 = 1.6, 1.9
+        mat1 = EMpy.materials.AnisotropicMaterial(
+            "m1",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * np.diag([nE1**2, nO1**2, nO1**2])
+            ),
+        )
+        # 1. Uniform homogeneous uniaxial crystal must have R == 0 and T == 1 for all (alpha, delta, psi)
+        ml_homo = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(mat1, np.inf),
+                EMpy.utils.Layer(mat1, 0.35e-6),
+                EMpy.utils.Layer(mat1, np.inf),
+            ]
+        )
+        for a_deg, d_deg, p_deg in [
+            (0.0, 0.0, 0.0),
+            (0.0, 25.0, 37.0),
+            (30.0, 0.0, 0.0),
+            (30.0, 25.0, 40.0),
+            (89.9, 0.0, 20.0),  # nearly k || c1 optic axis
+        ]:
+            rh = EMpy.RCWA.AnisotropicRCWA(
+                ml_homo,
+                EMpy.utils.deg2rad(a_deg),
+                EMpy.utils.deg2rad(d_deg),
+                EMpy.utils.deg2rad(p_deg),
+                np.pi / 2,
+                1,
+            ).solve([wl])
+            self.assertAlmostEqual(float((rh.DEO1 + rh.DEE1).sum()), 0.0, places=13)
+            self.assertAlmostEqual(float((rh.DEO3 + rh.DEE3).sum()), 1.0, places=13)
+
+        # 2. Uniaxial superstrate + 3D Euler-rotated biaxial layer + uniaxial substrate vs Berreman TMM
+        mat2 = EMpy.materials.AnisotropicMaterial(
+            "m2",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0
+                * EMpy.utils.euler_rotate(
+                    np.diag([1.8**2, 2.0**2, 2.2**2]), 0.3, 0.4, 0.5
+                )
+            ),
+        )
+        mat3 = EMpy.materials.AnisotropicMaterial(
+            "m3",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * np.diag([nE3**2, nO3**2, nO3**2])
+            ),
+        )
+        ml = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(mat1, np.inf),
+                EMpy.utils.Layer(mat2, 0.35e-6),
+                EMpy.utils.Layer(mat3, np.inf),
+            ]
+        )
+        alpha = EMpy.utils.deg2rad(22.0)
+        delta = EMpy.utils.deg2rad(30.0)
+        dirk1 = np.array(
+            [
+                np.sin(alpha) * np.cos(delta),
+                np.sin(alpha) * np.sin(delta),
+                np.cos(alpha),
+            ]
+        )
+        c1 = np.array([1.0, 0.0, 0.0])
+        dO_hat = np.cross(c1, dirk1)
+        dO_hat /= np.linalg.norm(dO_hat)
+        dE_hat = np.cross(dirk1, dO_hat)
+        e_tm = np.array(
+            [
+                np.cos(alpha) * np.cos(delta),
+                np.cos(alpha) * np.sin(delta),
+                -np.sin(alpha),
+            ]
+        )
+        e_te = np.array([-np.sin(delta), np.cos(delta), 0.0])
+        psi_O = float(np.arctan2(np.dot(dO_hat, e_te), np.dot(dO_hat, e_tm)))
+        psi_E = float(np.arctan2(np.dot(dE_hat, e_te), np.dot(dE_hat, e_tm)))
+
+        abskO1 = k * nO1
+        abskE1 = (
+            k * nO1 * nE1 / np.sqrt(nO1**2 + (nE1**2 - nO1**2) * np.dot(c1, dirk1) ** 2)
+        )
+
+        r_O = EMpy.RCWA.AnisotropicRCWA(ml, alpha, delta, psi_O, np.pi / 2, 1).solve(
+            [wl]
+        )
+        tmm_O = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            ml, np.arcsin(abskO1 * dirk1[0] / k), np.arcsin(abskO1 * dirk1[1] / k)
+        ).solve([wl])
+        np.testing.assert_allclose(
+            [r_O.DEO1[1, 0], r_O.DEE1[1, 0], r_O.DEO3[1, 0], r_O.DEE3[1, 0]],
+            [tmm_O.R[1, 1, 0], tmm_O.R[1, 0, 0], tmm_O.T[1, 1, 0], tmm_O.T[1, 0, 0]],
+            atol=1e-13,
+        )
+
+        r_E = EMpy.RCWA.AnisotropicRCWA(ml, alpha, delta, psi_E, np.pi / 2, 1).solve(
+            [wl]
+        )
+        tmm_E = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            ml, np.arcsin(abskE1 * dirk1[0] / k), np.arcsin(abskE1 * dirk1[1] / k)
+        ).solve([wl])
+        np.testing.assert_allclose(
+            [r_E.DEO1[1, 0], r_E.DEE1[1, 0], r_E.DEO3[1, 0], r_E.DEE3[1, 0]],
+            [tmm_E.R[0, 1, 0], tmm_E.R[0, 0, 0], tmm_E.T[0, 1, 0], tmm_E.T[0, 0, 0]],
+            atol=1e-13,
+        )
+
+    def test_anisotropic_rcwa_degenerate_isotropic_and_lossy_limits(self):
+        """Verify AnisotropicRCWA converges to IsotropicRCWA as dn -> 0 and obeys passive lossy kappa -> 0+ limits."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        alpha = EMpy.utils.deg2rad(18.0)
+        delta = EMpy.utils.deg2rad(25.0)
+        psi = EMpy.utils.deg2rad(35.0)
+
+        n1_iso = EMpy.materials.IsotropicMaterial(
+            "n1", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+        n2_iso = EMpy.materials.IsotropicMaterial(
+            "n2", n0=EMpy.materials.RefractiveIndex(n0_const=2.2)
+        )
+        n3_iso = EMpy.materials.IsotropicMaterial(
+            "n3", n0=EMpy.materials.RefractiveIndex(n0_const=1.6)
+        )
+        ml_iso = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(n1_iso, np.inf),
+                EMpy.utils.BinaryGrating(n2_iso, n1_iso, 0.43, 1.1e-6, 0.25e-6),
+                EMpy.utils.Layer(n3_iso, np.inf),
+            ]
+        )
+        r_iso = EMpy.RCWA.IsotropicRCWA(
+            ml_iso, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=2
+        ).solve([wl])
+
+        # 1. Weak-birefringence 3D-Euler-rotated grating + uniaxial superstrate -> IsotropicRCWA (dn = 1e-4, 1e-8, 0)
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            sup_a = EMpy.materials.AnisotropicMaterial(
+                "sup",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps0
+                    * np.diag([(1.45 + dn) ** 2, 1.45**2, 1.45**2])
+                ),
+            )
+            ridge_a = EMpy.materials.AnisotropicMaterial(
+                "ridge",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps0
+                    * EMpy.utils.euler_rotate(
+                        np.diag([2.2**2, (2.2 + 0.5 * dn) ** 2, (2.2 + dn) ** 2]),
+                        0.33,
+                        0.47,
+                        0.71,
+                    )
+                ),
+            )
+            sub_a = EMpy.materials.AnisotropicMaterial(
+                "sub",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps0
+                    * np.diag([(1.6 + dn) ** 2, 1.6**2, 1.6**2])
+                ),
+            )
+            ml_a = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(sup_a, np.inf),
+                    EMpy.utils.BinaryGrating(ridge_a, sup_a, 0.43, 1.1e-6, 0.25e-6),
+                    EMpy.utils.Layer(sub_a, np.inf),
+                ]
+            )
+            ra = EMpy.RCWA.AnisotropicRCWA(
+                ml_a, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=2
+            ).solve([wl])
+            self.assertAlmostEqual(
+                float((ra.DEO1 + ra.DEE1 + ra.DEO3 + ra.DEE3).sum()), 1.0, places=12
+            )
+            err = float(
+                np.max(
+                    np.abs((ra.DEO1 + ra.DEE1) - r_iso.DE1)
+                    + np.abs((ra.DEO3 + ra.DEE3) - r_iso.DE3)
+                )
+            )
+            dn_errs.append(err)
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-12)
+
+        # 2. Passive lossy rotated anisotropic layer -> lossless limit (kap = 1e-2, 1e-5, 0.0 + 0j)
+        def _solve_lossy_film(kap, force_complex=False):
+            n_o = complex(1.9, -kap) if (kap > 0 or force_complex) else 1.9
+            n_e = complex(2.15, -1.5 * kap) if (kap > 0 or force_complex) else 2.15
+            film = EMpy.materials.AnisotropicMaterial(
+                "film",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps0
+                    * EMpy.utils.euler_rotate(
+                        np.diag([n_o**2, n_o**2, n_e**2]), 0.25, 0.35, 0.45
+                    )
+                ),
+            )
+            ml_f = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(n1_iso, np.inf),
+                    EMpy.utils.Layer(film, 0.4e-6),
+                    EMpy.utils.Layer(n3_iso, np.inf),
+                ]
+            )
+            return EMpy.RCWA.AnisotropicRCWA(
+                ml_f, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=1
+            ).solve([wl])
+
+        r_ll = _solve_lossy_film(0.0, force_complex=False)
+        r_c0 = _solve_lossy_film(0.0, force_complex=True)
+        self.assertAlmostEqual(
+            float((r_ll.DEO1 + r_ll.DEE1 + r_ll.DEO3 + r_ll.DEE3).sum()), 1.0, places=13
+        )
+        np.testing.assert_allclose(
+            r_c0.DEO1 + r_c0.DEE1, r_ll.DEO1 + r_ll.DEE1, atol=1e-14
+        )
+        np.testing.assert_allclose(
+            r_c0.DEO3 + r_c0.DEE3, r_ll.DEO3 + r_ll.DEE3, atol=1e-14
+        )
+
+        kap_errs = []
+        for kap in (1e-2, 1e-5):
+            rk = _solve_lossy_film(kap)
+            tot_k = float((rk.DEO1 + rk.DEE1 + rk.DEO3 + rk.DEE3).sum())
+            self.assertLess(tot_k, 1.0)
+            kap_errs.append(
+                abs(tot_k - 1.0)
+                + float(np.max(np.abs((rk.DEO3 + rk.DEE3) - (r_ll.DEO3 + r_ll.DEE3))))
+            )
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[1], 1e-4)
