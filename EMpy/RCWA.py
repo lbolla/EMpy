@@ -43,12 +43,16 @@ def dispersion_relation_ordinary(kx, ky, k, nO):
     if kx.shape != ky.shape:
         raise ValueError("kx and ky must have the same length")
 
-    delta = (k * nO) ** 2 - (kx**2 + ky**2)
-    kz = np.sqrt(np.asarray(delta, dtype=complex))
+    delta = np.asarray((k * nO) ** 2 - (kx**2 + ky**2), dtype=complex)
+    kz = np.sqrt(delta)
 
-    # Adjust sign of real/imag part
-    kz.real = np.abs(kz.real)
-    kz.imag = -np.abs(kz.imag)
+    # Choose the algebraic root +/-sqrt(delta) (preserving kz**2 == delta) that decays
+    # or propagates in +z under exp(+i*w*t - i*kz*z): Im(kz) < 0, or Re(kz) >= 0 if Im(kz) == 0.
+    tol = 1e-12 * np.maximum(1.0, np.abs(kz))
+    flip = (kz.imag > tol) | ((np.abs(kz.imag) <= tol) & (kz.real < 0))
+    kz = np.where(flip, -kz, kz)
+    if np.all(np.abs(delta.imag) == 0):
+        kz = np.where(delta.real >= 0, kz.real + 0.0j, 1j * kz.imag)
 
     return kz
 

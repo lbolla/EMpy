@@ -78,6 +78,21 @@ class IsotropicRCWATest(TestCase):
             z = kz_e[ii] / k
             self.assertAlmostEqual(abs(c2 * z**2 + c1 * z + c0), 0.0, places=12)
 
+        # Quadrant-I complex delta (e.g. lossy superstrate launching complex kx into lossless medium):
+        # dispersion_relation_ordinary must satisfy kz**2 == delta identically and match extraordinary(nE=nO).
+        kx_cplx = np.array([(0.8 - 0.15j) * k, (1.8 - 0.2j) * k])
+        ky_cplx = np.array([(0.2 - 0.04j) * k, 0.0j])
+        for kap in (0.1, 1e-5, 0.0):
+            no_v = complex(1.5, -kap) if kap > 0 else 1.5
+            delta_v = (k * no_v) ** 2 - (kx_cplx**2 + ky_cplx**2)
+            kz_ord = EMpy.RCWA.dispersion_relation_ordinary(kx_cplx, ky_cplx, k, no_v)
+            kz_ext = EMpy.RCWA.dispersion_relation_extraordinary(
+                kx_cplx, ky_cplx, k, no_v, no_v, c
+            )
+            np.testing.assert_allclose(kz_ord**2, delta_v, rtol=1e-13, atol=1e-13)
+            self.assertTrue(np.all(kz_ord.imag <= 0.0))
+            np.testing.assert_allclose(kz_ord, kz_ext, rtol=1e-11, atol=1e-11)
+
     def test_anisotropic_rcwa_anisotropic_end_layers(self):
         eps_air = EMpy.materials.EpsilonTensor(
             epsilon_tensor_const=EMpy.constants.eps0 * np.eye(3)
