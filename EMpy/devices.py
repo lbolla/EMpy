@@ -1356,8 +1356,8 @@ class SWG(Device):
 class Etalon(Device):
     """Etalon.
 
-    @ivar R: Reflectivity.
-    @ivar theta: Angle of incidence.
+    @ivar R: Mirror power reflectivity.
+    @ivar theta: Internal propagation/refraction angle inside the cavity layer (radians).
 
     @see: U{http://en.wikipedia.org/wiki/Etalon}
 
@@ -1381,18 +1381,33 @@ class Etalon(Device):
         n = self.layer.mat.n(wls)
         l = self.layer.thickness
 
-        # phase difference between any succeeding reflection
+        # Compute group index ng = Re(n - wl * dn/dwl) for dispersive cavities
+        dw = wls * 1e-7
+        try:
+            dn_dwl = (self.layer.mat.n(wls + dw) - self.layer.mat.n(wls - dw)) / (
+                2.0 * dw
+            )
+        except (KeyError, ValueError):
+            dn_dwl = numpy.gradient(n, wls) if wls.size > 1 else numpy.zeros_like(n)
+        ng = numpy.real(n - wls * dn_dwl)
+
+        # Round-trip complex phase (under exp(+i*w*t - i*k*z), Im(n) <= 0 attenuates exp(-i*delta))
         self.delta = 2 * numpy.pi / wls * 2 * n * l * numpy.cos(self.theta)
         # coefficient of finesse
         self.F = 4.0 * self.R / (1 - self.R) ** 2
-        # transmission function
-        self.Te = 1.0 / (1.0 + self.F * numpy.sin(self.delta / 2.0) ** 2)
+        # Airy power transmission (reduces identically to 1 / (1 + F * sin(delta/2)^2) when Im(n) == 0)
+        if numpy.iscomplexobj(self.delta) and numpy.any(numpy.imag(self.delta) != 0):
+            p = numpy.exp(-0.5j * self.delta)
+            self.Te = numpy.abs((1.0 - self.R) * p / (1.0 - self.R * p**2)) ** 2
+        else:
+            delta_r = numpy.real(self.delta)
+            self.Te = 1.0 / (1.0 + self.F * numpy.sin(delta_r / 2.0) ** 2)
         self.Rmax = 1.0 - 1.0 / (1.0 + self.F)
 
         self.wl0 = numpy.mean(wls)
-        self.FSRwl = self.wl0**2 / (2 * n * l * numpy.cos(self.theta) + self.wl0)
+        self.FSRwl = wls**2 / (2 * ng * l * numpy.cos(self.theta) + wls)
 
-        self.f0, self.FSR = EMpy.utils.wl2f(self.wl0, self.FSRwl)
+        self.f0, self.FSR = EMpy.utils.wl2f(wls, self.FSRwl)
 
         self.FINESSE = numpy.pi / (2 * numpy.arcsin(1.0 / numpy.sqrt(self.F)))
         # self.FINESSE = numpy.pi * numpy.sqrt(self.F) / 2.

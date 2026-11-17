@@ -188,6 +188,85 @@ class EtalonTest(TestCase):
         self.assertEqual(etalon_scalar.Te.shape, (1,))
         self.assertEqual(etalon_scalar.FWHMwl.shape, (1,))
 
+    def test_dispersive_group_index_oblique_angle_and_lossy_limits(self):
+        """Verify Etalon uses group index ng in FSRwl, internal refraction angle theta, and passive lossy limits."""
+        # 1. Dispersive Silicon etalon: peak-to-peak FSR of Te must match group-index FSRwl (ng ~ 3.60 != n ~ 3.48)
+        wls_si = numpy.linspace(1.54e-6, 1.56e-6, 4001)
+        si_layer = EMpy.utils.Layer(EMpy.materials.Si, 50.0e-6)
+        et_si = EMpy.devices.Etalon(si_layer, 0.85, 0.0).solve(wls_si)
+        peaks = sorted(
+            [p.x for p in EMpy.utils.find_peaks(wls_si, et_si.Te) if p.y > 0.99]
+        )
+        self.assertGreaterEqual(len(peaks), 2)
+        p_mid = len(peaks) // 2
+        measured_fsr = peaks[p_mid] - peaks[p_mid - 1]
+        idx_mid = int(
+            numpy.argmin(numpy.abs(wls_si - 0.5 * (peaks[p_mid] + peaks[p_mid - 1])))
+        )
+        self.assertAlmostEqual(
+            et_si.FSRwl[idx_mid], measured_fsr, delta=0.005 * measured_fsr
+        )
+        # Scalar wavelength on dispersive Si must also use ng (~3.60), not phase index (~3.48)
+        et_si_1 = EMpy.devices.Etalon(si_layer, 0.85, 0.0).solve(1.55e-6)
+        self.assertAlmostEqual(
+            float(et_si_1.FSRwl[0]),
+            float(et_si.FSRwl[len(wls_si) // 2]),
+            delta=1e-11,
+        )
+
+        # 2. Oblique internal refraction angle theta_int vs IsotropicTransferMatrix at external angle theta_ext
+        n_slab = 2.4
+        theta_ext = EMpy.utils.deg2rad(35.0)
+        theta_int = float(numpy.arcsin(numpy.sin(theta_ext) / n_slab))
+        r_s = (
+            (numpy.cos(theta_ext) - n_slab * numpy.cos(theta_int))
+            / (numpy.cos(theta_ext) + n_slab * numpy.cos(theta_int))
+        ) ** 2
+        wls = numpy.linspace(1.545e-6, 1.555e-6, 101)
+        slab = EMpy.utils.Layer(
+            EMpy.materials.IsotropicMaterial(
+                "s", n0=EMpy.materials.RefractiveIndex(n0_const=n_slab)
+            ),
+            8.0e-6,
+        )
+        et_obl = EMpy.devices.Etalon(slab, r_s, theta_int).solve(wls)
+        tmm_obl = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(EMpy.materials.Air, numpy.inf),
+                    slab,
+                    EMpy.utils.Layer(EMpy.materials.Air, numpy.inf),
+                ]
+            ),
+            theta_ext,
+        ).solve(wls)
+        numpy.testing.assert_allclose(et_obl.Te, tmm_obl.Ts, rtol=1e-12, atol=1e-13)
+
+        # 3. Passive lossy cavity -> lossless limit (kap = 1e-2, 1e-5, 0.0 + 0j)
+        def _solve_lossy_et(kap, force_complex=False):
+            n_val = complex(n_slab, -kap) if (kap > 0 or force_complex) else n_slab
+            lyr = EMpy.utils.Layer(
+                EMpy.materials.IsotropicMaterial(
+                    "lk", n0=EMpy.materials.RefractiveIndex(n0_const=n_val)
+                ),
+                8.0e-6,
+            )
+            return EMpy.devices.Etalon(lyr, 0.7, theta_int).solve(wls)
+
+        et_ll = _solve_lossy_et(0.0, force_complex=False)
+        et_c0 = _solve_lossy_et(0.0, force_complex=True)
+        self.assertFalse(numpy.iscomplexobj(et_c0.Te))
+        numpy.testing.assert_allclose(et_c0.Te, et_ll.Te, rtol=1e-13, atol=1e-14)
+
+        k_errs = []
+        for kap in (1e-2, 1e-5):
+            et_k = _solve_lossy_et(kap)
+            self.assertFalse(numpy.iscomplexobj(et_k.Te))
+            self.assertTrue(numpy.all((et_k.Te >= 0.0) & (et_k.Te < 1.0)))
+            k_errs.append(float(numpy.max(numpy.abs(et_k.Te - et_ll.Te))))
+        self.assertLess(k_errs[1], k_errs[0])
+        self.assertLess(k_errs[1], 5e-3)
+
 
 class TunableRingTest(TestCase):
 
