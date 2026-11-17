@@ -5,6 +5,7 @@ Constants used in mathematics and electromagnetism.
 @var c: U{Speed of light<http://en.wikipedia.org/wiki/Speed_of_light>} [m/s].
 @var mu0: U{Magnetic Permeability<http://en.wikipedia.org/wiki/Permeability_(electromagnetism)>} [N/A^2].
 @var eps0: U{Electric Permettivity<http://en.wikipedia.org/wiki/Permittivity>} [F/m].
+@var eta0: U{Impedance of free space<http://en.wikipedia.org/wiki/Impedance_of_free_space>} [Ohm].
 @var h: U{Plank's constant<http://en.wikipedia.org/wiki/Plank%27s_constant>} [W s^2].
 @var k: U{Boltzmann's constant<http://en.wikipedia.org/wiki/Boltzmann_constant>} [J/K].
 
@@ -17,6 +18,7 @@ from numpy import pi
 c = 299792458.0
 mu0 = 4 * pi * 1e-7
 eps0 = 1.0 / (c**2 * mu0)
+eta0 = mu0 * c
 
 h = 6.62606896e-34
 h_bar = h / (2 * pi)

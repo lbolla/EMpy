@@ -2258,29 +2258,29 @@ class FDMode(Mode):
         x_Ez_FDTD = x_t[1:-1]
         y_Ez_FDTD = y_t[1:-1]
         Ez_FDTD = EMpy.utils.interp2(x_Ez_FDTD, y_Ez_FDTD, x_Ez, y_Ez, self.Ez)
-        # Hx: ignores x = 0, max, /120pi, reverse direction
+        # Hx: ignores x = 0, max, /eta0, reverse direction
         x_Hx = xr
         y_Hx = yr
         x_Hx_FDTD = x_t[1:-1]
         y_Hx_FDTD = EMpy.utils.centered1d(y_t)
         Hx_FDTD = EMpy.utils.interp2(x_Hx_FDTD, y_Hx_FDTD, x_Hx, y_Hx, self.Hx) / (
-            -120.0 * numpy.pi
+            -EMpy.constants.eta0
         )
-        # Hy: ignores y = 0, max, /120pi, reverse direction
+        # Hy: ignores y = 0, max, /eta0, reverse direction
         x_Hy = xr
         y_Hy = yr
         x_Hy_FDTD = EMpy.utils.centered1d(x_t)
         y_Hy_FDTD = y_t[1:-1]
         Hy_FDTD = EMpy.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x_Hy, y_Hy, self.Hy) / (
-            -120.0 * numpy.pi
+            -EMpy.constants.eta0
         )
-        # Hz: /120pi, reverse direction
+        # Hz: /eta0, reverse direction
         x_Hz = xr
         y_Hz = yr
         x_Hz_FDTD = EMpy.utils.centered1d(x_t)
         y_Hz_FDTD = EMpy.utils.centered1d(y_t)
         Hz_FDTD = EMpy.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x_Hz, y_Hz, self.Hz) / (
-            -120.0 * numpy.pi
+            -EMpy.constants.eta0
         )
 
         return (Ex_FDTD, Ey_FDTD, Ez_FDTD, Hx_FDTD, Hy_FDTD, Hz_FDTD)

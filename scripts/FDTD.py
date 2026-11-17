@@ -712,7 +712,7 @@ def fixdir(str, sep="/"):
 
 
 def overlap_f(sensors, solver, nwl):
-    z0_imp = 120.0 * numpy.pi
+    z0_imp = EMpy.constants.eta0
     sqrt_z0 = numpy.sqrt(z0_imp)
     # Sensor spacings dx1, dx2 are in microns; match solver's spatial units (meters if wl < 1e-3, else microns).
     unit_scale = 1e-6 if float(numpy.real(solver.wl)) < 1e-3 else 1.0

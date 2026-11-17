@@ -53,6 +53,87 @@ class ScatteringTest(unittest.TestCase):
         numpy.testing.assert_array_equal(field_single.E, numpy.zeros((3, 1)))
         numpy.testing.assert_array_equal(field_single.H, numpy.zeros((3, 1)))
 
+    def test_kottler_maxwell_curl_farfield_impedance_and_lossy_limits(self):
+        """Verify Kottler scattering obeys Maxwell's curl equations with exact CODATA eta0 = mu0*c and lossy limits."""
+        import EMpy.constants as C
+
+        self.assertAlmostEqual(C.eta0, numpy.sqrt(C.mu0 / C.eps0), places=12)
+        f = 1.0e9
+        omega = 2.0 * numpy.pi * f
+        epsr = 2.25
+        Q = numpy.array([[0.0], [0.0], [0.0]])
+        J = numpy.array([[0.3 - 0.1j], [-0.2 + 0.4j], [0.7 + 0.2j]])
+        M = numpy.array([[-0.15 + 0.25j], [0.35 - 0.1j], [0.2 - 0.3j]])
+        dS = numpy.array([0.05])
+
+        # 1. Central finite-difference check of Faraday (curl E = -j*w*mu0*H) and Ampere (curl H = +j*w*eps0*epsr*E)
+        p0 = numpy.array([0.42, -0.31, 0.53])
+        h = 1.0e-5
+        pts = [p0]
+        for ax in range(3):
+            dp = numpy.zeros(3)
+            dp[ax] = h
+            pts.append(p0 + dp)
+            pts.append(p0 - dp)
+        P_sten = numpy.column_stack(pts)
+        fld = S.currentsScatteringKottler(P_sten, J, M, Q, dS, f=f, epsr=epsr)
+        E0, H0 = fld.E[:, 0], fld.H[:, 0]
+        dE = [
+            (fld.E[:, 2 * ax + 1] - fld.E[:, 2 * ax + 2]) / (2.0 * h) for ax in range(3)
+        ]
+        dH = [
+            (fld.H[:, 2 * ax + 1] - fld.H[:, 2 * ax + 2]) / (2.0 * h) for ax in range(3)
+        ]
+        curl_E = numpy.array(
+            [dE[1][2] - dE[2][1], dE[2][0] - dE[0][2], dE[0][1] - dE[1][0]]
+        )
+        curl_H = numpy.array(
+            [dH[1][2] - dH[2][1], dH[2][0] - dH[0][2], dH[0][1] - dH[1][0]]
+        )
+        numpy.testing.assert_allclose(
+            curl_E, -1j * omega * C.mu0 * H0, rtol=1e-8, atol=1e-10
+        )
+        numpy.testing.assert_allclose(
+            curl_H, 1j * omega * C.eps0 * epsr * E0, rtol=1e-8, atol=1e-10
+        )
+
+        # 2. Far-field wave impedance |E_far| / |H_far| == eta0 / sqrt(epsr) (not 120*pi / sqrt(epsr))
+        P_far = numpy.array([[0.0], [0.0], [1.0e5]])
+        J_x = numpy.array([[1.0 + 0j], [0.0], [0.0]])
+        M_0 = numpy.zeros_like(J_x)
+        f_far = S.currentsScatteringKottler(P_far, J_x, M_0, Q, dS, f=f, epsr=epsr)
+        z_meas = numpy.linalg.norm(f_far.E[:, 0]) / numpy.linalg.norm(f_far.H[:, 0])
+        self.assertAlmostEqual(
+            float(z_meas), float(C.eta0 / numpy.sqrt(epsr)), delta=1e-7
+        )
+
+        # 3. Passive lossy dielectric epsr = (n_r - 1j * kap)**2: spatial attenuation and kap -> 0+ continuity
+        P_obs = numpy.array([[0.5, 2.5], [0.0, 0.0], [0.0, 0.0]])
+        f_ll = S.currentsScatteringKottler(P_obs, J, M, Q, dS, f=f, epsr=1.5**2)
+        f_c0 = S.currentsScatteringKottler(
+            P_obs, J, M, Q, dS, f=f, epsr=(1.5 - 0.0j) ** 2
+        )
+        numpy.testing.assert_allclose(f_c0.E, f_ll.E, rtol=1e-14, atol=1e-16)
+        numpy.testing.assert_allclose(f_c0.H, f_ll.H, rtol=1e-14, atol=1e-16)
+
+        e_scale = float(numpy.max(numpy.abs(f_ll.E)))
+        kap_errs = []
+        for kap in (1e-2, 1e-5, 1e-8):
+            f_k = S.currentsScatteringKottler(
+                P_obs, J, M, Q, dS, f=f, epsr=(1.5 - 1j * kap) ** 2
+            )
+            # Farther point (r = 2.5 m) must experience stronger attenuation relative to lossless than r = 0.5 m
+            ratio_near = numpy.linalg.norm(f_k.E[:, 0]) / numpy.linalg.norm(
+                f_ll.E[:, 0]
+            )
+            ratio_far = numpy.linalg.norm(f_k.E[:, 1]) / numpy.linalg.norm(f_ll.E[:, 1])
+            self.assertLess(ratio_far, ratio_near)
+            self.assertLess(ratio_near, 1.0)
+            kap_errs.append(float(numpy.max(numpy.abs(f_k.E - f_ll.E))) / e_scale)
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[2], kap_errs[1])
+        self.assertLess(kap_errs[2], 1e-6)
+
 
 if __name__ == "__main__":
     unittest.main()

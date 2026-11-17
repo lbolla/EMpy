@@ -177,7 +177,7 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
     lambdam = lambda0 / numpy.sqrt(epsr)
     # k0 = 2*numpy.pi/lambda0
     km = 2 * numpy.pi / lambdam
-    Z0 = 120 * numpy.pi
+    Z0 = EMpy.constants.eta0
     NbP = numpy.size(P, axis=1)
 
     # preallocation

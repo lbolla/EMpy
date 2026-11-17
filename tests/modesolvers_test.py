@@ -346,7 +346,7 @@ class VFDModeSolverTest(TestCase):
         FDTD_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(FDTD_mod)
 
-        z0_imp = 120.0 * numpy.pi
+        z0_imp = EMpy.constants.eta0
         sqrt_z0 = numpy.sqrt(z0_imp)
 
         def _make_sensor(
