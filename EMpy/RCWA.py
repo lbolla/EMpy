@@ -265,9 +265,10 @@ class IsotropicRCWA(RCWA):
             kx = k1i[0, :]
             ky = k1[1]
 
-            # angles of reflection
-            # phi_i = np.arctan2(ky,kx)
-            phi_i = np.arctan2(ky, kx.real)  # OKKIO
+            # Azimuthal plane-of-diffraction angles; at normal diffraction (kx == ky == 0,
+            # e.g. m = 0 at normal incidence alpha = 0), preserve delta for continuity as alpha -> 0+.
+            zero_kt = (np.abs(kx.real) <= 1e-15 * k) & (abs(ky.real) <= 1e-15 * k)
+            phi_i = np.where(zero_kt, delta, np.arctan2(ky.real, kx.real))
 
             Kx = np.diag(kx / k)
             Ky = ky / k * I
