@@ -13,7 +13,10 @@ def S2T(S):
     s12 = S[:dim, dim:]
     s21 = S[dim:, :dim]
     T = numpy.zeros_like(S)
-    s12_1 = numpy.linalg.inv(s12)
+    try:
+        s12_1 = numpy.linalg.inv(s12)
+    except numpy.linalg.LinAlgError:
+        s12_1 = numpy.linalg.pinv(s12)
     T[:dim, :dim] = s21 - numpy.dot(numpy.dot(s22, s12_1), s11)
     T[dim:, dim:] = s12_1
     T[:dim, dim:] = numpy.dot(s22, s12_1)
@@ -119,54 +122,36 @@ class SimpleJoint:
         self.outputRHS = output[self.solver1.nmodes :]
 
     def build_matrix(self):
+        """Symmetric vector mode-matching S-matrix at a zero-length waveguide junction.
+
+        Matching transverse E_t = sum (a + b) E_m and H_t = sum (+-a -+ b) H_m across z = 0
+        and projecting against the modes of each side using O_pq = 0.5 * int (E_p x H_q^*)_z:
+          Side 1: O11^T (a1 + b1) = O21^T (b2 + a2),  O11^* (a1 - b1) = O12^* (b2 - a2)
+          Side 2: O22^T (b2 + a2) = O12^T (a1 + b1),  O22^* (b2 - a2) = O21^* (a1 - b1)
+        Eliminating incoming/outgoing combinations yields the passive, reciprocal coupled
+        system [I, -R12; -R21, I] [b1; b2] = [0, T12; T21, 0] [a1; a2], which reproduces
+        exact Fresnel reflection/transmission in the homogeneous limit (including lossy media)
+        and accounts for radiation loss under basis truncation without unphysical gain.
+        """
         O11, O22, O12, O21 = interface_matrix(self.solver1, self.solver2)
-        neffA = numpy.array([m.neff for m in self.solver1.modes])
-        neffB = numpy.array([m.neff for m in self.solver2.modes])
-        betaA = 2 * numpy.pi / self.solver1.wl * neffA
-        betaB = 2 * numpy.pi / self.solver1.wl * neffB
-
-        BetaA = numpy.diag(betaA)
-        BetaB = numpy.diag(betaB)
-
-        #        MRA1 = numpy.dot(O12, BetaA + BetaB)
-        #        MRA2 = numpy.dot(O12, BetaA - BetaB)
-        #        MRA = numpy.dot(numpy.linalg.inv(MRA1), MRA2)
-        #        S11 = MRA
-        #
-        #        MRB1 = numpy.dot(O21, BetaA + BetaB)
-        #        MRB2 = numpy.dot(O21, BetaB - BetaA)
-        #        MRB = numpy.dot(numpy.linalg.inv(MRB1), MRB2)
-        #        S22 = MRB
-        #
-        #        MTAB1 = numpy.dot(O22, BetaA + BetaB)
-        #        MTAB2 = numpy.dot(O12, 2. * BetaA)
-        #        MTAB = numpy.dot(numpy.linalg.inv(MTAB1), MTAB2)
-        #        S12 = MTAB
-        #
-        #        MTBA1 = numpy.dot(O11, BetaA + BetaB)
-        #        MTBA2 = numpy.dot(O21, 2. * BetaB)
-        #        MTBA = numpy.dot(numpy.linalg.inv(MTBA1), MTBA2)
-        #        S21 = MTBA
-
-        SUM = numpy.dot(BetaA, O21) + numpy.dot(O21, BetaB)
-        DIF = numpy.dot(BetaA, O21) - numpy.dot(O21, BetaB)
-        A = 0.5 * numpy.dot(numpy.linalg.inv(BetaA), SUM)
-        B = 0.5 * numpy.dot(numpy.linalg.inv(BetaA), DIF)
-        A_1 = numpy.linalg.inv(A)
-        S11 = numpy.dot(B, A_1)
-        S12 = A - numpy.dot(numpy.dot(B, A_1), B)
-        S21 = A_1
-        S22 = -numpy.dot(A_1, B)
-
         dim = O11.shape[0]
 
-        S = numpy.zeros((2 * dim, 2 * dim), dtype=complex)
-        S[:dim, :dim] = S11
-        S[dim:, dim:] = S22
-        S[:dim, dim:] = S12
-        S[dim:, :dim] = S21
+        E1_from_2 = numpy.linalg.solve(O11.T, O21.T)
+        H1_from_2 = numpy.linalg.solve(O11.conj(), O12.conj())
+        E2_from_1 = numpy.linalg.solve(O22.T, O12.T)
+        H2_from_1 = numpy.linalg.solve(O22.conj(), O21.conj())
 
-        self.S = S
+        R12 = 0.5 * (E1_from_2 - H1_from_2)
+        T12 = 0.5 * (E1_from_2 + H1_from_2)
+        T21 = 0.5 * (E2_from_1 + H2_from_1)
+        R21 = 0.5 * (E2_from_1 - H2_from_1)
+
+        ident = numpy.eye(dim, dtype=complex)
+        zeros = numpy.zeros((dim, dim), dtype=complex)
+        lhs = numpy.block([[ident, -R12], [-R21, ident]])
+        rhs = numpy.block([[zeros, T12], [T21, zeros]])
+
+        self.S = numpy.linalg.solve(lhs, rhs)
         self.T = S2T(self.S)
 
     def plot(self, sumx=1, nxy=100, nz=100, z0=0):

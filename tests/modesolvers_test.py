@@ -459,3 +459,147 @@ class GeometriesTest(TestCase):
         gd = EMpy.modesolvers.geometries.GenericDevice([d1, d2])
         numpy.testing.assert_allclose(gd.T, numpy.eye(4, dtype=complex))
         numpy.testing.assert_allclose(gd.outputRHS, numpy.array([1.0, 0.0]))
+
+    def test_simple_joint_exact_fresnel_te10_lossless_and_lossy(self):
+        """Verify SimpleJoint reproduces exact complex TE10 reflection/transmission to ~1e-14."""
+        wl = 1.55e-6
+        x = numpy.linspace(0.0, 2.0e-6, 31)
+        y = numpy.linspace(0.0, 1.3e-6, 21)
+
+        for n1, n2 in [(1.5, 2.4), (1.5, 2.4 - 0.5j), (2.1 - 0.1j, 1.4 - 0.3j)]:
+            s1 = EMpy.modesolvers.FD.VFDModeSolver(
+                wl,
+                x,
+                y,
+                lambda x_, y_, n=n1: numpy.full((len(x_), len(y_)), n**2),
+                "SSAA",
+            ).solve(1, 1e-12)
+            s2 = EMpy.modesolvers.FD.VFDModeSolver(
+                wl,
+                x,
+                y,
+                lambda x_, y_, n=n2: numpy.full((len(x_), len(y_)), n**2),
+                "SSAA",
+            ).solve(1, 1e-12)
+            sj = EMpy.modesolvers.geometries.SimpleJoint(s1, s2)
+            ne1, ne2 = s1.modes[0].neff, s2.modes[0].neff
+            r_exact = (ne1 - ne2) / (ne1 + ne2)
+            numpy.testing.assert_allclose(sj.S[0, 0], r_exact, rtol=1e-12, atol=1e-13)
+            numpy.testing.assert_allclose(sj.S[1, 1], -r_exact, rtol=1e-12, atol=1e-13)
+            if numpy.isreal(n1) and numpy.isreal(n2):
+                t_exact = 2.0 * numpy.sqrt(ne1 * ne2) / (ne1 + ne2)
+                numpy.testing.assert_allclose(
+                    abs(sj.S[1, 0]), abs(t_exact), rtol=1e-12, atol=1e-13
+                )
+                numpy.testing.assert_allclose(
+                    sj.S.conj().T @ sj.S, numpy.eye(2), atol=1e-13
+                )
+
+    def test_simple_joint_passivity_reciprocity_and_degenerate_limits(self):
+        """Verify SimpleJoint passivity, reciprocity, swap symmetry, and aniso/lossy -> iso/lossless limits."""
+        wl = 1.55e-6
+        xg = numpy.linspace(0.0, 3.0e-6, 41)
+        yg = numpy.linspace(0.0, 2.0e-6, 31)
+
+        def _eps_iso(w, kap=0.0):
+            def _f(x_, y_):
+                nc = complex(3.45, -kap) if kap > 0 else 3.45
+                ncl = complex(1.45, -0.2 * kap) if kap > 0 else 1.45
+                return numpy.where(
+                    (numpy.abs(x_[:, None] - 1.5e-6) <= w / 2.0)
+                    & (numpy.abs(y_[None, :] - 1.0e-6) <= 0.11e-6),
+                    nc**2,
+                    ncl**2,
+                )
+
+            return _f
+
+        def _eps_aniso(w, dn=0.0, phi_deg=33.0):
+            ph = EMpy.utils.deg2rad(phi_deg)
+
+            def _f(x_, y_):
+                core = (numpy.abs(x_[:, None] - 1.5e-6) <= w / 2.0) & (
+                    numpy.abs(y_[None, :] - 1.0e-6) <= 0.11e-6
+                )
+                nO = numpy.where(core, 3.45, 1.45)
+                nE = numpy.where(core, 3.45 + dn, 1.45 + dn)
+                exx = nE**2 * numpy.cos(ph) ** 2 + nO**2 * numpy.sin(ph) ** 2
+                eyy = nE**2 * numpy.sin(ph) ** 2 + nO**2 * numpy.cos(ph) ** 2
+                exy = (nE**2 - nO**2) * numpy.sin(ph) * numpy.cos(ph)
+                ezz = nO**2
+                return numpy.stack([exx, exy, exy, eyy, ezz], axis=-1)
+
+            return _f
+
+        sn = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_iso(0.4e-6), "0000"
+        ).solve(1, 1e-10)
+        sw = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_iso(1.6e-6), "0000"
+        ).solve(1, 1e-10)
+
+        # Identical waveguide butt-joint must have zero reflection and unit transmission
+        sj_same = EMpy.modesolvers.geometries.SimpleJoint(sn, sn)
+        numpy.testing.assert_allclose(
+            numpy.abs(sj_same.S), numpy.array([[0.0, 1.0], [1.0, 0.0]]), atol=1e-12
+        )
+
+        # Step discontinuity: strict passivity (||S||_2 < 1 due to radiation loss), reciprocity, swap symmetry
+        sj_nw = EMpy.modesolvers.geometries.SimpleJoint(sn, sw)
+        sj_wn = EMpy.modesolvers.geometries.SimpleJoint(sw, sn)
+        sv_nw = numpy.linalg.svd(sj_nw.S, compute_uv=False)
+        self.assertTrue(numpy.all(sv_nw < 1.0))
+        self.assertLess(abs(sj_nw.S[0, 0]) ** 2 + abs(sj_nw.S[1, 0]) ** 2, 1.0)
+        self.assertLess(abs(sj_nw.S[1, 1]) ** 2 + abs(sj_nw.S[0, 1]) ** 2, 1.0)
+        self.assertAlmostEqual(abs(sj_nw.S[0, 1]), abs(sj_nw.S[1, 0]), places=12)
+        numpy.testing.assert_allclose(
+            numpy.abs(sj_nw.S),
+            numpy.abs(sj_wn.S[[1, 0], :][:, [1, 0]]),
+            atol=1e-12,
+        )
+
+        # Multi-mode junction with decoupled symmetry modes must remain passive and non-singular
+        sn2 = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_iso(0.4e-6), "0000"
+        ).solve(2, 1e-10)
+        sw2 = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_iso(1.6e-6), "0000"
+        ).solve(2, 1e-10)
+        sj2 = EMpy.modesolvers.geometries.SimpleJoint(sn2, sw2)
+        self.assertTrue(numpy.all(numpy.linalg.svd(sj2.S, compute_uv=False) <= 1.0))
+
+        # Anisotropic 5-component rotated tensor -> isotropic limit (dn = 1e-4, 1e-8, 0)
+        aniso_errs = []
+        for dn in [1e-4, 1e-8, 0.0]:
+            sna = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xg, yg, _eps_aniso(0.4e-6, dn), "0000"
+            ).solve(1, 1e-10)
+            swa = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xg, yg, _eps_aniso(1.6e-6, dn), "0000"
+            ).solve(1, 1e-10)
+            sja = EMpy.modesolvers.geometries.SimpleJoint(sna, swa)
+            self.assertTrue(numpy.all(numpy.linalg.svd(sja.S, compute_uv=False) <= 1.0))
+            self.assertAlmostEqual(abs(sja.S[0, 1]), abs(sja.S[1, 0]), places=11)
+            aniso_errs.append(
+                float(numpy.max(numpy.abs(numpy.abs(sja.S) - numpy.abs(sj_nw.S))))
+            )
+        self.assertLess(aniso_errs[1], aniso_errs[0])
+        self.assertLess(aniso_errs[2], 1e-10)
+
+        # Lossy -> non-lossy limit (kappa = 1e-2, 1e-5, 0.0+0j -> lossless)
+        lossy_errs = []
+        for kap in [1e-2, 1e-5, 0.0]:
+            snk = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xg, yg, _eps_iso(0.4e-6, kap), "0000"
+            ).solve(1, 1e-10)
+            swk = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xg, yg, _eps_iso(1.6e-6, kap), "0000"
+            ).solve(1, 1e-10)
+            sjk = EMpy.modesolvers.geometries.SimpleJoint(snk, swk)
+            self.assertTrue(numpy.all(numpy.linalg.svd(sjk.S, compute_uv=False) <= 1.0))
+            self.assertAlmostEqual(abs(sjk.S[0, 1]), abs(sjk.S[1, 0]), delta=1e-5)
+            lossy_errs.append(
+                float(numpy.max(numpy.abs(numpy.abs(sjk.S) - numpy.abs(sj_nw.S))))
+            )
+        self.assertLess(lossy_errs[1], lossy_errs[0])
+        self.assertLess(lossy_errs[2], 1e-10)
