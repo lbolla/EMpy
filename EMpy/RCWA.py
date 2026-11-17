@@ -7,9 +7,9 @@ JOSA A, 7(8), 1990, permits to find the diffraction efficiencies
 multilayer.
 The multilayer can be made of isotropic or anisotropic layers and
 binary gratings.
-Two versions of the algorithm are present: an isotropic one, stable
-for every diffraction order and layer thickness, and an anisotropic
-one, only stable for low diffraction orders and thin layers.
+Two versions of the algorithm are present: an isotropic one and an
+anisotropic one, both stabilized via Moharam's Enhanced Transmittance
+Matrix recursion for arbitrary diffraction orders and layer thicknesses.
 
 """
 
@@ -535,8 +535,7 @@ class AnisotropicRCWA(RCWA):
         kO3i = np.zeros_like(kO1i)
         kE3i = np.zeros_like(kO1i)
 
-        Mp = np.zeros((4 * nood, 4 * nood, nlayers), dtype=complex)
-        M = np.zeros((4 * nood, 4 * nood, nlayers), dtype=complex)
+        step_T = np.zeros((2 * nood, 2 * nood, nlayers), dtype=complex)
 
         dlt = (i == 0).astype(int)
 
@@ -722,8 +721,47 @@ class AnisotropicRCWA(RCWA):
                 )
             )
 
-            Mp.fill(0.0)
-            M.fill(0.0)
+            # Reduced 2N-column eigenmode bases B1, B3 enforcing Glytsis eqs. (46)-(49)
+            # identically for c1 = c3 = [1, 0, 0] (ROx = 0, TOx = 0, and extraordinary
+            # orthogonality in regions 1 and 3), enabling Moharam's 4N x 2N Enhanced
+            # Transmittance Matrix recursion without inverting decaying exponentials.
+            q1_r = np.diag(DRE - np.dot(np.dot(FRE, CRE_1), ARE))
+            p1 = np.diag(ERE - np.dot(np.dot(FRE, CRE_1), BRE))
+            nrm1 = np.hypot(np.abs(p1), np.abs(q1_r))
+            zero1 = nrm1 == 0
+            p1 = np.where(zero1, 1.0, p1)
+            nrm1 = np.where(zero1, 1.0, nrm1)
+            B1 = np.asarray(
+                np.bmat(
+                    [
+                        [ZERO, ZERO],
+                        [I, ZERO],
+                        [ZERO, np.diag(p1 / nrm1)],
+                        [ZERO, np.diag(-q1_r / nrm1)],
+                    ]
+                )
+            )
+
+            q3_t = np.diag(DTE - np.dot(np.dot(FTE, CTE_1), ATE))
+            p3 = np.diag(ETE - np.dot(np.dot(FTE, CTE_1), BTE))
+            nrm3 = np.hypot(np.abs(p3), np.abs(q3_t))
+            zero3 = nrm3 == 0
+            p3 = np.where(zero3, 1.0, p3)
+            nrm3 = np.where(zero3, 1.0, nrm3)
+            B3 = np.asarray(
+                np.bmat(
+                    [
+                        [ZERO, ZERO],
+                        [I, ZERO],
+                        [ZERO, np.diag(p3 / nrm3)],
+                        [ZERO, np.diag(-q3_t / nrm3)],
+                    ]
+                )
+            )
+
+            MR_red = np.dot(MR, B1)
+            MT_curr = np.dot(MT, B3)
+            step_T.fill(0.0)
 
             def _li_transform(eps):
                 inv_exx = 1.0 / eps[0, 0]
@@ -844,100 +882,66 @@ class AnisotropicRCWA(RCWA):
 
                 q, W = eig(H)
                 W1, W2, W3, W4 = np.split(W, 4)
+                W_full = np.r_[W2, W1, -1j * W4, -1j * W3]
 
-                #
-                # boundary conditions
-                #
-                # x = [R T]
-                # R = [ROx ROy REx REy]
-                # T = [TOx TOy TEx TEy]
-                # b + MR.R = M1p.c
-                # M1.c = M2p.c
-                # ...
-                # ML.c = MT.T
-                # therefore: b + MR.R = (M1p.M1^-1.M2p.M2^-1. ...).MT.T
-                # missing equations from (46)..(49) in glytsis_rigorous
-                # [b] = [-MR Mtot.MT] [R]
-                # [0]   [...........] [T]
-
-                z = np.zeros_like(q)
-                z[np.where(q.real > 0)] = -thickness
-                D = np.exp(k * q * z)
-                Sy0 = W1 * D[np.newaxis, :]
-                Sx0 = W2 * D[np.newaxis, :]
-                Uy0 = W3 * D[np.newaxis, :]
-                Ux0 = W4 * D[np.newaxis, :]
-
-                z = thickness * np.ones_like(q)
-                z[np.where(q.real > 0)] = 0
-                D = np.exp(k * q * z)
-                D1 = np.exp(-1j * k2i[2, :] * thickness)
-                Syd = D1[:, np.newaxis] * W1 * D[np.newaxis, :]
-                Sxd = D1[:, np.newaxis] * W2 * D[np.newaxis, :]
-                Uyd = D1[:, np.newaxis] * W3 * D[np.newaxis, :]
-                Uxd = D1[:, np.newaxis] * W4 * D[np.newaxis, :]
-
-                Mp[:, :, nlayer] = np.r_[Sx0, Sy0, -1j * Ux0, -1j * Uy0]
-                M[:, :, nlayer] = np.r_[Sxd, Syd, -1j * Uxd, -1j * Uyd]
-
-            Mtot = np.eye(4 * nood, dtype=complex)
-            for nlayer in range(1, nlayers - 1):
-                Mtot = np.dot(np.dot(Mtot, Mp[:, :, nlayer]), inv(M[:, :, nlayer]))
-
-            BC_b = np.r_[b, np.zeros_like(b)]
-            BC_A1 = np.c_[-MR, np.dot(Mtot, MT)]
-            BC_A2 = np.asarray(
-                np.bmat(
-                    [
-                        [
-                            (c1[0] * I - c1[2] * np.dot(CRO_1, ARO)),
-                            (c1[1] * I - c1[2] * np.dot(CRO_1, BRO)),
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                        ],
-                        [
-                            ZERO,
-                            ZERO,
-                            (DRE - np.dot(np.dot(FRE, CRE_1), ARE)),
-                            (ERE - np.dot(np.dot(FRE, CRE_1), BRE)),
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                        ],
-                        [
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            (c3[0] * I - c3[2] * np.dot(CTO_1, ATO)),
-                            (c3[1] * I - c3[2] * np.dot(CTO_1, BTO)),
-                            ZERO,
-                            ZERO,
-                        ],
-                        [
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            ZERO,
-                            (DTE - np.dot(np.dot(FTE, CTE_1), ATE)),
-                            (ETE - np.dot(np.dot(FTE, CTE_1), BTE)),
-                        ],
-                    ]
+                # Partition the 4N layer eigenmodes into 2N forward (+z decaying or +z
+                # power-carrying) and 2N backward (-z decaying or -z power-carrying) modes
+                # so both exp(+k * q_f * d) and exp(-k * q_b * d) remain bounded (<= 1).
+                re_tol = 1e-10 * max(1.0, float(np.max(np.abs(q))))
+                sz = np.sum(
+                    np.real(
+                        W_full[0:nood, :] * np.conj(W_full[3 * nood : 4 * nood, :])
+                        - W_full[nood : 2 * nood, :]
+                        * np.conj(W_full[2 * nood : 3 * nood, :])
+                    ),
+                    axis=0,
                 )
-            )
+                w_norm2 = np.sum(np.abs(W_full) ** 2, axis=0)
 
-            BC_A = np.r_[BC_A1, BC_A2]
+                def _mode_sort_key(idx):
+                    qr = float(q[idx].real)
+                    qi = float(q[idx].imag)
+                    if qr < -re_tol:
+                        cat = 2
+                    elif qr > re_tol:
+                        cat = -2
+                    else:
+                        sz_rel = float(sz[idx]) / max(float(w_norm2[idx]), 1e-30)
+                        if sz_rel > 1e-10:
+                            cat = 1
+                        elif sz_rel < -1e-10:
+                            cat = -1
+                        else:
+                            cat = 0
+                    return (cat, -qi, -qr)
 
-            x = linsolve(BC_A, BC_b)
+                order = sorted(range(4 * nood), key=_mode_sort_key, reverse=True)
+                q_f = q[order[: 2 * nood]]
+                q_b = q[order[2 * nood :]]
+                W_ord = W_full[:, order]
+                W_f = W_ord[:, : 2 * nood]
+                W_b = W_ord[:, 2 * nood :]
 
-            ROx, ROy, REx, REy, TOx, TOy, TEx, TEy = np.split(x, 8)
+                x_f = np.exp(k * q_f * thickness)
+                x_b = np.exp(-k * q_b * thickness)
+                D1_inv_4 = np.tile(np.exp(1j * k2i[2, :] * thickness), 4)
+
+                MTp = linsolve(W_ord, D1_inv_4[:, np.newaxis] * MT_curr)
+                MTp1 = MTp[: 2 * nood, :]
+                MTp2 = MTp[2 * nood :, :]
+                step_T[:, :, nlayer] = linsolve(MTp1, np.diag(x_f))
+                MT_curr = W_f + np.dot(
+                    W_b * x_b[np.newaxis, :], np.dot(MTp2, step_T[:, :, nlayer])
+                )
+
+            sol = linsolve(np.c_[-MR_red, MT_curr], b)
+            r_red = sol[: 2 * nood]
+            t_curr = sol[2 * nood :]
+            for nlayer in range(1, nlayers - 1):
+                t_curr = np.dot(step_T[:, :, nlayer], t_curr)
+
+            ROx, ROy, REx, REy = np.split(np.dot(B1, r_red), 4)
+            TOx, TOy, TEx, TEy = np.split(np.dot(B3, t_curr), 4)
 
             ROz = -np.dot(CRO_1, (np.dot(ARO, ROx) + np.dot(BRO, ROy)))
             REz = -np.dot(CRE_1, (np.dot(ARE, REx) + np.dot(BRE, REy)))

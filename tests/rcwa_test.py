@@ -793,3 +793,279 @@ class IsotropicRCWATest(TestCase):
             )
         self.assertLess(sup_errs[1], sup_errs[0])
         self.assertLess(sup_errs[2], 1e-14)
+
+    def test_anisotropic_rcwa_thick_high_order_etm_stability_and_limits(self):
+        """Verify Enhanced Transmittance Matrix stability on thick high-order gratings and degenerate limits."""
+        wl = 1.55e-6
+        pitch = 1.0e-6
+        eps0 = EMpy.constants.eps0
+        alpha = EMpy.utils.deg2rad(18.0)
+        delta = EMpy.utils.deg2rad(27.0)
+        psi = EMpy.utils.deg2rad(38.0)
+
+        # 1. Strongly birefringent 3D-Euler-rotated thick cascaded grating stack with birefringent end layers:
+        # exp(-2 * pi * 12 * 3.0 / 1.0) ~ 1e-98 would completely overflow naive M^-1 transfer matrices.
+        sup_bi = EMpy.materials.AnisotropicMaterial(
+            "sup_bi",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * np.diag([1.62**2, 1.48**2, 1.48**2])
+            ),
+        )
+        sub_bi = EMpy.materials.AnisotropicMaterial(
+            "sub_bi",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * np.diag([1.75**2, 1.52**2, 1.52**2])
+            ),
+        )
+        lc1 = EMpy.materials.AnisotropicMaterial(
+            "lc1",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0
+                * EMpy.utils.euler_rotate(
+                    np.diag([1.52**2, 1.65**2, 1.88**2]), 0.35, 0.55, 0.75
+                )
+            ),
+        )
+        lc2 = EMpy.materials.AnisotropicMaterial(
+            "lc2",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0
+                * EMpy.utils.euler_rotate(
+                    np.diag([2.10**2, 1.80**2, 1.60**2]), -0.4, 0.65, 0.25
+                )
+            ),
+        )
+        sio2_a = EMpy.materials.AnisotropicMaterial(
+            "sio2_a",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * 1.45**2 * np.eye(3)
+            ),
+        )
+        ml_thick_bi = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(sup_bi, np.inf),
+                EMpy.utils.BinaryGrating(lc1, sio2_a, 0.43, pitch, 2.0e-6),
+                EMpy.utils.Layer(lc2, 1.5e-6),
+                EMpy.utils.BinaryGrating(lc2, lc1, 0.58, pitch, 3.0e-6),
+                EMpy.utils.Layer(sub_bi, np.inf),
+            ]
+        )
+        de0_by_n = {}
+        for n_ord in (4, 8, 12, 16):
+            res_n = EMpy.RCWA.AnisotropicRCWA(
+                ml_thick_bi, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=n_ord
+            ).solve([wl])
+            total_power = float(
+                (res_n.DEO1 + res_n.DEE1 + res_n.DEO3 + res_n.DEE3).sum()
+            )
+            self.assertAlmostEqual(total_power, 1.0, places=12)
+            de0_by_n[n_ord] = np.array(
+                [
+                    res_n.DEO1[n_ord, 0],
+                    res_n.DEE1[n_ord, 0],
+                    res_n.DEO3[n_ord, 0],
+                    res_n.DEE3[n_ord, 0],
+                ]
+            )
+        self.assertLess(
+            float(np.max(np.abs(de0_by_n[16] - de0_by_n[12]))),
+            float(np.max(np.abs(de0_by_n[8] - de0_by_n[4]))),
+        )
+
+        # 2. Homogeneous thick crystal limit (d = 25 um, n = 10): AniRCWA == AnisotropicTransferMatrix
+        air_a = EMpy.materials.AnisotropicMaterial(
+            "air_a",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * np.eye(3)
+            ),
+        )
+        ml_hom_rcwa = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air_a, np.inf),
+                EMpy.utils.BinaryGrating(lc1, lc1, 0.5, pitch, 25.0e-6),
+                EMpy.utils.Layer(sio2_a, np.inf),
+            ]
+        )
+        ml_hom_tmm = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air_a, np.inf),
+                EMpy.utils.Layer(lc1, 25.0e-6),
+                EMpy.utils.Layer(sio2_a, np.inf),
+            ]
+        )
+        r_hom = EMpy.RCWA.AnisotropicRCWA(
+            ml_hom_rcwa, alpha=alpha, delta=0.0, psi=0.0, phi=np.pi / 2, n=10
+        ).solve([wl])
+        tmm_hom = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            ml_hom_tmm, alpha, 0.0
+        ).solve([wl])
+        self.assertAlmostEqual(
+            float(r_hom.DEO1[10, 0] + r_hom.DEE1[10, 0]),
+            float(tmm_hom.R[1, :, 0].sum()),
+            places=12,
+        )
+        self.assertAlmostEqual(
+            float(r_hom.DEO3[10, 0] + r_hom.DEE3[10, 0]),
+            float(tmm_hom.T[1, :, 0].sum()),
+            places=12,
+        )
+
+        # 3. Degenerate anisotropic -> isotropic limit (dn -> 0 with 3D Euler rotation) at n = 12, d = 2.0 + 2.5 um
+        air_i = EMpy.materials.Air
+        si_i = EMpy.materials.IsotropicMaterial(
+            "si_i", n0=EMpy.materials.RefractiveIndex(n0_const=2.45)
+        )
+        sio2_i = EMpy.materials.IsotropicMaterial(
+            "sio2_i", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+        sin_i = EMpy.materials.IsotropicMaterial(
+            "sin_i", n0=EMpy.materials.RefractiveIndex(n0_const=1.98)
+        )
+        ml_iso = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air_i, np.inf),
+                EMpy.utils.BinaryGrating(si_i, sio2_i, 0.4, pitch, 2.0e-6),
+                EMpy.utils.BinaryGrating(sin_i, sio2_i, 0.6, pitch, 2.5e-6),
+                EMpy.utils.Layer(sio2_i, np.inf),
+            ]
+        )
+        for al_test in (alpha, 0.0):
+            r_iso = EMpy.RCWA.IsotropicRCWA(
+                ml_iso, alpha=al_test, delta=delta, psi=psi, phi=np.pi / 2, n=12
+            ).solve([wl])
+            self.assertAlmostEqual(float((r_iso.DE1 + r_iso.DE3).sum()), 1.0, places=12)
+
+            dn_errs = []
+            for dn in (1e-4, 1e-8, 0.0):
+                si_a = EMpy.materials.AnisotropicMaterial(
+                    "si_a",
+                    epsilon_tensor=EMpy.materials.EpsilonTensor(
+                        epsilon_tensor_const=eps0
+                        * EMpy.utils.euler_rotate(
+                            np.diag(
+                                [2.45**2, (2.45 + 0.5 * dn) ** 2, (2.45 + dn) ** 2]
+                            ),
+                            0.3,
+                            0.5,
+                            0.7,
+                        )
+                    ),
+                )
+                sin_a = EMpy.materials.AnisotropicMaterial(
+                    "sin_a",
+                    epsilon_tensor=EMpy.materials.EpsilonTensor(
+                        epsilon_tensor_const=eps0
+                        * EMpy.utils.euler_rotate(
+                            np.diag(
+                                [1.98**2, (1.98 - 0.5 * dn) ** 2, (1.98 - dn) ** 2]
+                            ),
+                            -0.25,
+                            0.45,
+                            0.65,
+                        )
+                    ),
+                )
+                ml_ani_dn = EMpy.utils.Multilayer(
+                    [
+                        EMpy.utils.Layer(air_a, np.inf),
+                        EMpy.utils.BinaryGrating(si_a, sio2_a, 0.4, pitch, 2.0e-6),
+                        EMpy.utils.BinaryGrating(sin_a, sio2_a, 0.6, pitch, 2.5e-6),
+                        EMpy.utils.Layer(sio2_a, np.inf),
+                    ]
+                )
+                r_ani_dn = EMpy.RCWA.AnisotropicRCWA(
+                    ml_ani_dn,
+                    alpha=al_test,
+                    delta=delta,
+                    psi=psi,
+                    phi=np.pi / 2,
+                    n=12,
+                ).solve([wl])
+                dn_errs.append(
+                    float(
+                        np.max(
+                            np.abs((r_ani_dn.DEO1 + r_ani_dn.DEE1) - r_iso.DE1)
+                            + np.abs((r_ani_dn.DEO3 + r_ani_dn.DEE3) - r_iso.DE3)
+                        )
+                    )
+                )
+            self.assertLess(dn_errs[1], dn_errs[0])
+            self.assertLess(dn_errs[2], 1e-12)
+
+        # 4. Passive lossy thick high-order anisotropic grating (n = 12, d = 2.5 um):
+        # verify kap -> 0+ limit, complex 0j continuity, strict passivity, and lossy Ani == lossy Iso at dn = 0.
+        def _solve_lossy_thick_ani(kap, force_complex=False, dn=0.22):
+            if kap > 0 or force_complex:
+                no = complex(2.1, -kap)
+                ne = complex(2.1 + dn, -(1.0 + dn) * kap)
+            else:
+                no = 2.1
+                ne = 2.1 + dn
+            mat_l = EMpy.materials.AnisotropicMaterial(
+                "mat_l",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps0
+                    * EMpy.utils.euler_rotate(
+                        np.diag([no**2, no**2, ne**2]), 0.33, 0.51, 0.68
+                    )
+                ),
+            )
+            ml_l = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(air_a, np.inf),
+                    EMpy.utils.BinaryGrating(mat_l, sio2_a, 0.45, pitch, 2.5e-6),
+                    EMpy.utils.Layer(sio2_a, np.inf),
+                ]
+            )
+            return EMpy.RCWA.AnisotropicRCWA(
+                ml_l, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=12
+            ).solve([wl])
+
+        r_ll = _solve_lossy_thick_ani(0.0, force_complex=False)
+        r_c0 = _solve_lossy_thick_ani(0.0, force_complex=True)
+        self.assertAlmostEqual(
+            float((r_ll.DEO1 + r_ll.DEE1 + r_ll.DEO3 + r_ll.DEE3).sum()),
+            1.0,
+            places=12,
+        )
+        np.testing.assert_allclose(
+            r_c0.DEO1 + r_c0.DEE1, r_ll.DEO1 + r_ll.DEE1, atol=1e-13
+        )
+        np.testing.assert_allclose(
+            r_c0.DEO3 + r_c0.DEE3, r_ll.DEO3 + r_ll.DEE3, atol=1e-13
+        )
+
+        kap_errs = []
+        for kap in (1e-2, 1e-5):
+            rk = _solve_lossy_thick_ani(kap)
+            self.assertLess(float((rk.DEO1 + rk.DEE1 + rk.DEO3 + rk.DEE3).sum()), 1.0)
+            kap_errs.append(
+                float(np.max(np.abs((rk.DEO3 + rk.DEE3) - (r_ll.DEO3 + r_ll.DEE3))))
+            )
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[1], 5e-4)
+
+        r_lani_iso = _solve_lossy_thick_ani(0.25, dn=0.0)
+        mat_li = EMpy.materials.IsotropicMaterial(
+            "mat_li", n0=EMpy.materials.RefractiveIndex(n0_const=2.1 - 0.25j)
+        )
+        r_liso = EMpy.RCWA.IsotropicRCWA(
+            EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(air_i, np.inf),
+                    EMpy.utils.BinaryGrating(mat_li, sio2_i, 0.45, pitch, 2.5e-6),
+                    EMpy.utils.Layer(sio2_i, np.inf),
+                ]
+            ),
+            alpha=alpha,
+            delta=delta,
+            psi=psi,
+            phi=np.pi / 2,
+            n=12,
+        ).solve([wl])
+        np.testing.assert_allclose(
+            r_lani_iso.DEO1 + r_lani_iso.DEE1, r_liso.DE1, atol=1e-13
+        )
+        np.testing.assert_allclose(
+            r_lani_iso.DEO3 + r_lani_iso.DEE3, r_liso.DE3, atol=1e-13
+        )
