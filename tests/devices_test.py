@@ -31,7 +31,95 @@ class NRRTest(TestCase):
         NRR = EMpy.devices.NRR(Ks, neffs, l1s, l2s).solve()
 
         self.assertEqual(NRR.THRU.shape, (N,))
+        self.assertEqual(NRR.DROP.shape, (N,))
         self.assertAlmostEqual(numpy.absolute(NRR.THRU).min(), 0.3868920546379094)
+        numpy.testing.assert_allclose(
+            numpy.abs(NRR.THRU) ** 2 + numpy.abs(NRR.DROP) ** 2, 1.0, atol=1e-12
+        )
+
+    def test_nrr_matches_srr_and_obeys_lossy_limits(self):
+        """Verify N=1 NRR matches exact SRR (amplitude & phase) and N-ring passivity / kappa -> 0+ limits."""
+        wls = numpy.linspace(1.545e-6, 1.555e-6, 51)
+        c1 = EMpy.devices.Coupler(
+            wls, numpy.full_like(wls, numpy.sqrt(0.3)), numpy.full_like(wls, 0.97)
+        )
+        c2 = EMpy.devices.Coupler(
+            wls, numpy.full_like(wls, numpy.sqrt(0.5)), numpy.full_like(wls, 0.91)
+        )
+        neff_lossy = (2.45 - 2e-3j) * numpy.ones_like(wls)
+        l1, l2 = 11.0e-6, 19.0e-6
+
+        srr = EMpy.devices.SRR(c1, c2, neff_lossy, l1, l2).solve()
+        nrr1 = EMpy.devices.NRR([c1, c2], [neff_lossy], [l1], [l2]).solve()
+        numpy.testing.assert_allclose(nrr1.THRU, srr.THRU, rtol=1e-13, atol=1e-14)
+        numpy.testing.assert_allclose(nrr1.DROP, srr.DROP, rtol=1e-13, atol=1e-14)
+        self.assertTrue(
+            numpy.all(numpy.abs(nrr1.THRU) ** 2 + numpy.abs(nrr1.DROP) ** 2 < 1.0)
+        )
+
+        # Scalar wavelength support in NRR
+        c1_s = EMpy.devices.Coupler(1.55e-6, numpy.sqrt(0.3), 0.97)
+        c2_s = EMpy.devices.Coupler(1.55e-6, numpy.sqrt(0.5), 0.91)
+        srr_s = EMpy.devices.SRR(c1_s, c2_s, 2.45 - 2e-3j, l1, l2).solve()
+        nrr_s = EMpy.devices.NRR([c1_s, c2_s], [2.45 - 2e-3j], [l1], [l2]).solve()
+        self.assertAlmostEqual(nrr_s.THRU, srr_s.THRU, places=14)
+        self.assertAlmostEqual(nrr_s.DROP, srr_s.DROP, places=14)
+
+        # Asymmetric lossy arcs (l1 = 0, l2 = 100 um with strong absorption): DROP must be strongly attenuated
+        c_hi1 = EMpy.devices.Coupler(
+            wls, numpy.full_like(wls, 0.8), numpy.ones_like(wls)
+        )
+        c_hi2 = EMpy.devices.Coupler(
+            wls, numpy.full_like(wls, 0.9), numpy.ones_like(wls)
+        )
+        nrr_asym = EMpy.devices.NRR(
+            [c_hi1, c_hi2], [(2.45 - 0.05j) * numpy.ones_like(wls)], [0.0], [100.0e-6]
+        ).solve()
+        self.assertTrue(numpy.all(numpy.abs(nrr_asym.DROP) < 1e-5))
+        self.assertTrue(
+            numpy.all(
+                numpy.abs(nrr_asym.THRU) ** 2 + numpy.abs(nrr_asym.DROP) ** 2 < 1.0
+            )
+        )
+
+        # 3-ring NRR: lossless unitarity, positive DROP group delay, and passive kappa -> 0+ convergence
+        ks3 = [
+            EMpy.devices.Coupler(
+                wls, numpy.full_like(wls, numpy.sqrt(kv)), numpy.ones_like(wls)
+            )
+            for kv in (0.25, 0.06, 0.08, 0.30)
+        ]
+        l1s_3 = [10.0e-6, 13.0e-6, 11.5e-6]
+        l2s_3 = [14.0e-6, 11.0e-6, 15.5e-6]
+
+        def _solve_nrr3(kap, force_complex=False):
+            ns = [
+                (complex(nr, -kap) if (kap > 0 or force_complex) else nr)
+                * numpy.ones_like(wls)
+                for nr in (2.42, 2.45, 2.43)
+            ]
+            return EMpy.devices.NRR(ks3, ns, l1s_3, l2s_3).solve()
+
+        nrr3_ll = _solve_nrr3(0.0, force_complex=False)
+        nrr3_c0 = _solve_nrr3(0.0, force_complex=True)
+        numpy.testing.assert_allclose(
+            numpy.abs(nrr3_ll.THRU) ** 2 + numpy.abs(nrr3_ll.DROP) ** 2,
+            1.0,
+            atol=1e-13,
+        )
+        numpy.testing.assert_allclose(nrr3_c0.THRU, nrr3_ll.THRU, atol=1e-14)
+        numpy.testing.assert_allclose(nrr3_c0.DROP, nrr3_ll.DROP, atol=1e-14)
+        _, tau_drop, _ = EMpy.utils.group_delay_and_dispersion(wls, nrr3_ll.DROP)
+        self.assertTrue(numpy.all(tau_drop > 0.0))
+
+        errs = []
+        for kap in (1e-2, 1e-5):
+            nrr3_k = _solve_nrr3(kap)
+            pwr_k = numpy.abs(nrr3_k.THRU) ** 2 + numpy.abs(nrr3_k.DROP) ** 2
+            self.assertTrue(numpy.all(pwr_k < 1.0))
+            errs.append(float(numpy.max(numpy.abs(nrr3_k.DROP - nrr3_ll.DROP))))
+        self.assertLess(errs[1], errs[0])
+        self.assertLess(errs[1], 1e-2)
 
 
 class SWGTest(TestCase):

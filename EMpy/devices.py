@@ -932,12 +932,20 @@ class NRR(Device):
 
         """
 
-        self.THRU = numpy.zeros_like(self.wl).astype("complex")
-        self.DROP = numpy.zeros_like(self.wl).astype("complex")
-        for iwl, wl in enumerate(self.wl):
+        wls = numpy.atleast_1d(self.wl)
+        thru = numpy.zeros(wls.shape, dtype=complex)
+        drop = numpy.zeros(wls.shape, dtype=complex)
+        for iwl, wl in enumerate(wls):
             H = self.TM(wl)
-            self.THRU[iwl] = H.data[0, 0]
-            self.DROP[iwl] = H.data[0, 1]
+            thru[iwl] = H.data[0, 0]
+            drop[iwl] = H.data[1, 0]
+
+        if numpy.isscalar(self.wl):
+            self.THRU = thru[0]
+            self.DROP = drop[0]
+        else:
+            self.THRU = thru
+            self.DROP = drop
 
         return self
 
