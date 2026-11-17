@@ -68,31 +68,72 @@ class SWG:
         betas = 2 * numpy.pi / self.solver.wl * neffs
         neigs = self.solver.nmodes
         T = numpy.zeros((2 * neigs, 2 * neigs), dtype=complex)
-        T[:neigs, :neigs] = numpy.diag(numpy.exp(1j * betas * self.length))
-        T[neigs:, neigs:] = numpy.diag(numpy.exp(-1j * numpy.conj(betas) * self.length))
+        T[:neigs, :neigs] = numpy.diag(numpy.exp(-1j * betas * self.length))
+        T[neigs:, neigs:] = numpy.diag(numpy.exp(1j * betas * self.length))
         self.T = T
         self.S = T2S(self.T)
 
-    def plot(self, sumx=1, nxy=100, nz=100, z0=0):
-        if sumx is None:  # sum in y
-            x = self.solver.modes[0].get_y(nxy)
-            axis = 0
-        else:  # sum in x
-            x = self.solver.modes[0].get_x(nxy)
-            axis = 1
+    def _marginal_intensity(self, sumx=1, nxy=100, nz=100, z0=0):
+        m0 = self.solver.modes[0]
+        x_grid = m0.get_x() if nxy is None else m0.get_x(nxy)
+        y_grid = m0.get_y() if nxy is None else m0.get_y(nxy)
         z = numpy.linspace(0, self.length, nz)
-        const_z = numpy.ones_like(z)
-        f = numpy.zeros((len(x), len(z)), dtype=complex)
+
+        nx, ny = len(x_grid), len(y_grid)
+        Ex_tot = numpy.zeros((nx, ny, nz), dtype=complex)
+        Ey_tot = numpy.zeros((nx, ny, nz), dtype=complex)
+        Hx_tot = numpy.zeros((nx, ny, nz), dtype=complex)
+        Hy_tot = numpy.zeros((nx, ny, nz), dtype=complex)
+        sz_incoherent = None
+
         for im, (coeffLHS, coeffRHS) in enumerate(zip(self.inputLHS, self.inputRHS)):
+            if coeffLHS == 0 and coeffRHS == 0:
+                continue
             m = self.solver.modes[im]
-            # beta = 2 * numpy.pi / self.solver.wl * m.neff
-            tmp = numpy.sum(m.intensity(x, x), axis=axis)
-            f += (
-                numpy.abs(coeffLHS) ** 2 * tmp[:, numpy.newaxis] * const_z
-                + numpy.abs(coeffRHS) ** 2 * tmp[:, numpy.newaxis] * const_z
+            beta = 2 * numpy.pi / self.solver.wl * m.neff
+            env = coeffLHS * numpy.exp(-1j * beta * z) + coeffRHS * numpy.exp(
+                1j * beta * (z - self.length)
             )
+            if hasattr(m, "fields"):
+                Ex, Ey, _, Hx, Hy, _ = m.fields(x_grid, y_grid)
+                Ex, Ey, Hx, Hy = Ex.T, Ey.T, Hx.T, Hy.T
+            elif hasattr(m, "get_field"):
+                Ex = m.get_field("Ex", x_grid, y_grid)
+                Ey = m.get_field("Ey", x_grid, y_grid)
+                Hx = m.get_field("Hx", x_grid, y_grid)
+                Hy = m.get_field("Hy", x_grid, y_grid)
+            else:
+                if sz_incoherent is None:
+                    sz_incoherent = numpy.zeros((nx, ny, nz), dtype=float)
+                sz_incoherent += (
+                    numpy.real(m.intensity(x_grid, y_grid))[:, :, numpy.newaxis]
+                    * numpy.abs(env)[numpy.newaxis, numpy.newaxis, :] ** 2
+                )
+                continue
+
+            Ex_tot += Ex[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
+            Ey_tot += Ey[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
+            Hx_tot += Hx[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
+            Hy_tot += Hy[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
+
+        sz = 0.5 * numpy.real(Ex_tot * numpy.conj(Hy_tot) - Ey_tot * numpy.conj(Hx_tot))
+        if sz_incoherent is not None:
+            sz = sz + sz_incoherent
+
+        if sumx is None:
+            coord = y_grid
+            f = numpy.trapezoid(sz, x=x_grid, axis=0)
+        else:
+            coord = x_grid
+            f = numpy.trapezoid(sz, x=y_grid, axis=1)
+        return coord, z0 + z, f
+
+    def plot(self, sumx=1, nxy=100, nz=100, z0=0):
+        if self.length == 0:
+            return
+        coord, z_grid, f = self._marginal_intensity(sumx=sumx, nxy=nxy, nz=nz, z0=z0)
         plt.hot()
-        plt.contourf(x, z0 + z, numpy.abs(f).T, 16)
+        plt.contourf(coord, z_grid, numpy.abs(f).T, 16)
 
 
 class SimpleJoint:
