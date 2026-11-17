@@ -328,3 +328,277 @@ class UtilsTest(TestCase):
             aprr_errs.append(float(numpy.max(numpy.abs(tau_k - tau_ll))))
         self.assertLess(aprr_errs[1], aprr_errs[0])
         self.assertLess(aprr_errs[2], 1e-10)
+
+    def test_liquid_crystal_cell_alignment_twist_bvp_and_degenerate_limits(self):
+        from pathlib import Path
+        import sys
+        import types
+        from unittest import mock
+        import scipy.integrate
+        import EMpy.constants as C
+        import EMpy.transfer_matrix as TM
+
+        wl = 1.55e-6
+        lc_file_path = str(
+            Path(__file__).resolve().parent.parent / "examples" / "lc_data.dat"
+        )
+        lc = EMpy.materials.LiquidCrystal(
+            "E7",
+            nO=1.52,
+            nE=1.74,
+            nO_electrical=1.8,
+            nE_electrical=4.2,
+            K11=11e-12,
+            K22=6.5e-12,
+            K33=17e-12,
+        )
+
+        # 1. At V = 0, BVP planar alignment must match examples/lc_data.dat (86.5 deg from z for 3.5 deg pretilt)
+        c_file = U.LiquidCrystalCell(
+            lc,
+            voltage=0.0,
+            t_tot=10e-6,
+            t_anchoring=0.0,
+            pretilt=U.deg2rad(3.5),
+            nlayers=9,
+            data_file=lc_file_path,
+        )
+        c_bvp = U.LiquidCrystalCell(
+            lc,
+            voltage=0.0,
+            t_tot=10e-6,
+            t_anchoring=0.0,
+            pretilt=U.deg2rad(3.5),
+            nlayers=9,
+        )
+        self.assertFalse(numpy.iscomplexobj(c_file.angles))
+        numpy.testing.assert_allclose(c_bvp.angles, 86.5, atol=1e-14)
+        numpy.testing.assert_allclose(c_bvp.angles, c_file.angles, atol=1e-14)
+        e_file = c_file.createMultilayer()[0].mat.epsilonTensor(wl)[:, :, 0]
+        e_bvp = c_bvp.createMultilayer()[0].mat.epsilonTensor(wl)[:, :, 0]
+        numpy.testing.assert_allclose(e_bvp, e_file, rtol=1e-14, atol=1e-15)
+        self.assertGreater(e_bvp[0, 0].real, e_bvp[2, 2].real)
+
+        # 2. Gooch-Tarry 90-deg Twisted Nematic first Mauguin minimum (u = sqrt(3): ~100% polarization rotation)
+        n_o, n_e = 1.50, 1.55
+        d_gt = numpy.sqrt(3.0) * wl / (2.0 * (n_e - n_o))
+        lc_tn = EMpy.materials.LiquidCrystal("TN", nO=n_o, nE=n_e)
+        cell_tn = U.LiquidCrystalCell(
+            lc_tn,
+            voltage=0.0,
+            t_tot=d_gt,
+            t_anchoring=0.0,
+            pretilt=0.0,
+            totaltwist=numpy.pi / 2.0,
+            nlayers=60,
+        )
+        numpy.testing.assert_allclose(cell_tn.twists[[0, -1]], [0.0, 90.0], atol=1e-13)
+        amb = EMpy.materials.IsotropicMaterial(
+            "amb", n0=EMpy.materials.RefractiveIndex(n0_const=0.5 * (n_o + n_e))
+        )
+        ml_tn = U.Multilayer(
+            [U.Layer(amb, numpy.inf), cell_tn, U.Layer(amb, numpy.inf)]
+        ).simplify()
+        tmm_tn = TM.AnisotropicTransferMatrix(ml_tn, 0.0, 0.0).solve([wl])
+        self.assertLess(tmm_tn.T[1, 1, 0], 1e-6)
+        self.assertGreater(tmm_tn.T[1, 0, 0], 0.9998)
+
+        # 3. Live BVP Freedericksz transition & chiral q0*d scale invariance via scipy.integrate.solve_bvp
+        def _colnew_shim(boundary_points, degrees, fsub, gsub, **kwargs):
+            z_mesh = numpy.linspace(0.0, 1.0, 41)
+            y_init, _ = kwargs["initial_guess"](z_mesh)
+
+            def _fun(z, y):
+                ddt, ddp, ddu = fsub(z, y)
+                return numpy.vstack([y[1], ddt, y[3], ddp, y[5], ddu])
+
+            def _bc(ya, yb):
+                return gsub(numpy.column_stack([ya, ya, ya, yb, yb, yb]))
+
+            res = scipy.integrate.solve_bvp(
+                _fun, _bc, z_mesh, y_init, tol=1e-8, max_nodes=2000
+            )
+            self.assertTrue(res.success, msg=res.message)
+
+            class _Sol:
+                mesh = res.x
+
+                def __call__(self, z):
+                    return res.sol(z).T
+
+            return _Sol()
+
+        fake_bvp_pkg = types.ModuleType("scikits.bvp1lg")
+        fake_colnew = types.ModuleType("scikits.bvp1lg.colnew")
+        fake_colnew.solve = _colnew_shim  # type: ignore[attr-defined]
+        fake_bvp_pkg.colnew = fake_colnew  # type: ignore[attr-defined]
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "scikits": types.ModuleType("scikits"),
+                "scikits.bvp1lg": fake_bvp_pkg,
+                "scikits.bvp1lg.colnew": fake_colnew,
+            },
+        ):
+            lc_mix = EMpy.materials.get_10400_000_100(50)
+            v_th = numpy.pi * numpy.sqrt(lc_mix.K11 / (C.eps0 * lc_mix.deleps))
+            c_low = U.LiquidCrystalCell(
+                lc_mix,
+                voltage=0.6 * v_th,
+                t_tot=8e-6,
+                t_anchoring=0.0,
+                pretilt=0.02,
+                nlayers=21,
+            )
+            c_hi = U.LiquidCrystalCell(
+                lc_mix,
+                voltage=3.0 * v_th,
+                t_tot=8e-6,
+                t_anchoring=0.0,
+                pretilt=0.02,
+                nlayers=21,
+            )
+            self.assertGreater(c_low.angles[10], 85.0)
+            self.assertLess(c_hi.angles[10], 10.0)
+            self.assertGreater(c_hi.capacitance(), 1.4 * c_low.capacitance())
+
+            # Chiral q0 * d dimensional scaling invariance: identical q0 * d must produce identical profiles
+            lc_q0 = EMpy.materials.LiquidCrystal(
+                "c0", 1.5, 1.7, 1.8, 3.5, 11e-12, 6.5e-12, 17e-12, q0=0.0
+            )
+            lc_qa = EMpy.materials.LiquidCrystal(
+                "cA",
+                1.5,
+                1.7,
+                1.8,
+                3.5,
+                11e-12,
+                6.5e-12,
+                17e-12,
+                q0=numpy.pi / (2.0 * 4e-6),
+            )
+            lc_qb = EMpy.materials.LiquidCrystal(
+                "cB",
+                1.5,
+                1.7,
+                1.8,
+                3.5,
+                11e-12,
+                6.5e-12,
+                17e-12,
+                q0=numpy.pi / (2.0 * 40e-6),
+            )
+            c0 = U.LiquidCrystalCell(
+                lc_q0,
+                voltage=1.5,
+                t_tot=6e-6,
+                t_anchoring=1e-6,
+                pretilt=0.2,
+                totaltwist=numpy.pi / 2.0,
+                nlayers=15,
+            )
+            ca = U.LiquidCrystalCell(
+                lc_qa,
+                voltage=1.5,
+                t_tot=6e-6,
+                t_anchoring=1e-6,
+                pretilt=0.2,
+                totaltwist=numpy.pi / 2.0,
+                nlayers=15,
+            )
+            cb = U.LiquidCrystalCell(
+                lc_qb,
+                voltage=1.5,
+                t_tot=42e-6,
+                t_anchoring=1e-6,
+                pretilt=0.2,
+                totaltwist=numpy.pi / 2.0,
+                nlayers=15,
+            )
+            numpy.testing.assert_allclose(ca.angles, cb.angles, atol=1e-12)
+            numpy.testing.assert_allclose(ca.twists, cb.twists, atol=1e-12)
+            self.assertGreater(float(numpy.max(numpy.abs(ca.angles - c0.angles))), 0.1)
+
+        # 4. Degenerate limits: twisted/pretilted LC -> IsotropicTransferMatrix (dn -> 0) and lossy kappa -> 0+
+        air = EMpy.materials.Air
+        glass = EMpy.materials.IsotropicMaterial(
+            "glass", n0=EMpy.materials.RefractiveIndex(n0_const=1.48)
+        )
+        lc_iso_mat = EMpy.materials.IsotropicMaterial(
+            "lc_iso", n0=EMpy.materials.RefractiveIndex(n0_const=1.52)
+        )
+        tmm_iso = TM.IsotropicTransferMatrix(
+            U.Multilayer(
+                [
+                    U.Layer(air, numpy.inf),
+                    U.Layer(lc_iso_mat, 5.0e-6),
+                    U.Layer(glass, numpy.inf),
+                ]
+            ),
+            U.deg2rad(25.0),
+        ).solve([wl])
+
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            lc_d = EMpy.materials.LiquidCrystal("d", nO=1.52, nE=1.52 + dn)
+            cell_d = U.LiquidCrystalCell(
+                lc_d,
+                voltage=0.0,
+                t_tot=5.0e-6,
+                t_anchoring=0.5e-6,
+                pretilt=U.deg2rad(12.0),
+                totaltwist=U.deg2rad(75.0),
+                nlayers=12,
+            )
+            ml_d = U.Multilayer(
+                [U.Layer(air, numpy.inf), cell_d, U.Layer(glass, numpy.inf)]
+            )
+            tmm_d = TM.AnisotropicTransferMatrix(ml_d, U.deg2rad(25.0), 0.0).solve([wl])
+            err = (
+                abs(float(tmm_d.R[0, 0, 0] - tmm_iso.Rs[0]))
+                + abs(float(tmm_d.T[0, 0, 0] - tmm_iso.Ts[0]))
+                + abs(float(tmm_d.R[1, 1, 0] - tmm_iso.Rp[0]))
+                + abs(float(tmm_d.T[1, 1, 0] - tmm_iso.Tp[0]))
+                + float(tmm_d.T[0, 1, 0] + tmm_d.T[1, 0, 0])
+            )
+            dn_errs.append(err)
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-13)
+
+        # Lossy -> non-lossy limit on twisted LC cell (kap = 1e-2, 1e-5, 0.0 + 0j)
+        def _solve_lc_lossy(kap, force_complex=False):
+            no = complex(1.52, -kap) if (kap > 0 or force_complex) else 1.52
+            ne = complex(1.65, -1.5 * kap) if (kap > 0 or force_complex) else 1.65
+            lc_k = EMpy.materials.LiquidCrystal("lk", nO=no, nE=ne)
+            cell_k = U.LiquidCrystalCell(
+                lc_k,
+                voltage=0.0,
+                t_tot=4.0e-6,
+                t_anchoring=0.2e-6,
+                pretilt=U.deg2rad(5.0),
+                totaltwist=numpy.pi / 2.0,
+                nlayers=15,
+            )
+            ml_k = U.Multilayer(
+                [U.Layer(air, numpy.inf), cell_k, U.Layer(glass, numpy.inf)]
+            )
+            return TM.AnisotropicTransferMatrix(ml_k, U.deg2rad(15.0), 0.0).solve([wl])
+
+        t_ll = _solve_lc_lossy(0.0, force_complex=False)
+        t_c0 = _solve_lc_lossy(0.0, force_complex=True)
+        numpy.testing.assert_allclose(t_c0.R, t_ll.R, atol=1e-14)
+        numpy.testing.assert_allclose(t_c0.T, t_ll.T, atol=1e-14)
+        numpy.testing.assert_allclose(
+            t_ll.R[:, :, 0].sum(axis=1) + t_ll.T[:, :, 0].sum(axis=1), 1.0, atol=1e-13
+        )
+
+        kap_errs = []
+        for kap in (1e-2, 1e-5):
+            tk = _solve_lc_lossy(kap)
+            self.assertTrue(
+                numpy.all(tk.R[:, :, 0].sum(axis=1) + tk.T[:, :, 0].sum(axis=1) < 1.0)
+            )
+            kap_errs.append(float(numpy.max(numpy.abs(tk.T - t_ll.T))))
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[1], 1e-3)

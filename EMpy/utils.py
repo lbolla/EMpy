@@ -477,8 +477,11 @@ class LiquidCrystalCell:
         self.__voltage = v
         if self.data_file is not None:
             self.__angles = self._get_angles_from_file()
+            self.__twists = EMpy.utils.rad2deg(
+                self.totaltwist * self.normalized_sample_points
+            )
         else:
-            self.__angles = self._get_angles_from_bvp()
+            self.__angles, self.__twists = self._get_angles_from_bvp()
 
     voltage = property(fget=getvoltage, fset=setvoltage)
 
@@ -486,6 +489,11 @@ class LiquidCrystalCell:
         return self.__angles
 
     angles = property(fget=getangles)
+
+    def gettwists(self):
+        return self.__twists
+
+    twists = property(fget=gettwists)
 
     def __ode_3k(self, z, f):
         """Inspiration from:
@@ -500,7 +508,9 @@ class LiquidCrystalCell:
         K11 = self.lc.K11
         K22 = self.lc.K22
         K33 = self.lc.K33
-        q0 = self.lc.q0
+        # z in [0, 1] is normalized by the active cell thickness d = t_tot - 2 * t_anchoring,
+        # so the chiral wavenumber q0 [m^-1] scales as q0 * d.
+        q0 = self.lc.q0 * (self.t_tot - 2.0 * self.t_anchoring)
         epslow = self.lc.epslow
         deleps = self.lc.deleps
 
@@ -564,7 +574,7 @@ class LiquidCrystalCell:
         """Inspiration from:
         U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
 
-        self.maxtilt = 90 * numpy.pi / 180 - self.pretilt
+        self.maxtilt = 0.9 * (numpy.pi / 2.0 - self.pretilt)
         init = numpy.array(
             [
                 self.pretilt + self.maxtilt * 4 * z * (1 - z),
@@ -631,29 +641,49 @@ class LiquidCrystalCell:
         y = [self.voltage]
         angles = interp2(x, y, data_x, data_y, data[1:, :])
 
-        return angles.squeeze()
+        return numpy.real(angles.squeeze())
 
     def _get_angles_from_bvp(self):
+        z_ = self.normalized_sample_points
         if self.voltage == 0:
-            return numpy.full_like(
-                self.normalized_sample_points, self.pretilt, dtype=float
-            )
+            if (self.totaltwist == 0 and self.lc.q0 == 0) or self.pretilt == 0:
+                theta = numpy.full_like(
+                    z_, EMpy.utils.rad2deg(numpy.pi / 2.0 - self.pretilt), dtype=float
+                )
+                phi = EMpy.utils.rad2deg(self.totaltwist * z_)
+                return theta, phi
+            try:
+                self.__apply_tension()
+            except ImportError:
+                theta = numpy.full_like(
+                    z_, EMpy.utils.rad2deg(numpy.pi / 2.0 - self.pretilt), dtype=float
+                )
+                phi = EMpy.utils.rad2deg(self.totaltwist * z_)
+                return theta, phi
+            _, theta, phi, _ = self.get_parameters(z_)
+            return theta, phi
+
         # solve bvp
         self.__apply_tension()
-        z_ = self.normalized_sample_points
-        z, theta, phi, u = self.get_parameters(z_)
+        _, theta, phi, _ = self.get_parameters(z_)
 
-        return theta
+        return theta, phi
 
     def createMultilayer(self):
         """Split the cell in nlayers homogeneous layers."""
 
         m = []
-        for a, t in zip(EMpy.utils.deg2rad(self.angles), self.tlc):
+        for a, p, t in zip(
+            EMpy.utils.deg2rad(self.angles),
+            EMpy.utils.deg2rad(self.twists),
+            self.tlc,
+        ):
             epsT = EMpy.materials.EpsilonTensor(
                 epsilon_tensor_const=EMpy.utils.euler_rotate(
-                    numpy.diag([self.lc.nE, self.lc.nO, self.lc.nO]) ** 2,
-                    0.0,
+                    numpy.diag(
+                        numpy.asarray([self.lc.nE, self.lc.nO, self.lc.nO]) ** 2
+                    ),
+                    p,
                     numpy.pi / 2.0,
                     numpy.pi / 2.0 - a,
                 )
@@ -661,14 +691,16 @@ class LiquidCrystalCell:
                 epsilon_tensor_known={
                     0: EMpy.utils.euler_rotate(
                         numpy.diag(
-                            [
-                                self.lc.nE_electrical,
-                                self.lc.nO_electrical,
-                                self.lc.nO_electrical,
-                            ]
-                        )
-                        ** 2,
-                        0.0,
+                            numpy.asarray(
+                                [
+                                    self.lc.nE_electrical,
+                                    self.lc.nO_electrical,
+                                    self.lc.nO_electrical,
+                                ]
+                            )
+                            ** 2
+                        ),
+                        p,
                         numpy.pi / 2.0,
                         numpy.pi / 2.0 - a,
                     )
@@ -784,7 +816,7 @@ class Multilayer:
         m = self.simplify()
         ctot_1 = 0.0
         for l in m:
-            if numpy.isfinite(l.thickness):
+            if numpy.isfinite(l.thickness) and l.thickness > 0:
                 ctot_1 += 1.0 / l.capacitance(area, wl)
         return 1.0 / ctot_1
 
