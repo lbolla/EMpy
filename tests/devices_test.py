@@ -297,3 +297,53 @@ class TunableRingTest(TestCase):
         numpy.testing.assert_allclose(
             numpy.abs(ctcrr.THRU) ** 2 + numpy.abs(ctcrr.DROP) ** 2, 1.0, atol=1e-12
         )
+
+    def test_t_tcrr_and_t_ctcrr_optimum_resonance_validation_and_lossy_limits(self):
+        """Verify Barbarossa 1997 optimum critical coupling (|DROP|^2 == 1), coupling validation, and lossy limits."""
+        wl0 = 1.55e-6
+        neff0 = 2.5
+        # Choose l0 = 20 * (wl0 / neff0) so beta * l_eff[0] == 2 * m * pi at wl0
+        l_unit = wl0 / neff0
+        l_in = numpy.array([20.0, 12.0, 10.0, 10.0]) * l_unit
+        K_in = numpy.array([0.3, 0.4, 0.7])
+        wls = numpy.array([wl0])
+        neff = numpy.array([neff0])
+
+        tcrr_opt = EMpy.devices.T_TCRR(neff, K_in, 1.0, l_in, coupling="optimum").solve(
+            wls
+        )
+        ctcrr_opt = EMpy.devices.T_CTCRR(
+            neff, K_in, 1.0, l_in, coupling="optimum"
+        ).solve(wls)
+        self.assertAlmostEqual(float(numpy.abs(tcrr_opt.DROP[0]) ** 2), 1.0, places=13)
+        self.assertAlmostEqual(float(numpy.abs(tcrr_opt.THRU[0]) ** 2), 0.0, places=13)
+        self.assertAlmostEqual(float(numpy.abs(ctcrr_opt.DROP[0]) ** 2), 1.0, places=13)
+        self.assertAlmostEqual(float(numpy.abs(ctcrr_opt.THRU[0]) ** 2), 0.0, places=13)
+
+        # Invalid coupling strings must raise ValueError instead of silently overriding K, l
+        for cls in (EMpy.devices.T_TCRR, EMpy.devices.T_CTCRR):
+            with self.assertRaises(ValueError):
+                cls(neff, K_in, 1.0, l_in, coupling="invalid")
+
+        # Passive lossy waveguide neff = neff0 - 1j * kap: strict passivity and kap -> 0+ limit
+        ctcrr_c0 = EMpy.devices.T_CTCRR(
+            numpy.array([neff0 + 0.0j]), K_in, 1.0, l_in, coupling="optimum"
+        ).solve(wls)
+        numpy.testing.assert_allclose(ctcrr_c0.DROP, ctcrr_opt.DROP, atol=1e-13)
+        numpy.testing.assert_allclose(ctcrr_c0.THRU, ctcrr_opt.THRU, atol=1e-13)
+
+        kap_errs = []
+        for kap in (1e-3, 1e-6, 1e-9):
+            ck = EMpy.devices.T_CTCRR(
+                numpy.array([complex(neff0, -kap)]),
+                K_in,
+                1.0,
+                l_in,
+                coupling="optimum",
+            ).solve(wls)
+            pwr = float(numpy.abs(ck.THRU[0]) ** 2 + numpy.abs(ck.DROP[0]) ** 2)
+            self.assertLess(pwr, 1.0)
+            kap_errs.append(float(numpy.abs(ck.DROP[0] - ctcrr_opt.DROP[0])))
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[2], kap_errs[1])
+        self.assertLess(kap_errs[2], 1e-6)

@@ -1026,6 +1026,8 @@ class T_TCRR(Device):
             raise ValueError("q must be a scalar.")
         if self.l.shape != (4,):
             raise ValueError("l must be a 1D-array with 4 elements.")
+        if self.coupling is not None and self.coupling != "optimum":
+            raise ValueError("coupling must be None or 'optimum'.")
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
@@ -1101,6 +1103,8 @@ class T_CRTCRR(Device):
             raise ValueError("K and l must be 1D-arrays with 3 elements.")
         if not numpy.isscalar(self.q):
             raise ValueError("q must be a scalar.")
+        if self.coupling is not None:
+            raise NotImplementedError("coupling is not implemented for T_CRTCRR.")
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
@@ -1178,6 +1182,8 @@ class T_CTCRR(Device):
             raise ValueError("l must be a 1D-array with 4 elements.")
         if not numpy.isscalar(self.q):
             raise ValueError("q must be a scalar.")
+        if self.coupling is not None and self.coupling != "optimum":
+            raise ValueError("coupling must be None or 'optimum'.")
 
     def solve(self, wls):
         """Compute the THRU and the DROP."""
@@ -1192,9 +1198,9 @@ class T_CTCRR(Device):
         if wls.shape != neff.shape:
             raise ValueError("wrong wls and neff shape.")
 
-        if coupling is not None:
-            # optimum: l2 = 2l1, l3 = l4
-            l[1] = l[0]  # OKKIO: check me!
+        if coupling == "optimum":
+            # optimum (Barbarossa 1997): l2 = l1, l3 = 2 * l1, l4 = 2 * l2
+            l[1] = l[0]
             l[2] = 2 * l[0]
             l[3] = 2 * l[1]
             # optimum: see article
