@@ -172,7 +172,9 @@ class AnisotropicTransferMatrix(TransferMatrix):
         theta_inc_x and theta_inc_y = angles of the incident wave (in
         radians) wrt the normal in vacuum, i.e. kx = k0 * sin(theta_inc_x)
         and ky = k0 * sin(theta_inc_y) (unlike IsotropicTransferMatrix,
-        where theta_inc is measured in multilayer[0]).
+        where theta_inc is measured in multilayer[0]; for prism-coupled
+        incidence with n0 * sin(theta_0) > 1, pass complex
+        np.arcsin(n0 * np.sin(theta_0) + 0j)).
         """
         TransferMatrix.__init__(self, multilayer)
         self.theta_inc_x = theta_inc_x

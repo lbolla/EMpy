@@ -9,7 +9,7 @@ from EMpy.materials import IsotropicMaterial, RefractiveIndex
 
 alpha = EMpy.utils.deg2rad(30.0)
 delta = EMpy.utils.deg2rad(45.0)
-psi = EMpy.utils.deg2rad(0.0)  # TE
+psi = EMpy.utils.deg2rad(0.0)  # TM (use 90.0 for TE)
 phi = EMpy.utils.deg2rad(90.0)
 
 wls = numpy.linspace(1.5495e-6, 1.550e-6, 101)

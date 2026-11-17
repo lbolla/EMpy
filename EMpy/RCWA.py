@@ -112,14 +112,15 @@ class RCWA:
     meaning:
 
     alpha:  float
-            angle between wave vector k1 and xy plane, in radians
+            angle between wave vector k1 and the z axis (surface normal),
+            in radians
 
     delta:  float
-            angle between the y axis and the projection of k1 onto the xy
+            angle between the x axis and the projection of k1 onto the xy
             plane, in radians
 
-    psi:    angle between the D vector of the plane wave and the xy plane,
-            in radians, TM: 0, TE: numpy.pi / 2
+    psi:    angle between the D vector of the plane wave and the plane of
+            incidence, in radians, TM: 0, TE: numpy.pi / 2
 
     phi:    angle between the grating vector K and z axis (in the xz plane),
             in radians, the grating is modulated in the direction of the
