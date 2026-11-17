@@ -79,7 +79,7 @@ class SVFDModeSolver(ModeSolver):
         self.method = method
 
     def _get_eps(self, xc, yc):
-        eps = self.epsfunc(xc, yc)
+        eps = self.epsfunc(numpy.real(xc), numpy.real(yc))
         eps = numpy.c_[eps[:, 0:1], eps, eps[:, -1:]]
         eps = numpy.r_[eps[0:1, :], eps, eps[-1:, :]]
         return eps
@@ -224,7 +224,7 @@ class SVFDModeSolver(ModeSolver):
 
         return A
 
-    def solve(self, neigs, tol):
+    def solve(self, neigs, tol, guess=None):
         from scipy.sparse import linalg
 
         self.nmodes = neigs
@@ -232,8 +232,20 @@ class SVFDModeSolver(ModeSolver):
 
         A = self.build_matrix()
 
+        if guess is not None:
+            k = 2 * numpy.pi / self.wl
+            shift = (guess * k) ** 2
+        else:
+            shift = None
+
         eigvals, eigvecs = linalg.eigs(  # type: ignore
-            A, k=neigs, which="LR", tol=tol, ncv=10 * neigs, return_eigenvectors=True
+            A,
+            k=neigs,
+            which="LR",
+            tol=tol,
+            ncv=10 * neigs,
+            return_eigenvectors=True,
+            sigma=shift,
         )
 
         neff = self.wl * numpy.sqrt(eigvals) / (2 * numpy.pi)
@@ -322,7 +334,7 @@ class VFDModeSolver(ModeSolver):
         self.boundary = boundary
 
     def _get_eps(self, xc, yc):
-        tmp = self.epsfunc(xc, yc)
+        tmp = self.epsfunc(numpy.real(xc), numpy.real(yc))
 
         def _reshape(tmp):
             """
@@ -2095,14 +2107,16 @@ class FDMode(Mode):
         self.Hz = Hz
 
     def get_x(self, n=None):
+        xr = numpy.real(self.x)
         if n is None:
-            return self.x
-        return numpy.linspace(self.x[0], self.x[-1], n)
+            return xr
+        return numpy.linspace(xr[0], xr[-1], n)
 
     def get_y(self, n=None):
+        yr = numpy.real(self.y)
         if n is None:
-            return self.y
-        return numpy.linspace(self.y[0], self.y[-1], n)
+            return yr
+        return numpy.linspace(yr[0], yr[-1], n)
 
     def get_field(self, fname, x=None, y=None):
         if fname == "Ex":
@@ -2127,16 +2141,20 @@ class FDMode(Mode):
         if (x is None) and (y is None):
             return f
 
+        xr = numpy.real(self.x)
+        yr = numpy.real(self.y)
         if not centered:
             # magnetic fields are not centered
-            x0 = self.x
-            y0 = self.y
+            x0 = xr
+            y0 = yr
         else:
             # electric fields and intensity are centered
-            x0 = EMpy.utils.centered1d(self.x)
-            y0 = EMpy.utils.centered1d(self.y)
+            x0 = EMpy.utils.centered1d(xr)
+            y0 = EMpy.utils.centered1d(yr)
 
-        return EMpy.utils.interp2(x, y, x0, y0, f)
+        x_eval = x0 if x is None else numpy.real(x)
+        y_eval = y0 if y is None else numpy.real(y)
+        return EMpy.utils.interp2(x_eval, y_eval, x0, y0, f)
 
     def intensityTETM(self, x=None, y=None):
         I_TE = self.Ex * EMpy.utils.centered2d(numpy.conj(self.Hy)) / 2.0
@@ -2144,10 +2162,12 @@ class FDMode(Mode):
         if x is None and y is None:
             return (I_TE, I_TM)
         else:
-            x0 = EMpy.utils.centered1d(self.x)
-            y0 = EMpy.utils.centered1d(self.y)
-            I_TE_ = EMpy.utils.interp2(x, y, x0, y0, I_TE)
-            I_TM_ = EMpy.utils.interp2(x, y, x0, y0, I_TM)
+            x0 = EMpy.utils.centered1d(numpy.real(self.x))
+            y0 = EMpy.utils.centered1d(numpy.real(self.y))
+            x_eval = x0 if x is None else numpy.real(x)
+            y_eval = y0 if y is None else numpy.real(y)
+            I_TE_ = EMpy.utils.interp2(x_eval, y_eval, x0, y0, I_TE)
+            I_TM_ = EMpy.utils.interp2(x_eval, y_eval, x0, y0, I_TM)
             return (I_TE_, I_TM_)
 
     def intensity(self, x=None, y=None):
@@ -2156,21 +2176,21 @@ class FDMode(Mode):
 
     def TEfrac(self, x_=None, y_=None):
         if x_ is None:
-            x = EMpy.utils.centered1d(self.x)
+            x = EMpy.utils.centered1d(numpy.real(self.x))
         else:
-            x = x_
+            x = numpy.real(x_)
         if y_ is None:
-            y = EMpy.utils.centered1d(self.y)
+            y = EMpy.utils.centered1d(numpy.real(self.y))
         else:
-            y = y_
+            y = numpy.real(y_)
         STE, STM = self.intensityTETM(x_, y_)
         num = EMpy.utils.trapz2(numpy.abs(STE), x=x, y=y)
         den = EMpy.utils.trapz2(numpy.abs(STE) + numpy.abs(STM), x=x, y=y)
         return num / den
 
     def norm(self):
-        x = EMpy.utils.centered1d(self.x)
-        y = EMpy.utils.centered1d(self.y)
+        x = EMpy.utils.centered1d(numpy.real(self.x))
+        y = EMpy.utils.centered1d(numpy.real(self.y))
         return numpy.sqrt(EMpy.utils.trapz2(self.intensity(), x=x, y=y))
 
     def normalize(self):
@@ -2185,31 +2205,28 @@ class FDMode(Mode):
         return self
 
     def overlap(self, m, x=None, y=None):
-        x1 = EMpy.utils.centered1d(self.x)
-        y1 = EMpy.utils.centered1d(self.y)
+        x1 = EMpy.utils.centered1d(numpy.real(self.x))
+        y1 = EMpy.utils.centered1d(numpy.real(self.y))
 
-        x2 = EMpy.utils.centered1d(m.x)
-        y2 = EMpy.utils.centered1d(m.y)
+        x2 = EMpy.utils.centered1d(numpy.real(m.x))
+        y2 = EMpy.utils.centered1d(numpy.real(m.y))
 
-        if x is None:
-            x = x2
-
-        if y is None:
-            y = y2
+        x_eval = x2 if x is None else numpy.real(x)
+        y_eval = y2 if y is None else numpy.real(y)
 
         # Interpolates m1 and centered m2 fields onto (x, y) grid:
-        Ex1 = EMpy.utils.interp2(x, y, x1, y1, self.Ex)
-        Ey1 = EMpy.utils.interp2(x, y, x1, y1, self.Ey)
+        Ex1 = EMpy.utils.interp2(x_eval, y_eval, x1, y1, self.Ex)
+        Ey1 = EMpy.utils.interp2(x_eval, y_eval, x1, y1, self.Ey)
         Hx2_c = EMpy.utils.interp2(
-            x, y, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hx))
+            x_eval, y_eval, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hx))
         )
         Hy2_c = EMpy.utils.interp2(
-            x, y, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hy))
+            x_eval, y_eval, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hy))
         )
 
         intensity = (Ex1 * Hy2_c - Ey1 * Hx2_c) / 2.0
 
-        return EMpy.utils.trapz2(intensity, x=x, y=y)
+        return EMpy.utils.trapz2(intensity, x=x_eval, y=y_eval)
 
     def get_fields_for_FDTD(self, x=None, y=None):
         """Get mode's field on a staggered grid.
@@ -2218,50 +2235,50 @@ class FDMode(Mode):
 
         """
 
-        if x is None:
-            x = self.x
-        if y is None:
-            y = self.y
+        xr = numpy.real(self.x)
+        yr = numpy.real(self.y)
+        x_t = xr if x is None else numpy.real(x)
+        y_t = yr if y is None else numpy.real(y)
 
         # Ex: ignores y = 0, max
-        x_Ex = EMpy.utils.centered1d(self.x)
-        y_Ex = EMpy.utils.centered1d(self.y)
-        x_Ex_FDTD = EMpy.utils.centered1d(x)
-        y_Ex_FDTD = y[1:-1]
+        x_Ex = EMpy.utils.centered1d(xr)
+        y_Ex = EMpy.utils.centered1d(yr)
+        x_Ex_FDTD = EMpy.utils.centered1d(x_t)
+        y_Ex_FDTD = y_t[1:-1]
         Ex_FDTD = EMpy.utils.interp2(x_Ex_FDTD, y_Ex_FDTD, x_Ex, y_Ex, self.Ex)
         # Ey: ignores x = 0, max
-        x_Ey = EMpy.utils.centered1d(self.x)
-        y_Ey = EMpy.utils.centered1d(self.y)
-        x_Ey_FDTD = x[1:-1]
-        y_Ey_FDTD = EMpy.utils.centered1d(y)
+        x_Ey = EMpy.utils.centered1d(xr)
+        y_Ey = EMpy.utils.centered1d(yr)
+        x_Ey_FDTD = x_t[1:-1]
+        y_Ey_FDTD = EMpy.utils.centered1d(y_t)
         Ey_FDTD = EMpy.utils.interp2(x_Ey_FDTD, y_Ey_FDTD, x_Ey, y_Ey, self.Ey)
         # Ez: ignores x, y = 0, max
-        x_Ez = EMpy.utils.centered1d(self.x)
-        y_Ez = EMpy.utils.centered1d(self.y)
-        x_Ez_FDTD = x[1:-1]
-        y_Ez_FDTD = y[1:-1]
+        x_Ez = EMpy.utils.centered1d(xr)
+        y_Ez = EMpy.utils.centered1d(yr)
+        x_Ez_FDTD = x_t[1:-1]
+        y_Ez_FDTD = y_t[1:-1]
         Ez_FDTD = EMpy.utils.interp2(x_Ez_FDTD, y_Ez_FDTD, x_Ez, y_Ez, self.Ez)
         # Hx: ignores x = 0, max, /120pi, reverse direction
-        x_Hx = self.x
-        y_Hx = self.y
-        x_Hx_FDTD = x[1:-1]
-        y_Hx_FDTD = EMpy.utils.centered1d(y)
+        x_Hx = xr
+        y_Hx = yr
+        x_Hx_FDTD = x_t[1:-1]
+        y_Hx_FDTD = EMpy.utils.centered1d(y_t)
         Hx_FDTD = EMpy.utils.interp2(x_Hx_FDTD, y_Hx_FDTD, x_Hx, y_Hx, self.Hx) / (
             -120.0 * numpy.pi
         )
         # Hy: ignores y = 0, max, /120pi, reverse direction
-        x_Hy = self.x
-        y_Hy = self.y
-        x_Hy_FDTD = EMpy.utils.centered1d(x)
-        y_Hy_FDTD = y[1:-1]
+        x_Hy = xr
+        y_Hy = yr
+        x_Hy_FDTD = EMpy.utils.centered1d(x_t)
+        y_Hy_FDTD = y_t[1:-1]
         Hy_FDTD = EMpy.utils.interp2(x_Hy_FDTD, y_Hy_FDTD, x_Hy, y_Hy, self.Hy) / (
             -120.0 * numpy.pi
         )
         # Hz: /120pi, reverse direction
-        x_Hz = self.x
-        y_Hz = self.y
-        x_Hz_FDTD = EMpy.utils.centered1d(x)
-        y_Hz_FDTD = EMpy.utils.centered1d(y)
+        x_Hz = xr
+        y_Hz = yr
+        x_Hz_FDTD = EMpy.utils.centered1d(x_t)
+        y_Hz_FDTD = EMpy.utils.centered1d(y_t)
         Hz_FDTD = EMpy.utils.interp2(x_Hz_FDTD, y_Hz_FDTD, x_Hz, y_Hz, self.Hz) / (
             -120.0 * numpy.pi
         )
@@ -2271,60 +2288,60 @@ class FDMode(Mode):
     @staticmethod
     def plot_field(x, y, field):
         plt.hot()
-        plt.contour(x, y, numpy.abs(field.T), 16)
+        plt.contour(numpy.real(x), numpy.real(y), numpy.abs(field.T), 16)
         plt.axis("image")
 
     def plot_Ex(self, x=None, y=None):
         if x is None:
-            x = EMpy.utils.centered1d(self.x)
+            x = EMpy.utils.centered1d(numpy.real(self.x))
         if y is None:
-            y = EMpy.utils.centered1d(self.y)
+            y = EMpy.utils.centered1d(numpy.real(self.y))
         Ex = self.get_field("Ex", x, y)
         self.plot_field(x, y, Ex)
 
     def plot_Ey(self, x=None, y=None):
         if x is None:
-            x = EMpy.utils.centered1d(self.x)
+            x = EMpy.utils.centered1d(numpy.real(self.x))
         if y is None:
-            y = EMpy.utils.centered1d(self.y)
+            y = EMpy.utils.centered1d(numpy.real(self.y))
         Ey = self.get_field("Ey", x, y)
         self.plot_field(x, y, Ey)
 
     def plot_Ez(self, x=None, y=None):
         if x is None:
-            x = EMpy.utils.centered1d(self.x)
+            x = EMpy.utils.centered1d(numpy.real(self.x))
         if y is None:
-            y = EMpy.utils.centered1d(self.y)
+            y = EMpy.utils.centered1d(numpy.real(self.y))
         Ez = self.get_field("Ez", x, y)
         self.plot_field(x, y, Ez)
 
     def plot_Hx(self, x=None, y=None):
         if x is None:
-            x = self.x
+            x = numpy.real(self.x)
         if y is None:
-            y = self.y
+            y = numpy.real(self.y)
         Hx = self.get_field("Hx", x, y)
         self.plot_field(x, y, Hx)
 
     def plot_Hy(self, x=None, y=None):
         if x is None:
-            x = self.x
+            x = numpy.real(self.x)
         if y is None:
-            y = self.y
+            y = numpy.real(self.y)
         Hy = self.get_field("Hy", x, y)
         self.plot_field(x, y, Hy)
 
     def plot_Hz(self, x=None, y=None):
         if x is None:
-            x = self.x
+            x = numpy.real(self.x)
         if y is None:
-            y = self.y
+            y = numpy.real(self.y)
         Hz = self.get_field("Hz", x, y)
         self.plot_field(x, y, Hz)
 
     def plot_intensity(self):
-        x = EMpy.utils.centered1d(self.x)
-        y = EMpy.utils.centered1d(self.y)
+        x = EMpy.utils.centered1d(numpy.real(self.x))
+        y = EMpy.utils.centered1d(numpy.real(self.y))
         I = self.intensity(x, y)
         self.plot_field(x, y, I)
 
@@ -2352,61 +2369,24 @@ class FDMode(Mode):
 
 
 def stretchmesh(x, y, nlayers, factor, method="PPPP"):
-    # OKKIO: check me!
+    """Continuously stretch grid spacing at computational domain boundaries.
 
-    # This function can be used to continuously stretch the grid
-    # spacing at the edges of the computation window for
-    # finite-difference calculations.  This is useful when you would
-    # like to increase the size of the computation window without
-    # increasing the total number of points in the computational
-    # domain.  The program implements four different expansion
-    # methods: uniform, linear, parabolic (the default) and
-    # geometric.  The first three methods also allow for complex
-    # coordinate stretching, which is useful for creating
-    # perfectly-matched non-reflective boundaries.
-    #
-    # USAGE:
-    #
-    # [x,y] = stretchmesh(x,y,nlayers,factor);
-    # [x,y] = stretchmesh(x,y,nlayers,factor,method);
-    # [x,y,xc,yc] = stretchmesh(x,y,nlayers,factor);
-    # [x,y,xc,yc] = stretchmesh(x,y,nlayers,factor,method);
-    # [x,y,xc,yc,dx,dy] = stretchmesh(x,y,nlayers,factor);
-    # [x,y,xc,yc,dx,dy] = stretchmesh(x,y,nlayers,factor,method);
-    #
-    # INPUT:
-    #
-    # x,y - vectors that specify the vertices of the original
-    #   grid, which are usually linearly spaced.
-    # nlayers - vector that specifies how many layers of the grid
-    #   you would like to expand:
-    # nlayers(1) = # of layers on the north boundary to stretch
-    # nlayers(2) = # of layers on the south boundary to stretch
-    # nlayers(3) = # of layers on the east boundary to stretch
-    # nlayers(4) = # of layers on the west boundary to stretch
-    # factor - cumulative factor by which the layers are to be
-    #   expanded.  As with nlayers, this can be a 4-vector.
-    # method - 4-letter string specifying the method of
-    #   stretching for each of the four boundaries.  Four different
-    #   methods are supported: uniform, linear, parabolic (default)
-    #   and geometric.  For example, method = 'LLLG' will use linear
-    #   expansion for the north, south and east boundaries and
-    #   geometric expansion for the west boundary.
-    #
-    # OUTPUT:
-    #
-    # x,y - the vertices of the new stretched grid
-    # xc,yc (optional) - the center cell coordinates of the
-    #   stretched grid
-    # dx,dy (optional) - the grid spacing (dx = diff(x))
+    Supports four expansion profiles per boundary (North, South, East, West):
+    ``'U'`` (uniform), ``'L'`` (linear), ``'P'`` (parabolic, default), and
+    ``'G'`` (geometric). The first three methods also support complex coordinate
+    stretching for perfectly matched layer (PML) absorbing boundaries: under
+    EMpy's ``exp(+i*omega*t - i*beta*z)`` harmonic convention, passive absorbing
+    PMLs require ``Im(factor) < 0`` (e.g. ``factor = 1 - 2j``), so that the
+    complex grid differentials ``dx = diff(xx)`` and ``dy = diff(yy)`` satisfy
+    ``Im(dx) <= 0`` and ``Im(dy) <= 0`` on all four boundaries.
+    """
+    xx = numpy.array(x, dtype=complex, copy=True)
+    yy = numpy.array(y, dtype=complex, copy=True)
 
-    xx = x.astype(complex)
-    yy = y.astype(complex)
+    nlayers_arr = numpy.broadcast_to(numpy.asarray(nlayers, dtype=int), (4,))
+    factor_arr = numpy.broadcast_to(numpy.asarray(factor), (4,))
 
-    nlayers *= numpy.ones(4, dtype=int)
-    factor *= numpy.ones(4)
-
-    for idx, (n, f, m) in enumerate(zip(nlayers, factor, method.upper())):
+    for idx, (n, f, m) in enumerate(zip(nlayers_arr, factor_arr, method.upper())):
         if n > 0 and f != 1:
             if idx == 0:
                 # north boundary
@@ -2436,8 +2416,7 @@ def stretchmesh(x, y, nlayers, factor, method="PPPP"):
             kv = kv.astype(int)
 
             if m == "U":
-                c = numpy.polyfit([q1, q2], [q1, q1 + f * (q2 - q1)], 1)
-                z[kv] = numpy.polyval(c, z[kv])
+                z[kv] = q1 + f * (z[kv] - q1)
             elif m == "L":
                 c = (f - 1) / (q2 - q1)
                 b = 1 - 2 * c * q1
@@ -2449,9 +2428,8 @@ def stretchmesh(x, y, nlayers, factor, method="PPPP"):
                 b = scipy.optimize.newton(lambda s: numpy.exp(s) - 1 - f * s, f)
                 a = (q2 - q1) / b
                 z[kv] = q1 + a * (numpy.exp((z[kv] - q1) / a) - 1)
-
-    xx = xx.real + 1j * numpy.abs(xx.imag)
-    yy = yy.real + 1j * numpy.abs(yy.imag)
+            else:
+                raise ValueError(f"unknown stretching method: {m!r}")
 
     xc = (xx[:-1] + xx[1:]) / 2.0
     yc = (yy[:-1] + yy[1:]) / 2.0

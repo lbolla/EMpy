@@ -77,6 +77,264 @@ class VFDModeSolverTest(TestCase):
         ).solve(1, 1e-10)
         self.assertAlmostEqual(sv_ey_q.neff[0].real, sv_ey_full.neff[0].real, places=9)
 
+    def test_stretchmesh_geometry_symmetry_and_pml_signs(self):
+        """Verify stretchmesh profiles (U/L/P/G), boundary mirror symmetry, and passive PML Im(dx), Im(dy) <= 0."""
+        x = numpy.linspace(0.0, 2.0, 21)
+        y = numpy.linspace(-1.0, 1.5, 26)
+        n = 5
+
+        # Degenerate unstretched limits: nlayers=0 or factor=1
+        xx0, yy0, xc0, yc0, dx0, dy0 = EMpy.modesolvers.FD.stretchmesh(x, y, 0, 1 - 2j)
+        numpy.testing.assert_allclose(xx0, x, atol=1e-15)
+        numpy.testing.assert_allclose(yy0, y, atol=1e-15)
+        xx1, yy1, _, _, _, _ = EMpy.modesolvers.FD.stretchmesh(
+            x, y, [n, n, n, n], [1, 1, 1, 1]
+        )
+        numpy.testing.assert_allclose(xx1, x, atol=1e-15)
+        numpy.testing.assert_allclose(yy1, y, atol=1e-15)
+
+        # Real expansion across all four methods ('U', 'L', 'P', 'G') with list / int-array inputs
+        nl_list = [n, n, n, n]
+        fac_int = numpy.array([3, 3, 3, 3], dtype=int)
+        for mch in ("U", "L", "P", "G"):
+            xx, yy, _, _, dx, dy = EMpy.modesolvers.FD.stretchmesh(
+                x, y, nl_list, fac_int, method=mch * 4
+            )
+            self.assertEqual(nl_list, [n, n, n, n])
+            numpy.testing.assert_array_equal(fac_int, numpy.array([3, 3, 3, 3]))
+            numpy.testing.assert_allclose(xx.imag, 0.0, atol=1e-15)
+            numpy.testing.assert_allclose(yy.imag, 0.0, atol=1e-15)
+            numpy.testing.assert_allclose(dx[:n], dx[-n:][::-1], rtol=1e-13, atol=1e-14)
+            numpy.testing.assert_allclose(dy[:n], dy[-n:][::-1], rtol=1e-13, atol=1e-14)
+            self.assertAlmostEqual(
+                float(xx[-1].real - xx[0].real),
+                (2.0 - 2 * 0.5) + 2 * 3.0 * 0.5,
+                places=12,
+            )
+
+        # Complex PML coordinate stretching across 'U', 'L', 'P'
+        f_pml = 1.0 - 2.0j
+        for mch in ("U", "L", "P"):
+            xx, yy, xc, yc, dx, dy = EMpy.modesolvers.FD.stretchmesh(
+                x, y, n, f_pml, method=mch * 4
+            )
+            # Interior mesh must remain strictly real and untouched
+            numpy.testing.assert_allclose(
+                xx[n : len(x) - n], x[n : len(x) - n], atol=1e-15
+            )
+            numpy.testing.assert_allclose(
+                yy[n : len(y) - n], y[n : len(y) - n], atol=1e-15
+            )
+            # All four PMLs must have Im(dx) < 0 and Im(dy) < 0 (passive absorption, never gain)
+            self.assertTrue(numpy.all(dx[:n].imag < 0.0))
+            self.assertTrue(numpy.all(dx[-n:].imag < 0.0))
+            self.assertTrue(numpy.all(dy[:n].imag < 0.0))
+            self.assertTrue(numpy.all(dy[-n:].imag < 0.0))
+            # Exact mirror symmetry between West/East and South/North in both real and imag parts
+            numpy.testing.assert_allclose(dx[:n], dx[-n:][::-1], rtol=1e-14, atol=1e-15)
+            numpy.testing.assert_allclose(dy[:n], dy[-n:][::-1], rtol=1e-14, atol=1e-15)
+            # Total complex domain span includes cumulative PML stretching on both sides
+            self.assertAlmostEqual(
+                xx[-1] - xx[0], (2.0 - 2 * 0.5) + 2 * f_pml * 0.5, places=13
+            )
+            # Conjugating factor must conjugate the stretched coordinates
+            xx_conj, yy_conj, _, _, _, _ = EMpy.modesolvers.FD.stretchmesh(
+                x, y, n, numpy.conj(f_pml), method=mch * 4
+            )
+            numpy.testing.assert_allclose(xx_conj, numpy.conj(xx), atol=1e-15)
+            numpy.testing.assert_allclose(yy_conj, numpy.conj(yy), atol=1e-15)
+
+        with self.assertRaises(ValueError):
+            EMpy.modesolvers.FD.stretchmesh(x, y, n, 2.0, method="XXXX")
+
+    def test_stretchmesh_pml_leaky_slab_exact_dispersion_and_invariance(self):
+        """Verify VFD/SVFD + stretchmesh PML reproduces exact analytical leaky-waveguide complex neff."""
+        import scipy.optimize
+
+        wl = 1.55e-6
+        k0 = 2.0 * numpy.pi / wl
+        n1 = 1.45
+        n2 = 1.80
+        w = 2.4e-6
+
+        # Exact fundamental leaky TE0 dispersion root: kx1 * tan(kx1 * w / 2) = i * kx2 (Re(kx2) > 0)
+        def _leaky_disp(vec):
+            neff = vec[0] + 1j * vec[1]
+            kx1 = numpy.sqrt((k0 * n1) ** 2 - (k0 * neff) ** 2)
+            kx2 = numpy.sqrt((k0 * n2) ** 2 - (k0 * neff) ** 2)
+            if kx2.real < 0:
+                kx2 = -kx2
+            res = (kx1 * numpy.tan(kx1 * w / 2.0) - 1j * kx2) / k0
+            return [float(res.real), float(res.imag)]
+
+        neff0 = float(numpy.sqrt(n1**2 - (wl / (2.0 * w)) ** 2))
+        sol = scipy.optimize.root(_leaky_disp, [neff0, -0.01], tol=1e-12)
+        self.assertTrue(sol.success)
+        neff_exact = sol.x[0] + 1j * sol.x[1]
+        self.assertLess(neff_exact.imag, -0.01)
+
+        # 1. East/West PMLs (leaky along x, invariant along y) across multiple PML strengths
+        lx = 6.0e-6
+        x = numpy.linspace(0.0, lx, 121)
+        y = numpy.linspace(0.0, 0.5e-6, 6)
+
+        def _eps_x(xc, yc):
+            return numpy.where(
+                numpy.abs(xc[:, None] - lx / 2.0) + 0.0 * yc[None, :] <= w / 2.0,
+                n1**2,
+                n2**2,
+            )
+
+        neffs_pml = []
+        for f_pml in (1.0 - 1.5j, 1.0 - 2.5j, 1.0 - 3.5j):
+            xx, yy, *_ = EMpy.modesolvers.FD.stretchmesh(x, y, [0, 0, 20, 20], f_pml)
+            vfd = EMpy.modesolvers.FD.VFDModeSolver(wl, xx, yy, _eps_x, "SS00").solve(
+                4, 1e-12, guess=neff_exact.real - 0.02
+            )
+            cands = numpy.array([m.neff for m in vfd.modes])
+            best = cands[numpy.argmin(numpy.abs(cands - neff_exact))]
+            self.assertLess(best.imag, 0.0)
+            self.assertLess(abs(best - neff_exact), 2.5e-4)
+            neffs_pml.append(best)
+        # PML-strength invariance across 1-1.5j, 1-2.5j, 1-3.5j
+        self.assertLess(abs(neffs_pml[0] - neffs_pml[1]), 5e-5)
+        self.assertLess(abs(neffs_pml[1] - neffs_pml[2]), 5e-5)
+
+        # Semi-vectorial SVFDModeSolver (Ey) on the same PML mesh
+        xx_sv, yy_sv, *_ = EMpy.modesolvers.FD.stretchmesh(
+            x, y, [0, 0, 20, 20], 1.0 - 2.5j
+        )
+        sv = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl, xx_sv, yy_sv, _eps_x, "SS00", method="Ey"
+        ).solve(4, 1e-12, guess=neff_exact.real - 0.02)
+        best_sv = sv.neff[numpy.argmin(numpy.abs(sv.neff - neff_exact))]
+        self.assertLess(abs(best_sv - neff_exact), 2.5e-4)
+
+        # 2. 90-degree rotated North/South PMLs (leaky along y, invariant along x) must match East/West identically
+        def _eps_y(xc, yc):
+            return numpy.where(
+                0.0 * xc[:, None] + numpy.abs(yc[None, :] - lx / 2.0) <= w / 2.0,
+                n1**2,
+                n2**2,
+            )
+
+        xx_ns, yy_ns, *_ = EMpy.modesolvers.FD.stretchmesh(
+            y, x, [20, 20, 0, 0], 1.0 - 2.5j
+        )
+        vfd_ns = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xx_ns, yy_ns, _eps_y, "00AA"
+        ).solve(4, 1e-12, guess=neff_exact.real - 0.02)
+        cands_ns = numpy.array([m.neff for m in vfd_ns.modes])
+        best_ns = cands_ns[numpy.argmin(numpy.abs(cands_ns - neff_exact))]
+        self.assertAlmostEqual(best_ns, neffs_pml[1], places=10)
+
+    def test_stretchmesh_pml_anisotropic_and_lossy_degenerate_limits(self):
+        """Verify PML + VFDModeSolver/FDMode across PML sigma -> 0+, material kappa -> 0+, and aniso dn -> 0 limits."""
+        wl = 1.55e-6
+        xg = numpy.linspace(0.0, 3.0e-6, 49)
+        yg = numpy.linspace(0.0, 2.2e-6, 37)
+
+        def _eps_iso(kap=0.0):
+            def _f(xc, yc):
+                nc = complex(3.45, -kap) if kap > 0 else 3.45
+                ncl = complex(1.45, -0.2 * kap) if kap > 0 else 1.45
+                return numpy.where(
+                    (xc[:, None] >= 1.2e-6)
+                    & (xc[:, None] <= 1.8e-6)
+                    & (yc[None, :] >= 0.99e-6)
+                    & (yc[None, :] <= 1.21e-6),
+                    nc**2,
+                    ncl**2,
+                )
+
+            return _f
+
+        def _eps_aniso(dn=0.0, kap=0.0, phi_deg=33.0):
+            ph = EMpy.utils.deg2rad(phi_deg)
+
+            def _f(xc, yc):
+                core = (
+                    (xc[:, None] >= 1.2e-6)
+                    & (xc[:, None] <= 1.8e-6)
+                    & (yc[None, :] >= 0.99e-6)
+                    & (yc[None, :] <= 1.21e-6)
+                )
+                nc = complex(3.45, -kap) if kap > 0 else 3.45
+                ncl = complex(1.45, -0.2 * kap) if kap > 0 else 1.45
+                nO = numpy.where(core, nc, ncl)
+                nE = numpy.where(core, nc + dn, ncl + dn)
+                exx = nE**2 * numpy.cos(ph) ** 2 + nO**2 * numpy.sin(ph) ** 2
+                eyy = nE**2 * numpy.sin(ph) ** 2 + nO**2 * numpy.cos(ph) ** 2
+                exy = (nE**2 - nO**2) * numpy.sin(ph) * numpy.cos(ph)
+                ezz = nO**2
+                return numpy.stack([exx, exy, exy, eyy, ezz], axis=-1)
+
+            return _f
+
+        s_real = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_iso(0.0), "0000"
+        ).solve(1, 1e-12, guess=2.3)
+
+        # 1. PML sigma -> 0+ limit (sigma = 1.5, 1e-2, 1e-5, 0.0) -> real unstretched mesh
+        pml_errs = []
+        for sig in (1.5, 1e-2, 0.0):
+            xx, yy, *_ = EMpy.modesolvers.FD.stretchmesh(xg, yg, 6, 1.0 - 1j * sig)
+            sp = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xx, yy, _eps_iso(0.0), "0000"
+            ).solve(1, 1e-12, guess=2.3)
+            pml_errs.append(abs(sp.modes[0].neff - s_real.modes[0].neff))
+        self.assertLess(pml_errs[1], pml_errs[0])
+        self.assertLess(pml_errs[2], 1e-9)
+
+        # Full FDMode post-processing on complex PML mesh (get_field, intensity, TEfrac, overlap, FDTD, plot)
+        xx_p, yy_p, *_ = EMpy.modesolvers.FD.stretchmesh(xg, yg, 6, 1.0 - 1.5j)
+        s_pml = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xx_p, yy_p, _eps_iso(0.0), "0000"
+        ).solve(1, 1e-12, guess=2.3)
+        m_pml = s_pml.modes[0]
+        self.assertAlmostEqual(m_pml.neff.real, s_real.modes[0].neff.real, places=4)
+        self.assertAlmostEqual(float(numpy.real(m_pml.norm())), 1.0, places=10)
+        self.assertAlmostEqual(
+            m_pml.TEfrac(xg, yg), s_real.modes[0].TEfrac(xg, yg), places=3
+        )
+        self.assertGreater(abs(m_pml.overlap(s_real.modes[0])), 0.999)
+        self.assertEqual(m_pml.get_field("Ex", xg, yg).shape, (len(xg), len(yg)))
+        self.assertEqual(len(m_pml.get_fields_for_FDTD()), 6)
+        m_pml.plot()
+        m_pml.plot_intensity()
+        plt.close("all")
+
+        # 2. Material lossy -> lossless limit on complex PML mesh (kap = 1e-2, 1e-5, 0.0)
+        kap_errs = []
+        for kap in (1e-2, 1e-5, 0.0):
+            sk = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xx_p, yy_p, _eps_iso(kap), "0000"
+            ).solve(1, 1e-12, guess=2.3)
+            if kap > 0:
+                self.assertLess(sk.modes[0].neff.imag, 0.0)
+            kap_errs.append(abs(sk.modes[0].neff - m_pml.neff))
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[2], 1e-9)
+
+        # 3. Anisotropic 5-component rotated tensor -> scalar isotropic limit on complex PML mesh
+        ani_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            sa = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xx_p, yy_p, _eps_aniso(dn=dn, kap=0.0), "0000"
+            ).solve(1, 1e-12, guess=2.3)
+            ani_errs.append(abs(sa.modes[0].neff - m_pml.neff))
+        self.assertLess(ani_errs[1], ani_errs[0])
+        self.assertLess(ani_errs[2], 1e-9)
+
+        # Lossy anisotropic with dn = 0 on PML mesh matches lossy scalar isotropic on PML mesh
+        s_iso_l = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xx_p, yy_p, _eps_iso(1e-3), "0000"
+        ).solve(1, 1e-12, guess=2.3)
+        s_ani_l = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xx_p, yy_p, _eps_aniso(dn=0.0, kap=1e-3), "0000"
+        ).solve(1, 1e-12, guess=2.3)
+        self.assertAlmostEqual(s_ani_l.modes[0].neff, s_iso_l.modes[0].neff, places=9)
+
 
 class FMMModeSolverTest(TestCase):
 
