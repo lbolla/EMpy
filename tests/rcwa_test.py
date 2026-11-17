@@ -450,3 +450,202 @@ class IsotropicRCWATest(TestCase):
             )
         self.assertLess(kap_errs[1], kap_errs[0])
         self.assertLess(kap_errs[1], 1e-4)
+
+    def test_lossy_grating_complex_symmetric_passivity_rytov_and_limits(self):
+        """Verify lossy gratings (complex-symmetric Toeplitz E, E1) match Rytov EMT, Iso==Ani, and kappa/dn -> 0 limits."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        air = EMpy.materials.Air
+        m1_i = EMpy.materials.IsotropicMaterial(
+            "m1", n0=EMpy.materials.RefractiveIndex(n0_const=1.3)
+        )
+        m2_i = EMpy.materials.IsotropicMaterial(
+            "m2", n0=EMpy.materials.RefractiveIndex(n0_const=2.2 - 0.5j)
+        )
+
+        # 1. Deep-subwavelength Rytov effective-medium benchmark (pitch = wl / 200) for both TE and TM!
+        dc = 0.4
+        thickness = 0.3e-6
+        pitch_sub = wl / 200.0
+        ml_sub = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(m1_i, m2_i, dc, pitch_sub, thickness),
+                EMpy.utils.Layer(air, np.inf),
+            ]
+        )
+        r_sub_te = EMpy.RCWA.IsotropicRCWA(
+            ml_sub, alpha=0.0, delta=0.0, psi=np.pi / 2, phi=np.pi / 2, n=4
+        ).solve([wl])
+        r_sub_tm = EMpy.RCWA.IsotropicRCWA(
+            ml_sub, alpha=0.0, delta=0.0, psi=0.0, phi=np.pi / 2, n=4
+        ).solve([wl])
+
+        eps1, eps2 = 1.3**2, (2.2 - 0.5j) ** 2
+        n_eff_te = np.sqrt(dc * eps1 + (1.0 - dc) * eps2)
+        n_eff_tm = np.sqrt(1.0 / (dc / eps1 + (1.0 - dc) / eps2))
+        if n_eff_te.imag > 0:
+            n_eff_te = -n_eff_te
+        if n_eff_tm.imag > 0:
+            n_eff_tm = -n_eff_tm
+        tmm_te = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(air, np.inf),
+                    EMpy.utils.Layer(
+                        EMpy.materials.IsotropicMaterial(
+                            "ete", n0=EMpy.materials.RefractiveIndex(n0_const=n_eff_te)
+                        ),
+                        thickness,
+                    ),
+                    EMpy.utils.Layer(air, np.inf),
+                ]
+            ),
+            0.0,
+        ).solve([wl])
+        tmm_tm = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(air, np.inf),
+                    EMpy.utils.Layer(
+                        EMpy.materials.IsotropicMaterial(
+                            "etm", n0=EMpy.materials.RefractiveIndex(n0_const=n_eff_tm)
+                        ),
+                        thickness,
+                    ),
+                    EMpy.utils.Layer(air, np.inf),
+                ]
+            ),
+            0.0,
+        ).solve([wl])
+        self.assertAlmostEqual(
+            float(r_sub_te.DE3[4, 0]), float(tmm_te.Ts[0]), delta=1e-3
+        )
+        self.assertAlmostEqual(
+            float(r_sub_tm.DE3[4, 0]), float(tmm_tm.Tp[0]), delta=1e-3
+        )
+
+        # 2. Conical lossy BinaryGrating & DoubleGratings: 3D-rotated lossy AniRCWA (dn -> 0) == lossy IsoRCWA
+        ml_i = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(m1_i, m2_i, dc, 1.1e-6, thickness),
+                EMpy.utils.Layer(air, np.inf),
+            ]
+        )
+        ri_c = EMpy.RCWA.IsotropicRCWA(
+            ml_i, alpha=0.3, delta=0.4, psi=0.6, phi=np.pi / 2, n=3
+        ).solve([wl])
+        self.assertLess(float((ri_c.DE1 + ri_c.DE3).sum()), 1.0)
+
+        m1_a = EMpy.materials.AnisotropicMaterial(
+            "m1a",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * 1.3**2 * np.eye(3)
+            ),
+        )
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            n2a = 2.2 - 0.5j
+            m2_a = EMpy.materials.AnisotropicMaterial(
+                "m2a",
+                epsilon_tensor=EMpy.materials.EpsilonTensor(
+                    epsilon_tensor_const=eps0
+                    * EMpy.utils.euler_rotate(
+                        np.diag([n2a**2, (n2a + 0.5 * dn) ** 2, (n2a + dn) ** 2]),
+                        0.31,
+                        0.52,
+                        0.73,
+                    )
+                ),
+            )
+            ml_a = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(air, np.inf),
+                    EMpy.utils.BinaryGrating(m1_a, m2_a, dc, 1.1e-6, thickness),
+                    EMpy.utils.Layer(air, np.inf),
+                ]
+            )
+            ra_c = EMpy.RCWA.AnisotropicRCWA(
+                ml_a, alpha=0.3, delta=0.4, psi=0.6, phi=np.pi / 2, n=3
+            ).solve([wl])
+            self.assertLess(
+                float((ra_c.DEO1 + ra_c.DEE1 + ra_c.DEO3 + ra_c.DEE3).sum()), 1.0
+            )
+            dn_errs.append(
+                float(
+                    np.max(
+                        np.abs((ra_c.DEO1 + ra_c.DEE1) - ri_c.DE1)
+                        + np.abs((ra_c.DEO3 + ra_c.DEE3) - ri_c.DE3)
+                    )
+                )
+            )
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-14)
+
+        # Also check lossy SymmetricDoubleGrating / AsymmetricDoubleGrating IsoRCWA == AniRCWA
+        sdg_i = EMpy.utils.SymmetricDoubleGrating(
+            m2_i, m2_i, m1_i, 0.2, 0.25, 1.1e-6, thickness
+        )
+        m2_a0 = EMpy.materials.AnisotropicMaterial(
+            "m2a0",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * (2.2 - 0.5j) ** 2 * np.eye(3)
+            ),
+        )
+        adg_a = EMpy.utils.AsymmetricDoubleGrating(
+            m2_a0, m2_a0, m1_a, 0.2, 0.25, 0.275, 1.1e-6, thickness
+        )
+        r_sdg_i = EMpy.RCWA.IsotropicRCWA(
+            EMpy.utils.Multilayer(
+                [EMpy.utils.Layer(air, np.inf), sdg_i, EMpy.utils.Layer(air, np.inf)]
+            ),
+            0.25,
+            0.35,
+            0.5,
+            np.pi / 2,
+            2,
+        ).solve([wl])
+        r_adg_a = EMpy.RCWA.AnisotropicRCWA(
+            EMpy.utils.Multilayer(
+                [EMpy.utils.Layer(air, np.inf), adg_a, EMpy.utils.Layer(air, np.inf)]
+            ),
+            0.25,
+            0.35,
+            0.5,
+            np.pi / 2,
+            2,
+        ).solve([wl])
+        np.testing.assert_allclose(r_adg_a.DEO1 + r_adg_a.DEE1, r_sdg_i.DE1, atol=1e-14)
+        np.testing.assert_allclose(r_adg_a.DEO3 + r_adg_a.DEE3, r_sdg_i.DE3, atol=1e-14)
+
+        # 3. Continuous lossy -> lossless grating limit (kap = 1e-2, 1e-5, 0.0 + 0j -> lossless)
+        def _solve_iso_grat(kap, force_complex=False):
+            n2_v = complex(2.2, -kap) if (kap > 0 or force_complex) else 2.2
+            m2_v = EMpy.materials.IsotropicMaterial(
+                "m2v", n0=EMpy.materials.RefractiveIndex(n0_const=n2_v)
+            )
+            ml_v = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(air, np.inf),
+                    EMpy.utils.BinaryGrating(m1_i, m2_v, dc, 1.1e-6, thickness),
+                    EMpy.utils.Layer(air, np.inf),
+                ]
+            )
+            return EMpy.RCWA.IsotropicRCWA(
+                ml_v, alpha=0.2, delta=0.3, psi=0.4, phi=np.pi / 2, n=3
+            ).solve([wl])
+
+        rg_ll = _solve_iso_grat(0.0, force_complex=False)
+        rg_c0 = _solve_iso_grat(0.0, force_complex=True)
+        self.assertAlmostEqual(float((rg_ll.DE1 + rg_ll.DE3).sum()), 1.0, places=13)
+        np.testing.assert_allclose(rg_c0.DE1, rg_ll.DE1, atol=1e-14)
+        np.testing.assert_allclose(rg_c0.DE3, rg_ll.DE3, atol=1e-14)
+
+        g_errs = []
+        for kap in (1e-2, 1e-5):
+            rg_k = _solve_iso_grat(kap)
+            self.assertLess(float((rg_k.DE1 + rg_k.DE3).sum()), 1.0)
+            g_errs.append(float(np.max(np.abs(rg_k.DE3 - rg_ll.DE3))))
+        self.assertLess(g_errs[1], g_errs[0])
+        self.assertLess(g_errs[1], 1e-4)

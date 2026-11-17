@@ -49,7 +49,7 @@ class Layer:
             EPS[:, :, hmax] = (
                 numpy.squeeze(self.mat.epsilonTensor(wl)) / EMpy.constants.eps0
             )
-            EPS1[:, :, hmax] = scipy.linalg.inv(EPS[:, :, hmax])
+            EPS1[:, :, hmax] = numpy.linalg.inv(EPS[:, :, hmax])
             return EPS, EPS1
 
     def capacitance(self, area=1.0, wl=0):
@@ -104,15 +104,17 @@ class BinaryGrating:
             EPS1 = numpy.zeros_like(EPS)
             eps1 = numpy.squeeze(self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
             eps2 = numpy.squeeze(self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
+            inv_eps1 = numpy.linalg.inv(eps1)
+            inv_eps2 = numpy.linalg.inv(eps2)
             f = self.dc
             h = numpy.arange(-hmax, hmax + 1)
             for ih, hh in enumerate(h):
                 EPS[:, :, ih] = (eps1 - eps2) * f * numpy.sinc(hh * f) + eps2 * (
                     hh == 0
                 )
-                EPS1[:, :, ih] = (
-                    scipy.linalg.inv(eps1) - scipy.linalg.inv(eps2)
-                ) * f * numpy.sinc(hh * f) + scipy.linalg.inv(eps2) * (hh == 0)
+                EPS1[:, :, ih] = (inv_eps1 - inv_eps2) * f * numpy.sinc(
+                    hh * f
+                ) + inv_eps2 * (hh == 0)
             return EPS, EPS1
 
     def capacitance(self, area=1.0, wl=0):
@@ -212,6 +214,9 @@ class SymmetricDoubleGrating:
             eps1 = numpy.squeeze(self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
             eps2 = numpy.squeeze(self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
             eps3 = numpy.squeeze(self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
+            inv_eps1 = numpy.linalg.inv(eps1)
+            inv_eps2 = numpy.linalg.inv(eps2)
+            inv_eps3 = numpy.linalg.inv(eps3)
             f1 = self.dc1
             f2 = self.dc2
             fM = (1.0 - f1 - f2) / 2.0
@@ -232,15 +237,15 @@ class SymmetricDoubleGrating:
                     + eps3 * (hh == 0)
                 )
                 EPS1[:, :, ih] = (
-                    (scipy.linalg.inv(eps1) - scipy.linalg.inv(eps3))
+                    (inv_eps1 - inv_eps3)
                     * f1
                     * numpy.sinc(hh * f1)
                     * numpy.exp(2j * numpy.pi * hh / N * A)
-                    + (scipy.linalg.inv(eps2) - scipy.linalg.inv(eps3))
+                    + (inv_eps2 - inv_eps3)
                     * f2
                     * numpy.sinc(hh * f2)
                     * numpy.exp(2j * numpy.pi * hh / N * B)
-                    + scipy.linalg.inv(eps3) * (hh == 0)
+                    + inv_eps3 * (hh == 0)
                 )
             return EPS, EPS1
 
@@ -337,6 +342,9 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
             eps1 = numpy.squeeze(self.mat1.epsilonTensor(wl)) / EMpy.constants.eps0
             eps2 = numpy.squeeze(self.mat2.epsilonTensor(wl)) / EMpy.constants.eps0
             eps3 = numpy.squeeze(self.mat3.epsilonTensor(wl)) / EMpy.constants.eps0
+            inv_eps1 = numpy.linalg.inv(eps1)
+            inv_eps2 = numpy.linalg.inv(eps2)
+            inv_eps3 = numpy.linalg.inv(eps3)
             f1 = self.dc1
             f2 = self.dc2
             fM = self.dcM
@@ -357,15 +365,15 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
                     + eps3 * (hh == 0)
                 )
                 EPS1[:, :, ih] = (
-                    (scipy.linalg.inv(eps1) - scipy.linalg.inv(eps3))
+                    (inv_eps1 - inv_eps3)
                     * f1
                     * numpy.sinc(hh * f1)
                     * numpy.exp(2j * numpy.pi * hh / N * A)
-                    + (scipy.linalg.inv(eps2) - scipy.linalg.inv(eps3))
+                    + (inv_eps2 - inv_eps3)
                     * f2
                     * numpy.sinc(hh * f2)
                     * numpy.exp(2j * numpy.pi * hh / N * B)
-                    + scipy.linalg.inv(eps3) * (hh == 0)
+                    + inv_eps3 * (hh == 0)
                 )
             return EPS, EPS1
 
@@ -1040,7 +1048,7 @@ def euler_rotate(X, phi, theta, psi):
             ],
         ]
     )
-    return numpy.dot(A, numpy.dot(X, scipy.linalg.inv(A)))
+    return numpy.dot(A, numpy.dot(X, numpy.linalg.inv(A)))
 
 
 def snell(theta_inc, n):

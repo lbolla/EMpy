@@ -11,7 +11,7 @@ anisotropic one.
 __author__ = "Lorenzo Bolla"
 
 import numpy as np
-from scipy.linalg import inv
+from numpy.linalg import inv
 from EMpy.utils import snell
 from EMpy.constants import c, mu0
 

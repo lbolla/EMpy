@@ -182,6 +182,43 @@ class UtilsTest(TestCase):
             if hh % 2 != 0:
                 numpy.testing.assert_allclose(eps_eq[:, :, idx], 0.0, atol=1e-14)
 
+        # Complex-symmetric lossy rotated anisotropic tensors must invert accurately (no sym-LAPACK corruption)
+        e_lossy = U.euler_rotate(
+            numpy.diag([(1.9 - 0.3j) ** 2, (2.1 - 0.5j) ** 2, (2.4 - 0.7j) ** 2]),
+            0.35,
+            0.55,
+            0.75,
+        )
+        mat_la = EMpy.materials.AnisotropicMaterial(
+            "la",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=EMpy.constants.eps0 * e_lossy
+            ),
+        )
+        lyr_e, lyr_e1 = U.Layer(mat_la, 0.2e-6).getEPSFourierCoeffs(
+            wl, 1, anisotropic=True
+        )
+        numpy.testing.assert_allclose(
+            lyr_e1[:, :, 2] @ lyr_e[:, :, 2], numpy.eye(3), atol=1e-14
+        )
+        inv_la = numpy.linalg.inv(e_lossy)
+        inv_m3 = numpy.eye(3) / n3**2
+        bg_la = U.BinaryGrating(mat_la, m3, 0.4, 1.0e-6, 0.2e-6)
+        _, bg_e1 = bg_la.getEPSFourierCoeffs(wl, 1, anisotropic=True)
+        numpy.testing.assert_allclose(
+            bg_e1[:, :, 2], 0.4 * inv_la + 0.6 * inv_m3, atol=1e-14
+        )
+        sdg_la = U.SymmetricDoubleGrating(mat_la, mat_la, m3, 0.2, 0.3, 1.0e-6, 0.2e-6)
+        adg_la = U.AsymmetricDoubleGrating(
+            mat_la, mat_la, m3, 0.2, 0.3, 0.25, 1.0e-6, 0.2e-6
+        )
+        _, sdg_e1 = sdg_la.getEPSFourierCoeffs(wl, 1, anisotropic=True)
+        _, adg_e1 = adg_la.getEPSFourierCoeffs(wl, 1, anisotropic=True)
+        numpy.testing.assert_allclose(sdg_e1, adg_e1, atol=1e-14)
+        numpy.testing.assert_allclose(
+            sdg_e1[:, :, 2], 0.5 * inv_la + 0.5 * inv_m3, atol=1e-14
+        )
+
     def test_rix_loss_roundtrip(self):
         wl = 1.55e-6
         n_real = 3.48

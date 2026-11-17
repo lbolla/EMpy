@@ -16,8 +16,9 @@ one, only stable for low diffraction orders and thin layers.
 __author__ = "Lorenzo Bolla"
 
 import numpy as np
-from scipy.linalg import toeplitz, inv, eig, solve as linsolve
 from numpy import pi
+from numpy.linalg import inv, solve as linsolve
+from scipy.linalg import eig, toeplitz
 
 from EMpy.constants import eps0
 from EMpy.utils import (
