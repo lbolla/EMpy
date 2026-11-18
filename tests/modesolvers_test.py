@@ -1316,3 +1316,133 @@ class GeometriesTest(TestCase):
         swg_fmm.plot(sumx=1, nxy=21, nz=9)
         swg_fmm.plot(sumx=None, nxy=21, nz=9)
         plt.close("all")
+
+    def test_fd_shift_invert_guess_above_below_and_subcutoff_passivity(self):
+        """Verify FD solvers find true guided modes for guess above/below/None and keep sub-cutoff modes passive."""
+        wl = 1.55e-6
+        mat1 = EMpy.materials.IsotropicMaterial(
+            "SiN", n0=EMpy.materials.RefractiveIndex(n0_const=1.97)
+        )
+        mat2 = EMpy.materials.IsotropicMaterial(
+            "Si", n0=EMpy.materials.RefractiveIndex(n0_const=3.4757)
+        )
+        l1 = EMpy.utils.Layer(mat1, 4.1e-6)
+        l21 = EMpy.utils.Layer(mat1, 2.0e-6)
+        l22 = EMpy.utils.Layer(mat2, 0.1e-6)
+        cs = EMpy.utils.CrossSection(
+            [
+                EMpy.utils.Slice(2.0e-6, [l1]),
+                EMpy.utils.Slice(0.5e-6, [l21, l22, l21]),
+                EMpy.utils.Slice(2.0e-6, [l1]),
+            ]
+        )
+        xg, yg = cs.grid((12, 8, 12), (12, 12, 12))
+
+        def _eps(x_, y_):
+            return cs.epsfunc(x_, y_, wl)
+
+        # VFDModeSolver & SVFDModeSolver: guess = n_core (above neff), guess below neff, and guess = None must agree
+        v_none = EMpy.modesolvers.FD.VFDModeSolver(wl, xg, yg, _eps, "0000").solve(
+            2, 1e-10
+        )
+        v_hi = EMpy.modesolvers.FD.VFDModeSolver(wl, xg, yg, _eps, "0000").solve(
+            2, 1e-10, guess=3.4757
+        )
+        v_lo = EMpy.modesolvers.FD.VFDModeSolver(wl, xg, yg, _eps, "0000").solve(
+            2, 1e-10, guess=2.05
+        )
+        self.assertGreater(v_none.modes[0].neff.real, 2.0)
+        numpy.testing.assert_allclose(
+            v_hi.modes[0].neff, v_none.modes[0].neff, rtol=1e-10
+        )
+        numpy.testing.assert_allclose(
+            v_lo.modes[0].neff, v_none.modes[0].neff, rtol=1e-10
+        )
+
+        sv_none = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl, xg, yg, _eps, "0000", method="Ex"
+        ).solve(1, 1e-10)
+        sv_hi = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl, xg, yg, _eps, "0000", method="Ex"
+        ).solve(1, 1e-10, guess=3.4757)
+        numpy.testing.assert_allclose(sv_hi.neff[0], sv_none.neff[0], rtol=1e-10)
+
+        # Sub-cutoff PEC air waveguide (0.4 um x 0.3 um at wl = 1.55 um): Im(neff) < 0 and SWG |S21| < 1
+        xp = numpy.linspace(0.0, 0.4e-6, 17)
+        yp = numpy.linspace(0.0, 0.3e-6, 13)
+        s_ev = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xp, yp, lambda x_, y_: numpy.ones((len(x_), len(y_))), "0000"
+        ).solve(2, 1e-10)
+        sv_ev = EMpy.modesolvers.FD.SVFDModeSolver(
+            wl,
+            xp,
+            yp,
+            lambda x_, y_: numpy.ones((len(x_), len(y_))),
+            "0000",
+            method="Ex",
+        ).solve(2, 1e-10)
+        self.assertTrue(numpy.all(numpy.imag([m.neff for m in s_ev.modes]) < -1.0))
+        self.assertTrue(numpy.all(numpy.imag(sv_ev.neff) < -1.0))
+        swg_ev = EMpy.modesolvers.geometries.SWG(s_ev, 0.5e-6)
+        # TE10 cutoff mode (neff ~ -1.66j) decays as exp(-k0 * 1.66 * 0.5e-6) ~ 0.034 < 0.05 (not 1e61 gain)
+        self.assertTrue(numpy.all(numpy.linalg.svd(swg_ev.S, compute_uv=False) < 0.05))
+
+    def test_simple_joint_multimode_passive_vs_reciprocal_and_fmm1d_slab(self):
+        """Verify SimpleJoint method='passive' vs 'reciprocal' on N=3 step junction and exact FMM1d slab dispersion."""
+        wl = 1.55e-6
+        xg = numpy.linspace(0.0, 3.2e-6, 41)
+        yg = numpy.linspace(0.0, 1.8e-6, 25)
+
+        def _eps_step(w, kap=0.0):
+            nc = complex(3.45, -kap) if kap > 0 else 3.45
+            ncl = complex(1.45, -0.2 * kap) if kap > 0 else 1.45
+            return lambda x_, y_: numpy.where(
+                (numpy.abs(x_[:, None] - 1.6e-6) <= w / 2.0)
+                & (numpy.abs(y_[None, :] - 0.9e-6) <= 0.11e-6),
+                nc**2,
+                ncl**2,
+            )
+
+        for kap in (0.0, 0.02):
+            s1 = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xg, yg, _eps_step(0.5e-6, kap), "0000"
+            ).solve(3, 1e-10)
+            s2 = EMpy.modesolvers.FD.VFDModeSolver(
+                wl, xg, yg, _eps_step(1.6e-6, kap), "0000"
+            ).solve(3, 1e-10)
+            sj_pas = EMpy.modesolvers.geometries.SimpleJoint(s1, s2, method="passive")
+            sj_rec = EMpy.modesolvers.geometries.SimpleJoint(
+                s1, s2, method="reciprocal"
+            )
+            # Wide-to-narrow fundamental port (index 3) exhibits strict radiation loss (< 1)
+            self.assertLess(numpy.sum(numpy.abs(sj_pas.S[:, 3]) ** 2), 1.0)
+            numpy.testing.assert_allclose(sj_rec.S, sj_rec.S.T, atol=1e-12)
+            if kap == 0.0:
+                numpy.testing.assert_allclose(
+                    sj_rec.S.conj().T @ sj_rec.S, numpy.eye(6), atol=1e-12
+                )
+
+        with self.assertRaises(ValueError):
+            EMpy.modesolvers.geometries.SimpleJoint(s1, s2, method="unknown")
+
+        # Exact 1D symmetric slab waveguide analytical dispersion (TE and TM, lossless and passive lossy)
+        wl_1d = 1.55
+        k0 = 2.0 * numpy.pi / wl_1d
+        d_core = 0.30
+        Uy = numpy.array([0.0, 4.5, 4.5 + d_core, 9.0 + d_core])
+        for kap in (0.0, 0.01):
+            n_core = complex(3.45, -kap) if kap > 0 else 3.45
+            n_clad = 1.45
+            ny = numpy.array([n_clad, n_core, n_clad])
+            for pol in ("TE", "TM"):
+                f1d = EMpy.modesolvers.FMM.FMM1d(Uy, ny, "AA").solve(wl_1d, 1, pol)
+                kz = f1d.modes[0].keff
+                kc = numpy.sqrt((k0 * n_core) ** 2 - kz**2 + 0j)
+                gc = numpy.sqrt(kz**2 - (k0 * n_clad) ** 2 + 0j)
+                if gc.real < 0:
+                    gc = -gc
+                ratio = (n_core / n_clad) ** 2 if pol == "TM" else 1.0
+                # Fundamental symmetric mode satisfies kc * tan(kc * d_core / 2) == ratio * gc
+                lhs = kc * numpy.tan(0.5 * kc * d_core)
+                rhs = ratio * gc
+                numpy.testing.assert_allclose(lhs, rhs, rtol=1e-10, atol=1e-10)

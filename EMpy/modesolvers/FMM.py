@@ -251,7 +251,6 @@ class FMMMode1dy(FMMMode1d):
         plt.legend(("real", "imag"))
         plt.xlabel("y")
         plt.ylabel("mode1d")
-        plt.show()
 
     def __str__(self):
         return (
@@ -810,7 +809,6 @@ class FMMMode2d(Mode):
             plt.ylabel("y")
             plt.title(titles[i])
             plt.axis("image")
-        plt.show()
 
         # power
         plt.figure()
@@ -819,7 +817,6 @@ class FMMMode2d(Mode):
         plt.ylabel("y")
         plt.title("cSz")
         plt.axis("image")
-        plt.show()
 
     def __str__(self):
         return "neff = %s" % (self.keff / (2 * numpy.pi / self.slicesx[0].wl))
@@ -1504,9 +1501,11 @@ def scalarprod(modo1, modo2):
             skd = sinxsux(kd)
             icc = 0.5 * di * (1.0 + s2kd)
             isc = 0.5 * (di**2) * (skd**2)
-            if abs(kd) < 1e-3:
+            if abs(kd) < 1e-2:
                 kd2 = kd**2
-                iss = (di**3) * (1.0 / 3.0 - kd2 / 15.0 + 2.0 * (kd2**2) / 315.0)
+                iss = (di**3) * (
+                    1.0 / 3.0 - kd2 / 15.0 + 2.0 * (kd2**2) / 315.0 - (kd2**3) / 2835.0
+                )
             else:
                 iss = 0.5 * di * (1.0 - s2kd) / (k**2)
             res = (

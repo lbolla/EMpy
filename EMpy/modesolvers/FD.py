@@ -102,6 +102,13 @@ class SVFDModeSolver(ModeSolver):
         xc = (x[:-1] + x[1:]) / 2
         yc = (y[:-1] + y[1:]) / 2
         eps = self._get_eps(xc, yc)
+        eps_flat = eps.ravel()
+        eps_pick = eps_flat[int(numpy.argmax(numpy.real(eps_flat)))]
+        self._eps_shift = (
+            float(numpy.real(eps_pick))
+            if numpy.imag(eps_pick) == 0
+            else complex(eps_pick)
+        )
 
         nx = len(xc)
         ny = len(yc)
@@ -232,30 +239,49 @@ class SVFDModeSolver(ModeSolver):
 
         A = self.build_matrix()
 
+        k = 2 * numpy.pi / self.wl
         if guess is not None:
-            k = 2 * numpy.pi / self.wl
             shift = (guess * k) ** 2
+            tol_eigs = tol
         else:
-            shift = None
+            shift = self._eps_shift * (1.0 + 1e-6) * k**2
+            tol_eigs = min(tol * 1e-4, 1e-14) if tol > 0 else 0.0
 
-        eigvals, eigvecs = linalg.eigs(  # type: ignore
-            A,
-            k=neigs,
-            which="LR",
-            tol=tol,
-            ncv=10 * neigs,
-            return_eigenvectors=True,
-            sigma=shift,
+        try:
+            eigvals, eigvecs = linalg.eigs(  # type: ignore
+                A,
+                k=neigs,
+                which="LM",
+                tol=tol_eigs,
+                ncv=max(10 * neigs, 20),
+                return_eigenvectors=True,
+                sigma=shift,
+            )
+        except RuntimeError:
+            eigvals, eigvecs = linalg.eigs(  # type: ignore
+                A,
+                k=neigs,
+                which="LM",
+                tol=tol_eigs,
+                ncv=max(10 * neigs, 20),
+                return_eigenvectors=True,
+                sigma=shift * (1.0 + 1e-5),
+            )
+
+        neff = (
+            self.wl * numpy.sqrt(numpy.asarray(eigvals, dtype=complex)) / (2 * numpy.pi)
         )
-
-        neff = self.wl * numpy.sqrt(eigvals) / (2 * numpy.pi)
+        flip = (neff.real - neff.imag < 0) | (
+            (neff.real - neff.imag == 0) & (neff.real < 0)
+        )
+        neff = numpy.where(flip, -neff, neff)
         phi = []
         for ieig in range(neigs):
             tmp = eigvecs[:, ieig].reshape(self.nx, self.ny)
             phi.append(tmp)
 
-        # sort and save the modes
-        idx = numpy.flipud(numpy.argsort(neff))
+        # sort and save the modes (guided highest Re(neff) first, least-attenuated Im(neff) first)
+        idx = numpy.lexsort((neff.imag, neff.real))[::-1]
         self.neff = neff[idx]
         tmp = []
         for i in idx:
@@ -385,6 +411,21 @@ class VFDModeSolver(ModeSolver):
         xc = (x[:-1] + x[1:]) / 2
         yc = (y[:-1] + y[1:]) / 2
         epsxx, epsxy, epsyx, epsyy, epszz = self._get_eps(xc, yc)
+        eig_t_plus = 0.5 * (epsxx + epsyy) + 0.5 * numpy.sqrt(
+            numpy.asarray((epsxx - epsyy) ** 2 + 4.0 * epsxy * epsyx, dtype=complex)
+        )
+        eig_flat = eig_t_plus.ravel()
+        eig_pick = eig_flat[int(numpy.argmax(numpy.real(eig_flat)))]
+        is_real_eps = (
+            not numpy.iscomplexobj(epsxx)
+            and not numpy.iscomplexobj(epsxy)
+            and not numpy.iscomplexobj(epsyx)
+            and not numpy.iscomplexobj(epsyy)
+            and numpy.imag(eig_pick) == 0
+        )
+        self._eps_shift: float | complex = (
+            float(numpy.real(eig_pick)) if is_real_eps else complex(eig_pick)
+        )
 
         nx = len(x)
         ny = len(y)
@@ -2034,25 +2075,44 @@ class VFDModeSolver(ModeSolver):
 
         A = self.build_matrix()
 
+        k = 2 * numpy.pi / self.wl
         if guess is not None:
             # calculate shift for eigs function
-            k = 2 * numpy.pi / self.wl
             shift = (guess * k) ** 2
+            tol_eigs = tol
         else:
-            shift = None
+            shift = self._eps_shift * (1.0 + 1e-6) * k**2
+            tol_eigs = min(tol * 1e-4, 1e-14) if tol > 0 else 0.0
 
-        # Here is where the actual mode-solving takes place!
-        [eigvals, eigvecs] = linalg.eigs(
-            A,
-            k=neigs,
-            which="LR",
-            tol=tol,
-            ncv=10 * neigs,
-            return_eigenvectors=True,
-            sigma=shift,
+        # Shift-invert with which="LM" finds modes closest to shift (both above and below guess)
+        try:
+            [eigvals, eigvecs] = linalg.eigs(
+                A,
+                k=neigs,
+                which="LM",
+                tol=tol_eigs,
+                ncv=max(10 * neigs, 20),
+                return_eigenvectors=True,
+                sigma=shift,
+            )
+        except RuntimeError:
+            [eigvals, eigvecs] = linalg.eigs(
+                A,
+                k=neigs,
+                which="LM",
+                tol=tol_eigs,
+                ncv=max(10 * neigs, 20),
+                return_eigenvectors=True,
+                sigma=shift * (1.0 + 1e-5),
+            )
+
+        neffs = (
+            self.wl * numpy.sqrt(numpy.asarray(eigvals, dtype=complex)) / (2 * numpy.pi)
         )
-
-        neffs = self.wl * numpy.sqrt(eigvals) / (2 * numpy.pi)
+        flip = (neffs.real - neffs.imag < 0) | (
+            (neffs.real - neffs.imag == 0) & (neffs.real < 0)
+        )
+        neffs = numpy.where(flip, -neffs, neffs)
         Hxs = []
         Hys = []
         nx = self.nx
@@ -2061,8 +2121,8 @@ class VFDModeSolver(ModeSolver):
             Hxs.append(eigvecs[: nx * ny, ieig].reshape(nx, ny))
             Hys.append(eigvecs[nx * ny :, ieig].reshape(nx, ny))
 
-        # sort the modes
-        idx = numpy.flipud(numpy.argsort(neffs))
+        # sort the modes (guided highest Re(neff) first, least-attenuated Im(neff) first)
+        idx = numpy.lexsort((neffs.imag, neffs.real))[::-1]
         neffs = neffs[idx]
         tmpx = []
         tmpy = []

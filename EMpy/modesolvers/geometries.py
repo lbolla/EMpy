@@ -74,6 +74,14 @@ class SWG:
         self.S = T2S(self.T)
 
     def _marginal_intensity(self, sumx=1, nxy=100, nz=100, z0=0):
+        """Compute 1D-integrated bidirectional modal optical intensity for visualization.
+
+        Note: applies the coherent scalar wave envelope a * exp(-i*beta*z) +
+        b * exp(+i*beta*(z - L)) to each mode's impedance-weighted profile so
+        counter-propagating waves exhibit standing-wave nodes/antinodes (rather
+        than net z-Poynting flux |a|^2 - |b|^2, which vanishes in an equal-amplitude
+        standing wave).
+        """
         m0 = self.solver.modes[0]
         x_grid = m0.get_x() if nxy is None else m0.get_x(nxy)
         y_grid = m0.get_y() if nxy is None else m0.get_y(nxy)
@@ -82,9 +90,9 @@ class SWG:
         nx, ny = len(x_grid), len(y_grid)
         Ex_tot = numpy.zeros((nx, ny, nz), dtype=complex)
         Ey_tot = numpy.zeros((nx, ny, nz), dtype=complex)
-        Hx_tot = numpy.zeros((nx, ny, nz), dtype=complex)
-        Hy_tot = numpy.zeros((nx, ny, nz), dtype=complex)
-        sz_incoherent = None
+        Hx_env = numpy.zeros((nx, ny, nz), dtype=complex)
+        Hy_env = numpy.zeros((nx, ny, nz), dtype=complex)
+        intensity_incoherent = None
 
         for im, (coeffLHS, coeffRHS) in enumerate(zip(self.inputLHS, self.inputRHS)):
             if coeffLHS == 0 and coeffRHS == 0:
@@ -103,9 +111,9 @@ class SWG:
                 Hx = m.get_field("Hx", x_grid, y_grid)
                 Hy = m.get_field("Hy", x_grid, y_grid)
             else:
-                if sz_incoherent is None:
-                    sz_incoherent = numpy.zeros((nx, ny, nz), dtype=float)
-                sz_incoherent += (
+                if intensity_incoherent is None:
+                    intensity_incoherent = numpy.zeros((nx, ny, nz), dtype=float)
+                intensity_incoherent += (
                     numpy.real(m.intensity(x_grid, y_grid))[:, :, numpy.newaxis]
                     * numpy.abs(env)[numpy.newaxis, numpy.newaxis, :] ** 2
                 )
@@ -113,19 +121,21 @@ class SWG:
 
             Ex_tot += Ex[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
             Ey_tot += Ey[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
-            Hx_tot += Hx[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
-            Hy_tot += Hy[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
+            Hx_env += Hx[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
+            Hy_env += Hy[:, :, numpy.newaxis] * env[numpy.newaxis, numpy.newaxis, :]
 
-        sz = 0.5 * numpy.real(Ex_tot * numpy.conj(Hy_tot) - Ey_tot * numpy.conj(Hx_tot))
-        if sz_incoherent is not None:
-            sz = sz + sz_incoherent
+        intensity_3d = 0.5 * numpy.real(
+            Ex_tot * numpy.conj(Hy_env) - Ey_tot * numpy.conj(Hx_env)
+        )
+        if intensity_incoherent is not None:
+            intensity_3d = intensity_3d + intensity_incoherent
 
         if sumx is None:
             coord = y_grid
-            f = numpy.trapezoid(sz, x=x_grid, axis=0)
+            f = numpy.trapezoid(intensity_3d, x=x_grid, axis=0)
         else:
             coord = x_grid
-            f = numpy.trapezoid(sz, x=y_grid, axis=1)
+            f = numpy.trapezoid(intensity_3d, x=y_grid, axis=1)
         return coord, z0 + z, f
 
     def plot(self, sumx=1, nxy=100, nz=100, z0=0):
@@ -138,11 +148,16 @@ class SWG:
 
 class SimpleJoint:
     #    def __init__(self, cs1, cs2, solver1, solver2, inputLHS=None, inputRHS=None):
-    def __init__(self, solver1, solver2, inputLHS=None, inputRHS=None):
+    def __init__(
+        self, solver1, solver2, inputLHS=None, inputRHS=None, method="passive"
+    ):
         #        self.cs1 = cs1
+        if method not in ("passive", "reciprocal"):
+            raise ValueError("method must be 'passive' or 'reciprocal'.")
         self.solver1 = solver1
         #        self.cs2 = cs2
         self.solver2 = solver2
+        self.method = method
         self.length = 0.0
         self.build_matrix()
         self.compute_output(inputLHS, inputRHS)
@@ -163,17 +178,65 @@ class SimpleJoint:
         self.outputRHS = output[self.solver1.nmodes :]
 
     def build_matrix(self):
-        """Symmetric vector mode-matching S-matrix at a zero-length waveguide junction.
+        """Vector mode-matching S-matrix at a zero-length waveguide junction.
 
-        Matching transverse E_t = sum (a + b) E_m and H_t = sum (+-a -+ b) H_m across z = 0
-        and projecting against the modes of each side using O_pq = 0.5 * int (E_p x H_q^*)_z:
+        With ``method="passive"`` (default), projects transverse E_t = sum (a + b) E_m
+        and H_t = sum (+-a -+ b) H_m onto the modes of each side using conjugated power
+        overlaps O_pq = 0.5 * int (E_p x H_q^*)_z:
           Side 1: O11^T (a1 + b1) = O21^T (b2 + a2),  O11^* (a1 - b1) = O12^* (b2 - a2)
           Side 2: O22^T (b2 + a2) = O12^T (a1 + b1),  O22^* (b2 - a2) = O21^* (a1 - b1)
-        Eliminating incoming/outgoing combinations yields the passive, reciprocal coupled
-        system [I, -R12; -R21, I] [b1; b2] = [0, T12; T21, 0] [a1; a2], which reproduces
-        exact Fresnel reflection/transmission in the homogeneous limit (including lossy media)
-        and accounts for radiation loss under basis truncation without unphysical gain.
+        This guarantees unconditional passivity (||S||_2 <= 1) under basis truncation so
+        cascaded GenericDevice circuits remain stable, reproduces exact Fresnel reflection
+        and transmission in homogeneous/1D limits (lossless and lossy), and converges to
+        Lorentz reciprocity as nmodes increases.
+
+        With ``method="reciprocal"``, uses unconjugated Lorentz-reaction overlaps
+        R_pq = 0.5 * int (E_p x H_q)_z (normalized to unit self-reaction) to enforce
+        exact S == S^T at any finite truncation order.
         """
+        if self.method == "reciprocal":
+            dim = self.solver1.nmodes
+
+            def _unconj_overlap(m1, m2):
+                x = m2.get_x()
+                y = m2.get_y()
+                if hasattr(m1, "fields"):
+                    Ex1, Ey1, _, _, _, _ = m1.fields(x, y)
+                    Ex1, Ey1 = Ex1.T, Ey1.T
+                else:
+                    Ex1 = m1.get_field("Ex", x, y)
+                    Ey1 = m1.get_field("Ey", x, y)
+                if hasattr(m2, "fields"):
+                    _, _, _, Hx2, Hy2, _ = m2.fields(x, y)
+                    Hx2, Hy2 = Hx2.T, Hy2.T
+                else:
+                    Hx2 = m2.get_field("Hx", x, y)
+                    Hy2 = m2.get_field("Hy", x, y)
+                return 0.5 * numpy.trapezoid(
+                    numpy.trapezoid(Ex1 * Hy2 - Ey1 * Hx2, x=y, axis=1), x=x, axis=0
+                )
+
+            d1 = numpy.array(
+                [_unconj_overlap(m, m) for m in self.solver1.modes], dtype=complex
+            )
+            d2 = numpy.array(
+                [_unconj_overlap(m, m) for m in self.solver2.modes], dtype=complex
+            )
+            X = numpy.zeros((dim, dim), dtype=complex)
+            for i in range(dim):
+                for j in range(dim):
+                    X[i, j] = _unconj_overlap(
+                        self.solver1.modes[i], self.solver2.modes[j]
+                    ) / numpy.sqrt(d1[i] * d2[j])
+            ident = numpy.eye(dim, dtype=complex)
+            s11 = numpy.linalg.solve(ident + X @ X.T, ident - X @ X.T).T
+            s21 = 2.0 * numpy.linalg.solve(ident + X.T @ X, X.T)
+            s22 = -numpy.linalg.solve(ident + X.T @ X, ident - X.T @ X).T
+            s12 = 2.0 * numpy.linalg.solve(ident + X @ X.T, X)
+            self.S = numpy.block([[s11, s12], [s21, s22]])
+            self.T = S2T(self.S)
+            return
+
         O11, O22, O12, O21 = interface_matrix(self.solver1, self.solver2)
         dim = O11.shape[0]
 
