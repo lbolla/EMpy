@@ -423,7 +423,7 @@ class VFDModeSolver(ModeSolver):
             and not numpy.iscomplexobj(epsyy)
             and numpy.imag(eig_pick) == 0
         )
-        self._eps_shift: float | complex = (
+        self._eps_shift = (
             float(numpy.real(eig_pick)) if is_real_eps else complex(eig_pick)
         )
 

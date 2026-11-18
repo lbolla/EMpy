@@ -89,6 +89,15 @@ class UtilsTest(TestCase):
         mono_peaks = U.find_peaks(x, x)
         self.assertEqual(len(mono_peaks), 1)
         self.assertAlmostEqual(mono_peaks[0].x, 10.0)
+        self.assertIsInstance(mono_peaks[0].y, float)
+
+        # Flat-top plateau must deduplicate to a single peak and return Python floats
+        plat_peaks = U.find_peaks(
+            numpy.arange(6, dtype=float), numpy.array([0.0, 1.0, 2.0, 2.0, 1.0, 0.0])
+        )
+        self.assertEqual(len(plat_peaks), 1)
+        self.assertAlmostEqual(plat_peaks[0].x, 2.5, places=4)
+        self.assertIsInstance(plat_peaks[0].y, float)
 
     def test_multilayer_slicing(self):
         l1 = U.Layer(EMpy.materials.Air, 1.0)
@@ -118,10 +127,74 @@ class UtilsTest(TestCase):
         m = cell.createMultilayer()
         self.assertIsInstance(m, U.Multilayer)
         self.assertEqual(len(m), 5)
-        with self.assertRaises(ImportError):
+        # Zero elastic constants cannot solve a non-zero voltage BVP
+        with self.assertRaises(ValueError):
             U.LiquidCrystalCell(
                 lc, voltage=1.0, t_tot=10e-6, t_anchoring=1e-6, nlayers=5
             )
+
+        # Built-in scipy.integrate.solve_bvp fallback works without scikits.bvp1lg
+        # for both V > 0 and twisted+pretilted V = 0 (capturing Oseen-Frank mid-cell bulge)
+        lc_real = EMpy.materials.get_10400_000_100(50)
+        c_v0_twist = U.LiquidCrystalCell(
+            lc_real,
+            voltage=0.0,
+            t_tot=8e-6,
+            t_anchoring=0.0,
+            pretilt=U.deg2rad(12.0),
+            totaltwist=U.deg2rad(75.0),
+            nlayers=21,
+        )
+        # For 10400_000_100 (K33 > 2*K22), twist-bend coupling pulls mid-cell tilt smaller
+        # (polar angle from z > 90 - 12 = 78 deg), symmetric across the cell:
+        self.assertAlmostEqual(c_v0_twist.angles[0], 78.0, places=5)
+        self.assertGreater(c_v0_twist.angles[10], 78.5)
+        numpy.testing.assert_allclose(
+            c_v0_twist.angles, c_v0_twist.angles[::-1], atol=1e-6
+        )
+
+        # In the one-constant limit (K11 = K22 = K33), twist energy ~ cos^2(tilt) * phi'^2
+        # pulls mid-cell tilt larger (polar angle from z < 78 deg):
+        lc_1k = EMpy.materials.LiquidCrystal(
+            nO=1.5,
+            nE=1.7,
+            nO_electrical=2.0,
+            nE_electrical=3.0,
+            K11=10e-12,
+            K22=10e-12,
+            K33=10e-12,
+        )
+        c_v0_1k = U.LiquidCrystalCell(
+            lc_1k,
+            voltage=0.0,
+            t_tot=8e-6,
+            t_anchoring=0.0,
+            pretilt=U.deg2rad(12.0),
+            totaltwist=U.deg2rad(75.0),
+            nlayers=21,
+        )
+        self.assertLess(c_v0_1k.angles[10], 77.0)
+
+        c_v_25 = U.LiquidCrystalCell(
+            lc_real,
+            voltage=2.5,
+            t_tot=8e-6,
+            t_anchoring=0.0,
+            pretilt=0.05,
+            nlayers=21,
+        )
+        c_v_50 = U.LiquidCrystalCell(
+            lc_real,
+            voltage=5.0,
+            t_tot=8e-6,
+            t_anchoring=0.0,
+            pretilt=0.05,
+            nlayers=21,
+        )
+        angle_wall = U.rad2deg(numpy.pi / 2.0 - 0.05)
+        self.assertLess(c_v_25.angles[10], angle_wall - 15.0)
+        self.assertLess(c_v_50.angles[10], c_v_25.angles[10])
+        self.assertLess(c_v_50.angles[10], 35.0)
 
     def test_symmetric_double_grating_fourier_coeffs(self):
         import scipy.integrate

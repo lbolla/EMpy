@@ -597,34 +597,64 @@ class LiquidCrystalCell:
         return init, self.__ode_3k(z, init)
 
     def __apply_tension(self):
-        """Inspiration from:
-        U{http://www.ee.ucl.ac.uk/~rjames/modelling/constant-order/oned/}."""
+        """Solve the 1D Oseen-Frank + electrostatic BVP (using scikits.bvp1lg if installed,
+        falling back to scipy.integrate.solve_bvp)."""
+
+        if self.lc.K11 <= 0 or self.lc.K22 <= 0 or self.lc.K33 <= 0:
+            raise ValueError(
+                "LiquidCrystal elastic constants (K11, K22, K33) must be positive to solve the BVP."
+            )
 
         try:
             from scikits.bvp1lg import colnew  # type: ignore
-        except ImportError as exc:
-            raise ImportError(
-                "scikits.bvp1lg is required to solve the LiquidCrystalCell BVP; "
-                "use voltage=0 or provide data_file instead."
-            ) from exc
+        except ImportError:
+            colnew = None
 
-        boundary_points = numpy.array([0, 0, 0, 1, 1, 1])
-        tol = 1e-6 * numpy.ones_like(boundary_points)
-        degrees = numpy.array([2, 2, 2])
+        if colnew is not None:
+            boundary_points = numpy.array([0, 0, 0, 1, 1, 1])
+            tol = 1e-6 * numpy.ones_like(boundary_points)
+            degrees = numpy.array([2, 2, 2])
 
-        solution = colnew.solve(
-            boundary_points,
-            degrees,
-            self.__ode_3k,
-            self.__bc_nosplay,
-            is_linear=False,
-            initial_guess=self.__ic_nosplay,
-            tolerances=tol,
-            vectorized=True,
-            maximum_mesh_size=1000,
+            self.bvp_solution = colnew.solve(
+                boundary_points,
+                degrees,
+                self.__ode_3k,
+                self.__bc_nosplay,
+                is_linear=False,
+                initial_guess=self.__ic_nosplay,
+                tolerances=tol,
+                vectorized=True,
+                maximum_mesh_size=1000,
+            )
+            return
+
+        import scipy.integrate
+
+        z_mesh = numpy.linspace(0.0, 1.0, 51)
+        y_init, _ = self.__ic_nosplay(z_mesh)
+
+        def _ode_first_order(z, y):
+            ddt, ddp, ddu = self.__ode_3k(z, y)
+            return numpy.vstack([y[1], ddt, y[3], ddp, y[5], ddu])
+
+        def _bc_func(ya, yb):
+            return self.__bc_nosplay(numpy.column_stack([ya, ya, ya, yb, yb, yb]))
+
+        res = scipy.integrate.solve_bvp(
+            _ode_first_order, _bc_func, z_mesh, y_init, tol=1e-6, max_nodes=2000
         )
+        if not res.success:
+            raise RuntimeError(
+                f"LiquidCrystalCell BVP failed to converge: {res.message}"
+            )
 
-        self.bvp_solution = solution
+        class _SciPyBVPSolution:
+            mesh = res.x
+
+            def __call__(self, z):
+                return res.sol(z).T
+
+        self.bvp_solution = _SciPyBVPSolution()
 
     def get_parameters(self, z=None):
         """Inspiration from:
@@ -654,20 +684,18 @@ class LiquidCrystalCell:
     def _get_angles_from_bvp(self):
         z_ = self.normalized_sample_points
         if self.voltage == 0:
-            if (self.totaltwist == 0 and self.lc.q0 == 0) or self.pretilt == 0:
+            has_elastic = self.lc.K11 > 0 and self.lc.K22 > 0 and self.lc.K33 > 0
+            if (
+                (self.totaltwist == 0 and self.lc.q0 == 0)
+                or self.pretilt == 0
+                or not has_elastic
+            ):
                 theta = numpy.full_like(
                     z_, EMpy.utils.rad2deg(numpy.pi / 2.0 - self.pretilt), dtype=float
                 )
                 phi = EMpy.utils.rad2deg(self.totaltwist * z_)
                 return theta, phi
-            try:
-                self.__apply_tension()
-            except ImportError:
-                theta = numpy.full_like(
-                    z_, EMpy.utils.rad2deg(numpy.pi / 2.0 - self.pretilt), dtype=float
-                )
-                phi = EMpy.utils.rad2deg(self.totaltwist * z_)
-                return theta, phi
+            self.__apply_tension()
             _, theta, phi, _ = self.get_parameters(z_)
             return theta, phi
 
@@ -1195,8 +1223,10 @@ def find_peaks(x, y, threshold=1e-6):
     if len(idxs) == 0:
         # there is only 1 min in f, so the max is on either boundary
         # get the max and set FWHM = 0
-        idx = numpy.argmax(y)
-        p = Peak(x[idx], y[idx], idx, x[idx], y[idx], x[idx], x[idx])
+        idx = int(numpy.argmax(y))
+        x_b = float(x[idx])
+        y_b = float(y[idx])
+        p = Peak(x_b, y_b, idx, x_b, y_b, x_b, x_b)
         # return a list of one element
         return [p]
 
@@ -1208,30 +1238,43 @@ def find_peaks(x, y, threshold=1e-6):
         return numpy.abs(scipy.interpolate.splev(x_, tck, der=1))
 
     peaks = []
+    xtol = float(x.max() - x.min()) * 1e-6
     for idx in idxs:
+        idx_i = int(idx)
         # look around the candidate
-        xtol = (x.max() - x.min()) * 1e-6
-        xopt = scipy.optimize.fminbound(
-            absdy, x[idx - 1], x[idx + 1], xtol=xtol, disp=False
+        xopt = float(
+            scipy.optimize.fminbound(
+                absdy, x[idx_i - 1], x[idx_i + 1], xtol=xtol, disp=False
+            )
         )
-        yopt = scipy.interpolate.splev(xopt, tck)
+        if any(abs(xopt - prev.x) <= max(10.0 * xtol, 1e-12) for prev in peaks):
+            continue
+        yopt = float(scipy.interpolate.splev(xopt, tck))
 
         if yopt > threshold * y.max():
             # FWHM
             tckFWHM = scipy.interpolate.splrep(x, y - 0.5 * yopt)
             roots = scipy.interpolate.sproot(tckFWHM)
 
-            idxFWHM = numpy.searchsorted(roots, xopt)
+            idxFWHM = int(numpy.searchsorted(roots, xopt))
             if idxFWHM <= 0:
-                xFWHM_1 = x[0]
+                xFWHM_1 = float(x[0])
             else:
-                xFWHM_1 = roots[idxFWHM - 1]
+                xFWHM_1 = float(roots[idxFWHM - 1])
             if idxFWHM >= len(roots):
-                xFWHM_2 = x[-1]
+                xFWHM_2 = float(x[-1])
             else:
-                xFWHM_2 = roots[idxFWHM]
+                xFWHM_2 = float(roots[idxFWHM])
 
-            p = Peak(xopt, yopt, idx, x[idx], y[idx], xFWHM_1, xFWHM_2)
+            p = Peak(
+                xopt,
+                yopt,
+                idx_i,
+                float(x[idx_i]),
+                float(y[idx_i]),
+                xFWHM_1,
+                xFWHM_2,
+            )
             peaks.append(p)
 
     peaks.sort(key=lambda p: p.y, reverse=True)

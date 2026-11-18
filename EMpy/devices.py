@@ -761,11 +761,9 @@ class SRR(Device):
     @type coupler2: L{Coupler}
     @ivar neff: Effective index of the feedback line.
     @type neff: numpy.ndarray
-    @ivar l1: Length of the feedback line (perimeter of the ring) from
-        coupler1 to coupler2.
+    @ivar l1: Length of the feedback line arc entering coupler1 (from coupler2 to coupler1).
     @type l1: scalar
-    @ivar l2: Length of the feedback line (perimeter of the ring) from
-        coupler2 to coupler1.
+    @ivar l2: Length of the feedback line arc from coupler1 to coupler2 (drop path).
     @type l2: scalar
     @ivar THRU: THRU of the filter.
     @type THRU: numpy.ndarray
@@ -1119,6 +1117,7 @@ class T_CRTCRR(Device):
         beta = 2.0 * numpy.pi * neff / wls
 
         t1 = numpy.exp(-1j * beta * l[0])
+        t1_15 = numpy.exp(-1.5j * beta * l[0])
         t2 = numpy.exp(-1j * beta * l[1])
         t3 = numpy.exp(-1j * beta * l[2])
         t31 = t3 / t1
@@ -1132,7 +1131,7 @@ class T_CRTCRR(Device):
             - q**2 * Kbar[1] * t2**2 * (Kbar[2] - q**3 * t1**2 * N1)
         )
         self.DROP = (
-            1j * q**4 * K[0] * K[1] * K[2] * Kbar[0] * t1**1.5 * t2 * (1 + t31) / denom
+            1j * q**4 * K[0] * K[1] * K[2] * Kbar[0] * t1_15 * t2 * (1 + t31) / denom
         )
         self.THRU = (
             q**2
@@ -1217,7 +1216,9 @@ class T_CTCRR(Device):
         beta = 2.0 * numpy.pi * neff / wls
 
         t1 = numpy.exp(-1j * beta * l[0])
+        t1_15 = numpy.exp(-1.5j * beta * l[0])
         t2 = numpy.exp(-1j * beta * l[1])
+        t2_15 = numpy.exp(-1.5j * beta * l[1])
         t3 = numpy.exp(-1j * beta * l[2])
         t4 = numpy.exp(-1j * beta * l[3])
         t31 = t3 / t1
@@ -1240,8 +1241,8 @@ class T_CTCRR(Device):
             * K[2]
             * Kbar[0]
             * Kbar[1]
-            * t1**1.5
-            * t2**1.5
+            * t1_15
+            * t2_15
             * (1 + t31)
             * (1 + t42)
             / denom
@@ -1389,12 +1390,38 @@ class Etalon(Device):
 
         # Compute group index ng = Re(n - wl * dn/dwl) for dispersive cavities
         dw = wls * 1e-7
+        dn_dwl = None
         try:
-            dn_dwl = (self.layer.mat.n(wls + dw) - self.layer.mat.n(wls - dw)) / (
-                2.0 * dw
-            )
+            n_plus = self.layer.mat.n(wls + dw)
+            n_minus = self.layer.mat.n(wls - dw)
+            # RefractiveIndex(n0_known=...) returns 0 at unstored shifted wavelengths
+            if not (
+                numpy.any(n != 0)
+                and (numpy.any(n_plus == 0) or numpy.any(n_minus == 0))
+            ):
+                dn_dwl = (n_plus - n_minus) / (2.0 * dw)
         except (KeyError, ValueError):
-            dn_dwl = numpy.gradient(n, wls) if wls.size > 1 else numpy.zeros_like(n)
+            dn_dwl = None
+
+        if dn_dwl is None:
+            if wls.size > 1:
+                dn_dwl = numpy.gradient(n, wls)
+            else:
+                known_dict = None
+                n0_obj = getattr(self.layer.mat, "n0", None)
+                get_rix = getattr(n0_obj, "get_rix", None)
+                args = getattr(get_rix, "args", ())
+                if len(args) == 1 and isinstance(args[0], dict) and len(args[0]) >= 2:
+                    known_dict = args[0]
+                if known_dict is not None:
+                    ks = numpy.array(sorted(known_dict.keys()), dtype=float)
+                    vs = numpy.array([known_dict[k_] for k_ in ks])
+                    grad = numpy.gradient(vs, ks)
+                    dn_dwl = numpy.interp(
+                        wls.real, ks, numpy.real(grad)
+                    ) + 1j * numpy.interp(wls.real, ks, numpy.imag(grad))
+                else:
+                    dn_dwl = numpy.zeros_like(n)
         ng = numpy.real(n - wls * dn_dwl)
 
         # Round-trip complex phase (under exp(+i*w*t - i*k*z), Im(n) <= 0 attenuates exp(-i*delta))
@@ -1411,13 +1438,21 @@ class Etalon(Device):
         self.Rmax = 1.0 - 1.0 / (1.0 + self.F)
 
         self.wl0 = numpy.mean(wls)
-        self.FSRwl = wls**2 / (2 * ng * l * numpy.cos(self.theta) + wls)
+        self.FSRwl = wls**2 / (2 * ng * l * numpy.cos(self.theta))
 
         self.f0, self.FSR = EMpy.utils.wl2f(wls, self.FSRwl)
 
-        self.FINESSE = numpy.pi / (2 * numpy.arcsin(1.0 / numpy.sqrt(self.F)))
-        # self.FINESSE = numpy.pi * numpy.sqrt(self.F) / 2.
-        # self.FINESSE = numpy.pi * numpy.sqrt(self.R) / (1 - self.R)
+        if numpy.all(self.F >= 1.0):
+            self.FINESSE = numpy.pi / (2 * numpy.arcsin(1.0 / numpy.sqrt(self.F)))
+        else:
+            f_arr = numpy.asarray(self.F, dtype=float)
+            fin = numpy.where(
+                f_arr >= 1.0,
+                numpy.pi
+                / (2.0 * numpy.arcsin(1.0 / numpy.sqrt(numpy.maximum(f_arr, 1.0)))),
+                numpy.nan,
+            )
+            self.FINESSE = float(fin) if numpy.ndim(self.F) == 0 else fin
 
         self.FWHMwl = self.FSRwl / self.FINESSE
         self.FWHM = self.FSR / self.FINESSE

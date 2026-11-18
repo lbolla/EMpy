@@ -204,7 +204,7 @@ class EtalonTest(TestCase):
             numpy.argmin(numpy.abs(wls_si - 0.5 * (peaks[p_mid] + peaks[p_mid - 1])))
         )
         self.assertAlmostEqual(
-            et_si.FSRwl[idx_mid], measured_fsr, delta=0.005 * measured_fsr
+            et_si.FSRwl[idx_mid], measured_fsr, delta=1e-4 * measured_fsr
         )
         # Scalar wavelength on dispersive Si must also use ng (~3.60), not phase index (~3.48)
         et_si_1 = EMpy.devices.Etalon(si_layer, 0.85, 0.0).solve(1.55e-6)
@@ -266,6 +266,41 @@ class EtalonTest(TestCase):
             k_errs.append(float(numpy.max(numpy.abs(et_k.Te - et_ll.Te))))
         self.assertLess(k_errs[1], k_errs[0])
         self.assertLess(k_errs[1], 5e-3)
+
+        # 4. Uncoated low-reflectivity glass (R = 0.04, F < 1): no RuntimeWarning and clean NaN FWHM/FINESSE
+        et_low_r = EMpy.devices.Etalon(
+            EMpy.utils.Layer(EMpy.materials.SiO2, 10.0e-6), 0.04, 0.0
+        ).solve(wls)
+        self.assertTrue(numpy.all(numpy.isfinite(et_low_r.Te)))
+        self.assertTrue(numpy.isnan(et_low_r.FINESSE))
+        self.assertTrue(numpy.all(numpy.isnan(et_low_r.FWHMwl)))
+
+        # 5. Tabulated dispersive RefractiveIndex(n0_known=...) uses group index ng (both array and scalar wl)
+        wls_tab = numpy.linspace(1.54e-6, 1.56e-6, 11)
+        slope = -1.0e7  # dn/dwl [m^-1] -> strong normal dispersion (ng ~ 19 != n ~ 3.5)
+        n_known = {float(w): float(3.5 + slope * (w - 1.55e-6)) for w in wls_tab}
+        lyr_tab = EMpy.utils.Layer(
+            EMpy.materials.IsotropicMaterial(
+                "tab", n0=EMpy.materials.RefractiveIndex(n0_known=n_known)
+            ),
+            10.0e-6,
+        )
+        lyr_poly = EMpy.utils.Layer(
+            EMpy.materials.IsotropicMaterial(
+                "poly",
+                n0=EMpy.materials.RefractiveIndex(
+                    n0_poly=[slope, 3.5 - slope * 1.55e-6]
+                ),
+            ),
+            10.0e-6,
+        )
+        et_tab = EMpy.devices.Etalon(lyr_tab, 0.8, 0.0).solve(wls_tab)
+        et_poly = EMpy.devices.Etalon(lyr_poly, 0.8, 0.0).solve(wls_tab)
+        numpy.testing.assert_allclose(et_tab.FSRwl, et_poly.FSRwl, rtol=1e-8)
+        et_tab_1 = EMpy.devices.Etalon(lyr_tab, 0.8, 0.0).solve(1.55e-6)
+        self.assertAlmostEqual(
+            float(et_tab_1.FSRwl[0]), float(et_poly.FSRwl[5]), delta=1e-14
+        )
 
 
 class TunableRingTest(TestCase):
@@ -347,3 +382,27 @@ class TunableRingTest(TestCase):
         self.assertLess(kap_errs[1], kap_errs[0])
         self.assertLess(kap_errs[2], kap_errs[1])
         self.assertLess(kap_errs[2], 1e-6)
+
+        # Vernier-tuned rings (l3 != 2*l1): continuous exp(-1.5j*beta*l) phase without pi branch-cut spikes
+        # Straddle beta * l1 = 65 * pi (wl = 2 * 2.5 * 20e-6 / 65 = 1.5384615e-6) where |DROP| > 0
+        wl_branch = 2.0 * 2.5 * 20e-6 / 65.0
+        wls_span = numpy.linspace(wl_branch - 0.5e-9, wl_branch + 0.5e-9, 1001)
+        neff_span = numpy.full_like(wls_span, 2.5)
+        crt_tuned = EMpy.devices.T_CRTCRR(
+            neff_span, [0.3, 0.3, 0.5], 1.0, [20e-6, 20e-6, 45e-6]
+        ).solve(wls_span)
+        ct_tuned = EMpy.devices.T_CTCRR(
+            neff_span, [0.3, 0.3, 0.5], 1.0, [20e-6, 20e-6, 45e-6, 45e-6]
+        ).solve(wls_span)
+        numpy.testing.assert_allclose(
+            numpy.abs(crt_tuned.THRU) ** 2 + numpy.abs(crt_tuned.DROP) ** 2,
+            1.0,
+            atol=1e-12,
+        )
+        self.assertGreater(float(numpy.min(numpy.abs(crt_tuned.DROP))), 0.05)
+        self.assertLess(float(numpy.max(numpy.abs(numpy.diff(crt_tuned.DROP)))), 5e-3)
+        self.assertLess(float(numpy.max(numpy.abs(numpy.diff(ct_tuned.DROP)))), 5e-3)
+        _, tau_crt, _ = EMpy.utils.group_delay_and_dispersion(wls_span, crt_tuned.DROP)
+        _, tau_ct, _ = EMpy.utils.group_delay_and_dispersion(wls_span, ct_tuned.DROP)
+        self.assertTrue(numpy.all(tau_crt > 0.0))
+        self.assertTrue(numpy.all(tau_ct > 0.0))
