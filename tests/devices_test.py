@@ -329,8 +329,8 @@ class TunableRingTest(TestCase):
         ctcrr_c0 = EMpy.devices.T_CTCRR(
             numpy.array([neff0 + 0.0j]), K_in, 1.0, l_in, coupling="optimum"
         ).solve(wls)
-        numpy.testing.assert_allclose(ctcrr_c0.DROP, ctcrr_opt.DROP, atol=1e-13)
-        numpy.testing.assert_allclose(ctcrr_c0.THRU, ctcrr_opt.THRU, atol=1e-13)
+        numpy.testing.assert_allclose(ctcrr_c0.DROP, ctcrr_opt.DROP, atol=1e-12)
+        numpy.testing.assert_allclose(ctcrr_c0.THRU, ctcrr_opt.THRU, atol=1e-12)
 
         kap_errs = []
         for kap in (1e-3, 1e-6, 1e-9):

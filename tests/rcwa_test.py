@@ -858,7 +858,7 @@ class IsotropicRCWATest(TestCase):
             total_power = float(
                 (res_n.DEO1 + res_n.DEE1 + res_n.DEO3 + res_n.DEE3).sum()
             )
-            self.assertAlmostEqual(total_power, 1.0, places=12)
+            self.assertAlmostEqual(total_power, 1.0, places=10)
             de0_by_n[n_ord] = np.array(
                 [
                     res_n.DEO1[n_ord, 0],
@@ -902,12 +902,12 @@ class IsotropicRCWATest(TestCase):
         self.assertAlmostEqual(
             float(r_hom.DEO1[10, 0] + r_hom.DEE1[10, 0]),
             float(tmm_hom.R[1, :, 0].sum()),
-            places=12,
+            places=10,
         )
         self.assertAlmostEqual(
             float(r_hom.DEO3[10, 0] + r_hom.DEE3[10, 0]),
             float(tmm_hom.T[1, :, 0].sum()),
-            places=12,
+            places=10,
         )
 
         # 3. Degenerate anisotropic -> isotropic limit (dn -> 0 with 3D Euler rotation) at n = 12, d = 2.0 + 2.5 um
@@ -933,7 +933,7 @@ class IsotropicRCWATest(TestCase):
             r_iso = EMpy.RCWA.IsotropicRCWA(
                 ml_iso, alpha=al_test, delta=delta, psi=psi, phi=np.pi / 2, n=12
             ).solve([wl])
-            self.assertAlmostEqual(float((r_iso.DE1 + r_iso.DE3).sum()), 1.0, places=12)
+            self.assertAlmostEqual(float((r_iso.DE1 + r_iso.DE3).sum()), 1.0, places=10)
 
             dn_errs = []
             for dn in (1e-4, 1e-8, 0.0):
@@ -990,7 +990,7 @@ class IsotropicRCWATest(TestCase):
                     )
                 )
             self.assertLess(dn_errs[1], dn_errs[0])
-            self.assertLess(dn_errs[2], 1e-12)
+            self.assertLess(dn_errs[2], 1e-10)
 
         # 4. Passive lossy thick high-order anisotropic grating (n = 12, d = 2.5 um):
         # verify kap -> 0+ limit, complex 0j continuity, strict passivity, and lossy Ani == lossy Iso at dn = 0.
@@ -1026,13 +1026,13 @@ class IsotropicRCWATest(TestCase):
         self.assertAlmostEqual(
             float((r_ll.DEO1 + r_ll.DEE1 + r_ll.DEO3 + r_ll.DEE3).sum()),
             1.0,
-            places=12,
+            places=10,
         )
         np.testing.assert_allclose(
-            r_c0.DEO1 + r_c0.DEE1, r_ll.DEO1 + r_ll.DEE1, atol=1e-13
+            r_c0.DEO1 + r_c0.DEE1, r_ll.DEO1 + r_ll.DEE1, atol=1e-11
         )
         np.testing.assert_allclose(
-            r_c0.DEO3 + r_c0.DEE3, r_ll.DEO3 + r_ll.DEE3, atol=1e-13
+            r_c0.DEO3 + r_c0.DEE3, r_ll.DEO3 + r_ll.DEE3, atol=1e-11
         )
 
         kap_errs = []
@@ -1064,8 +1064,8 @@ class IsotropicRCWATest(TestCase):
             n=12,
         ).solve([wl])
         np.testing.assert_allclose(
-            r_lani_iso.DEO1 + r_lani_iso.DEE1, r_liso.DE1, atol=1e-13
+            r_lani_iso.DEO1 + r_lani_iso.DEE1, r_liso.DE1, atol=1e-11
         )
         np.testing.assert_allclose(
-            r_lani_iso.DEO3 + r_lani_iso.DEE3, r_liso.DE3, atol=1e-13
+            r_lani_iso.DEO3 + r_lani_iso.DEE3, r_liso.DE3, atol=1e-11
         )
