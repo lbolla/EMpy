@@ -38,3 +38,34 @@ jobs:
 
     - name: Run tests
       run: uv run pytest
+
+    - name: Smoke test examples
+      if: matrix.python-version == '3.12'
+      working-directory: examples
+      env:
+        MPLBACKEND: Agg
+      run: |
+        uv run python -c '
+        import glob, os, runpy, sys
+        import matplotlib.pyplot as plt
+        plt.show = lambda *a, **k: None
+        sys.path.insert(0, os.getcwd())
+        for path in sorted(glob.glob("ex_*.py")):
+            runpy.run_path(path, run_name="__main__")
+            plt.close("all")
+        '
+
+  lowest-direct:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install uv and set the Python version
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: "3.11"
+
+    - name: Run tests with lowest-direct dependencies
+      run: uv run --isolated --resolution lowest-direct pytest
