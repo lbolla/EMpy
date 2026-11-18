@@ -555,3 +555,165 @@ class TransferMatrixTest(TestCase):
             self.assertLess(errs_i[2], 0.01 * errs_i[1])
             self.assertLess(errs_a[0], 5e-2)
             self.assertLess(errs_a[1], 5e-2)
+
+    def test_weak_birefringence_jones_waveplate_and_general_iso_limit(self):
+        """Verify weak-birefringence waveplates match exact Jones calculus and general 4x4 path matches IsotropicTM."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        n0 = 1.5
+        c_45 = np.array([1.0, 1.0, 0.0]) / np.sqrt(2.0)
+        mat_amb = _make_aniso_multilayer([n0], [np.inf])[0].mat
+
+        # 1. Exact half-wave plates (d = wl / (2 * dn)) down to dn = 1e-6 must give T_sp == 1, T_ss == 0
+        for dn in (1e-3, 1e-4, 2e-5, 1e-5, 5e-6, 1e-6):
+            d_hwp = wl / (2.0 * dn)
+            eps_wp = eps0 * (
+                n0**2 * np.eye(3) + ((n0 + dn) ** 2 - n0**2) * np.outer(c_45, c_45)
+            )
+            mat_wp = EMpy.materials.AnisotropicMaterial(
+                "wp", EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps_wp)
+            )
+            ml = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(mat_amb, np.inf),
+                    EMpy.utils.Layer(mat_wp, d_hwp),
+                    EMpy.utils.Layer(mat_amb, np.inf),
+                ]
+            )
+            sol = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml, 0.0, 0.0).solve(
+                [wl]
+            )
+            assert_allclose(sol.T[0, 1, 0], 1.0, atol=1e-5)
+            assert_allclose(sol.T[0, 0, 0], 0.0, atol=1e-5)
+
+        # 2. Fixed-thickness plate (d = 50 um): T_sp == sin^2(pi * dn * d / wl) smoothly across dn -> 0
+        d_fix = 50.0e-6
+        for dn in (1e-3, 1e-4, 2e-5, 1e-5, 1e-6, 1e-8, 0.0):
+            eps_wp = eps0 * (
+                n0**2 * np.eye(3) + ((n0 + dn) ** 2 - n0**2) * np.outer(c_45, c_45)
+            )
+            mat_wp = EMpy.materials.AnisotropicMaterial(
+                "wpf", EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps_wp)
+            )
+            ml = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(mat_amb, np.inf),
+                    EMpy.utils.Layer(mat_wp, d_fix),
+                    EMpy.utils.Layer(mat_amb, np.inf),
+                ]
+            )
+            sol = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml, 0.0, 0.0).solve(
+                [wl]
+            )
+            t_sp_jones = np.sin(np.pi * dn * d_fix / wl) ** 2
+            assert_allclose(sol.T[0, 1, 0], t_sp_jones, rtol=2e-3, atol=1e-14)
+
+        # 3. General 4x4 Berreman path near isotropic limit (1e-11 off-diagonal perturbation bypasses 1e-13 shortcut)
+        sol_iso = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            _make_iso_multilayer([1.0, 2.1, 1.45], [np.inf, 3.0e-6, np.inf]), 0.4
+        ).solve([wl])
+        k_pert = 2.1**2 * np.eye(3) + 1e-11 * np.array(
+            [[0.0, 1.0, 0.5], [1.0, 0.0, -0.3], [0.5, -0.3, 0.0]]
+        )
+        ml_pert = EMpy.utils.Multilayer(
+            [
+                _make_aniso_multilayer([1.0], [np.inf])[0],
+                EMpy.utils.Layer(
+                    EMpy.materials.AnisotropicMaterial(
+                        "p",
+                        EMpy.materials.EpsilonTensor(
+                            epsilon_tensor_const=eps0 * k_pert
+                        ),
+                    ),
+                    3.0e-6,
+                ),
+                _make_aniso_multilayer([1.45], [np.inf])[0],
+            ]
+        )
+        sol_pert = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            ml_pert, 0.4 * np.cos(0.3), 0.4 * np.sin(0.3)
+        ).solve([wl])
+        # Check at delta = 0 directly against IsotropicTransferMatrix to < 1e-9
+        sol_pert_0 = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+            ml_pert, 0.4, 0.0
+        ).solve([wl])
+        assert_allclose(sol_pert_0.R[0, 0, 0], sol_iso.Rs[0], atol=1e-9)
+        assert_allclose(sol_pert_0.T[0, 0, 0], sol_iso.Ts[0], atol=1e-9)
+        assert_allclose(sol_pert_0.R[1, 1, 0], sol_iso.Rp[0], atol=1e-9)
+        assert_allclose(sol_pert_0.T[1, 1, 0], sol_iso.Tp[0], atol=1e-9)
+        assert_allclose(sol_pert.R_tot[:, 0] + sol_pert.T_tot[:, 0], 1.0, atol=1e-12)
+
+    def test_biaxial_optic_axis_continuity_and_lossy_anisotropic_total_flux(self):
+        """Verify continuity across an oblique biaxial optic axis and exact passivity of R_tot + T_tot."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+
+        # 1. Biaxial crystal eps = diag(n1^2, n2^2, n3^2) at its xz-plane binormal (gamma_0 == gamma_2, E not perp k)
+        n1, n2, n3 = 1.5, 1.7, 2.0
+        # Exact wave-normal optic axis (where gamma_o^2 = n2^2 - ax^2 equals gamma_e^2 = n1^2*(1 - ax^2/n3^2)):
+        ax_axis = n3 * np.sqrt((n2**2 - n1**2) / (n3**2 - n1**2))
+        mat_prism = _make_aniso_multilayer([2.2], [np.inf])[0].mat
+        mat_biax = EMpy.materials.AnisotropicMaterial(
+            "bx",
+            EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * np.diag([n1**2, n2**2, n3**2])
+            ),
+        )
+        ml_bx = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(mat_prism, np.inf),
+                EMpy.utils.Layer(mat_biax, 2.5e-6),
+                EMpy.utils.Layer(mat_prism, np.inf),
+            ]
+        )
+        rpp_vals = []
+        for dax in (-1e-4, -1e-7, 0.0, 1e-7, 1e-4):
+            th_v = np.arcsin((ax_axis + dax) + 0j)
+            sb = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml_bx, th_v, 0.0).solve(
+                [wl]
+            )
+            assert_allclose(sb.R_tot[:, 0] + sb.T_tot[:, 0], 1.0, atol=1e-12)
+            rpp_vals.append(float(sb.R[1, 1, 0]))
+        assert_allclose(rpp_vals[2], 0.5 * (rpp_vals[0] + rpp_vals[4]), atol=1e-4)
+        assert_allclose(rpp_vals[1], rpp_vals[2], atol=1e-6)
+        assert_allclose(rpp_vals[3], rpp_vals[2], atol=1e-6)
+
+        # 2. Lossless air -> rotated lossy biaxial semi-infinite substrate: R_tot + T_tot == 1 identically at z = 0
+        mat_air = _make_aniso_multilayer([1.0], [np.inf])[0].mat
+        for kap in (0.0, 1e-3, 0.1, 0.35):
+            eps_l = eps0 * EMpy.utils.euler_rotate(
+                np.diag(
+                    [
+                        complex(1.5, -kap) ** 2,
+                        complex(1.7, -0.4 * kap) ** 2,
+                        complex(2.0, -0.2 * kap) ** 2,
+                    ]
+                ),
+                0.4,
+                0.6,
+                0.3,
+            )
+            mat_l = EMpy.materials.AnisotropicMaterial(
+                "lb", EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps_l)
+            )
+            sl_if = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                EMpy.utils.Multilayer(
+                    [EMpy.utils.Layer(mat_air, np.inf), EMpy.utils.Layer(mat_l, np.inf)]
+                ),
+                0.35,
+                0.15,
+            ).solve([wl])
+            assert_allclose(sl_if.R_tot[:, 0] + sl_if.T_tot[:, 0], 1.0, atol=1e-13)
+            if kap > 0:
+                sl_slab = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                    EMpy.utils.Multilayer(
+                        [
+                            EMpy.utils.Layer(mat_air, np.inf),
+                            EMpy.utils.Layer(mat_l, 0.6e-6),
+                            EMpy.utils.Layer(mat_air, np.inf),
+                        ]
+                    ),
+                    0.35,
+                    0.15,
+                ).solve([wl])
+                self.assertTrue(np.all(sl_slab.R_tot[:, 0] + sl_slab.T_tot[:, 0] < 1.0))

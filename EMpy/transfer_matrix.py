@@ -290,7 +290,43 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 gamma = np.array([g, -g, g, -g], dtype=complex)
                 raw_p = None
             else:
-                raw_gamma = np.roots(coeff)
+                # Solve the first-order 4x4 Berreman eigenproblem (rather than companion
+                # roots of the expanded quartic) to avoid O(sqrt(eps)) accuracy loss near
+                # double roots (e.g. weak birefringence or optic axes).
+                kzz = K[2, 2]
+                if abs(kzz) > 1e-14 * np.max(np.abs(K)):
+                    ez_row = (
+                        np.array([-K[2, 0], -alpha, -K[2, 1], beta], dtype=complex)
+                        / kzz
+                    )
+                    hz_row = np.array([-beta, 0.0, alpha, 0.0], dtype=complex)
+                    B_mat = np.zeros((4, 4), dtype=complex)
+                    B_mat[0, :] = alpha * ez_row + np.array([0.0, 1.0, 0.0, 0.0])
+                    B_mat[1, :] = (
+                        beta * hz_row
+                        + np.array([K[0, 0], 0.0, K[0, 1], 0.0])
+                        + K[0, 2] * ez_row
+                    )
+                    B_mat[2, :] = beta * ez_row + np.array([0.0, 0.0, 0.0, -1.0])
+                    B_mat[3, :] = (
+                        alpha * hz_row
+                        - np.array([K[1, 0], 0.0, K[1, 1], 0.0])
+                        - K[1, 2] * ez_row
+                    )
+                    raw_gamma = np.linalg.eigvals(B_mat)
+                else:
+                    raw_gamma = np.roots(coeff)
+
+                def _wave_op(g_val):
+                    return K + np.array(
+                        [
+                            [-beta2 - g_val**2, alpha * beta, alpha * g_val],
+                            [alpha * beta, -alpha2 - g_val**2, beta * g_val],
+                            [alpha * g_val, beta * g_val, -alpha2 - beta2],
+                        ],
+                        dtype=complex,
+                    )
+
                 raw_k = (
                     k0
                     * np.array(
@@ -303,15 +339,7 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 )
                 raw_p = np.zeros((4, 3), dtype=complex)
                 for i, g in enumerate(raw_gamma):
-                    H = K + np.array(
-                        [
-                            [-beta2 - g**2, alpha * beta, alpha * g],
-                            [alpha * beta, -alpha2 - g**2, beta * g],
-                            [alpha * g, beta * g, -alpha2 - beta2],
-                        ],
-                        dtype=complex,
-                    )
-                    _, _, vh = np.linalg.svd(H)
+                    _, _, vh = np.linalg.svd(_wave_op(g))
                     raw_p[i, :] = vh[-1, :].conj()
                     raw_p[i, :] /= np.linalg.norm(raw_p[i, :])
                 raw_q = wl / (2.0 * np.pi * mu0 * c) * np.cross(raw_k, raw_p)
@@ -391,26 +419,55 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 ).T
             )
             p = np.zeros((4, 3), dtype=complex)
-
-            deg_tol = 1e-5 * max(1.0, float(np.max(np.abs(gamma))))
-            if (
-                abs(gamma[0] - gamma[2]) < deg_tol
-                and abs(gamma[1] - gamma[3]) < deg_tol
-            ):
-                # Degenerate (e.g. isotropic) layer: construct orthogonal s and p basis
-                if abs(alpha) + abs(beta) > 1e-12:
-                    p_s = np.array([-beta, alpha, 0.0], dtype=complex)
-                else:
-                    p_s = np.array([0.0, 1.0, 0.0], dtype=complex)
-                p_s /= np.linalg.norm(p_s)
-                p_p_fwd = np.cross(p_s, k[0, :])
-                p_p_fwd /= np.linalg.norm(p_p_fwd)
-                p_p_bwd = np.cross(p_s, k[1, :])
-                p_p_bwd /= np.linalg.norm(p_p_bwd)
-                p = np.array([p_s, p_s, p_p_fwd, p_p_bwd], dtype=complex)
+            if abs(alpha) + abs(beta) > 1e-12:
+                p_s_ref = np.array([-beta, alpha, 0.0], dtype=complex)
             else:
-                assert raw_p is not None
-                p = raw_p
+                p_s_ref = np.array([0.0, 1.0, 0.0], dtype=complex)
+            p_s_ref /= np.linalg.norm(p_s_ref)
+
+            if raw_p is None:
+                # Isotropic layer: construct exact orthogonal s and p basis
+                p_p_fwd = np.cross(p_s_ref, k[0, :])
+                p_p_fwd /= np.linalg.norm(p_p_fwd)
+                p_p_bwd = np.cross(p_s_ref, k[1, :])
+                p_p_bwd /= np.linalg.norm(p_p_bwd)
+                p = np.array([p_s_ref, p_s_ref, p_p_fwd, p_p_bwd], dtype=complex)
+            else:
+                p = raw_p.copy()
+                # Only treat a forward or backward pair as degenerate at near-machine
+                # precision (preserving weak birefringence down to ~1e-11), and span
+                # the exact 2D SVD nullspace of H(gamma) so biaxial optic axes (where
+                # D perp k but E not perp k) satisfy Maxwell's wave equation exactly.
+                deg_tol = 1e-11 * max(1.0, float(np.max(np.abs(gamma))))
+                for i0, i1 in ((0, 2), (1, 3)):
+                    if abs(gamma[i0] - gamma[i1]) < deg_tol:
+                        g_avg = 0.5 * (gamma[i0] + gamma[i1])
+                        H_deg = K + np.array(
+                            [
+                                [-beta2 - g_avg**2, alpha * beta, alpha * g_avg],
+                                [alpha * beta, -alpha2 - g_avg**2, beta * g_avg],
+                                [alpha * g_avg, beta * g_avg, -alpha2 - beta2],
+                            ],
+                            dtype=complex,
+                        )
+                        _, _, vh_deg = np.linalg.svd(H_deg)
+                        V_null = vh_deg[-2:, :].conj().T  # (3, 2) orthonormal basis
+                        c_s = V_null.conj().T @ p_s_ref
+                        nrm_cs = float(np.linalg.norm(c_s))
+                        if nrm_cs > 1e-14:
+                            c_s = c_s / nrm_cs
+                        else:
+                            c_s = np.array([1.0 + 0j, 0.0 + 0j])
+                        c_p = np.array([-np.conj(c_s[1]), np.conj(c_s[0])])
+                        v_s = V_null @ c_s
+                        v_p = V_null @ c_p
+                        p_p_ref = np.cross(p_s_ref, k[i0, :])
+                        if np.linalg.norm(p_p_ref) > 0 and (
+                            np.real(np.vdot(p_p_ref, v_p)) < 0
+                        ):
+                            v_p = -v_p
+                        p[i0, :] = v_s / np.linalg.norm(v_s)
+                        p[i1, :] = v_p / np.linalg.norm(v_p)
 
             q = wl / (2.0 * np.pi * mu0 * c) * np.cross(k, p)
 
@@ -423,6 +480,8 @@ class AnisotropicTransferMatrix(TransferMatrix):
         # r and t are complex!
         R = np.zeros((2, 2, self.wls.size))
         T = np.zeros((2, 2, self.wls.size))
+        R_tot = np.zeros((2, self.wls.size))
+        T_tot = np.zeros((2, self.wls.size))
 
         epstot = np.zeros((3, 3, self.wls.size, nlayers), dtype=complex)
         for i, l in enumerate(multilayer):
@@ -529,8 +588,25 @@ class AnisotropicTransferMatrix(TransferMatrix):
             R[:, :, iwl] = np.absolute(r) ** 2 * (sz_ref[None, :] / sz_inc[:, None])
             T[:, :, iwl] = np.absolute(t) ** 2 * (sz_tr[None, :] / sz_inc[:, None])
 
+            # Total reflected and transmitted z-Poynting flux per input polarization
+            # (includes cross-mode interference when end media are both lossy and birefringent).
+            for m_in in range(2):
+                e_ref = r[m_in, 0] * p[1, :, 0] + r[m_in, 1] * p[3, :, 0]
+                h_ref = r[m_in, 0] * q[1, :, 0] + r[m_in, 1] * q[3, :, 0]
+                e_tr = t[m_in, 0] * p[0, :, -1] + t[m_in, 1] * p[2, :, -1]
+                h_tr = t[m_in, 0] * q[0, :, -1] + t[m_in, 1] * q[2, :, -1]
+                R_tot[m_in, iwl] = -_sz(e_ref, h_ref) / sz_inc[m_in]
+                sz_tot_tr = _sz(e_tr, h_tr)
+                if np.allclose(epsilon[:, :, -1], epsilon[:, :, -1].conj().T) and (
+                    sz_tr[0] == 0.0 and sz_tr[1] == 0.0
+                ):
+                    sz_tot_tr = max(sz_tot_tr, 0.0)
+                T_tot[m_in, iwl] = sz_tot_tr / sz_inc[m_in]
+
         self.R = R
         self.T = T
+        self.R_tot = R_tot
+        self.T_tot = T_tot
         return self
 
     def __str__(self):
