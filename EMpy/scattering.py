@@ -174,7 +174,10 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
         )
 
     lambda0 = EMpy.constants.c / f
-    lambdam = lambda0 / numpy.sqrt(epsr)
+    n_med = numpy.sqrt(numpy.asarray(epsr, dtype=complex))
+    if n_med.real - n_med.imag < 0 or (n_med.real - n_med.imag == 0 and n_med.real < 0):
+        n_med = -n_med
+    lambdam = lambda0 / n_med
     # k0 = 2*numpy.pi/lambda0
     km = 2 * numpy.pi / lambdam
     Z0 = EMpy.constants.eta0
@@ -216,9 +219,7 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
             / (4 * numpy.pi * 1j)
             * numpy.sum(
                 (
-                    Z0
-                    / numpy.sqrt(epsr)
-                    * (aa * J_nz + bb * (r1dotJ * numpy.ones((3, 1))) * r1)
+                    Z0 / n_med * (aa * J_nz + bb * (r1dotJ * numpy.ones((3, 1))) * r1)
                     + cc * numpy.cross(r1, -M_nz, axis=0)
                 )
                 * numpy.exp(-1j * kmr)
@@ -232,9 +233,7 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
             / (4 * numpy.pi * 1j)
             * numpy.sum(
                 (
-                    numpy.sqrt(epsr)
-                    / Z0
-                    * (-aa * M_nz + bb * (r1dotM * numpy.ones((3, 1))) * r1)
+                    n_med / Z0 * (-aa * M_nz + bb * (r1dotM * numpy.ones((3, 1))) * r1)
                     - cc * numpy.cross(r1, J_nz, axis=0)
                 )
                 * numpy.exp(-1j * kmr)

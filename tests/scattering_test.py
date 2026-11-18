@@ -58,6 +58,7 @@ class ScatteringTest(unittest.TestCase):
         import EMpy.constants as C
 
         self.assertAlmostEqual(C.eta0, numpy.sqrt(C.mu0 / C.eps0), places=12)
+        numpy.testing.assert_allclose(C.eta0, 376.730313668, rtol=1e-9)
         f = 1.0e9
         omega = 2.0 * numpy.pi * f
         epsr = 2.25
@@ -133,6 +134,16 @@ class ScatteringTest(unittest.TestCase):
         self.assertLess(kap_errs[1], kap_errs[0])
         self.assertLess(kap_errs[2], kap_errs[1])
         self.assertLess(kap_errs[2], 1e-6)
+
+        # 4. Negative real permittivity epsr < 0 (lossless plasma/metal): finite evanescent decay, no NaN/blowup
+        P_ev = numpy.array([[0.1, 0.3], [0.0, 0.0], [0.0, 0.0]])
+        f_ev_r = S.currentsScatteringKottler(P_ev, J, M, Q, dS, f=f, epsr=-4.0)
+        f_ev_c = S.currentsScatteringKottler(P_ev, J, M, Q, dS, f=f, epsr=-4.0 - 1e-9j)
+        self.assertTrue(numpy.all(numpy.isfinite(f_ev_r.E)))
+        numpy.testing.assert_allclose(f_ev_r.E, f_ev_c.E, rtol=1e-7, atol=1e-9)
+        self.assertLess(
+            numpy.linalg.norm(f_ev_r.E[:, 1]), numpy.linalg.norm(f_ev_r.E[:, 0])
+        )
 
 
 if __name__ == "__main__":

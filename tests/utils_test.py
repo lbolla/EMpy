@@ -274,6 +274,19 @@ class UtilsTest(TestCase):
             abs(th_k4[1] - th_real[1]),
         )
 
+        # Continuous limit kappa_0 -> 0+ in passive LOSSY incident medium (propagating and TIR)
+        for th_inc in (U.deg2rad(25.0), U.deg2rad(60.0)):
+            th_0 = U.snell(th_inc, numpy.array([1.5, 1.0]))
+            qz_0 = 1.0 * numpy.cos(th_0[1])
+            errs_inc = []
+            for kap0 in (1e-4, 1e-8, 1e-12):
+                th_k0 = U.snell(th_inc, numpy.array([complex(1.5, -kap0), 1.0]))
+                qz_k0 = 1.0 * numpy.cos(th_k0[1])
+                errs_inc.append(abs(qz_k0 - qz_0))
+            self.assertLess(errs_inc[0], 5e-4)
+            self.assertLess(errs_inc[1], 0.01 * errs_inc[0])
+            self.assertLess(errs_inc[2], 0.01 * errs_inc[1])
+
     def test_group_delay_and_dispersion(self):
         import scipy.integrate
         import EMpy.constants as C

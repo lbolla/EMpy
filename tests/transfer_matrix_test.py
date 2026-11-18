@@ -491,3 +491,67 @@ class TransferMatrixTest(TestCase):
         ).solve(wl)
         assert_allclose(sol_cz.R[0, 0, :], sol_iso_16.Rs, atol=1e-8)
         assert_allclose(sol_cz.R[1, 1, :], sol_iso_16.Rp, atol=1e-8)
+
+    def test_lossy_incident_medium_continuity_to_lossless(self):
+        """Verify passive lossy incident medium (kappa_0 -> 0+) converges smoothly without branch flips."""
+        wl = np.array([1.55e-6])
+        for th_deg in (25.0, 60.0):
+            th = EMpy.utils.deg2rad(th_deg)
+            ref_i = EMpy.transfer_matrix.IsotropicTransferMatrix(
+                _make_iso_multilayer([1.5, 2.1, 1.0], [np.inf, 0.25e-6, np.inf]), th
+            ).solve(wl)
+            errs_i = []
+            errs_a = []
+            for kap0 in (1e-4, 1e-8, 1e-12):
+                n0 = complex(1.5, -kap0)
+                th_vac = np.arcsin(n0 * np.sin(th) + 0j)
+                si = EMpy.transfer_matrix.IsotropicTransferMatrix(
+                    _make_iso_multilayer([n0, 2.1, 1.0], [np.inf, 0.25e-6, np.inf]), th
+                ).solve(wl)
+                # Perturb intermediate tensor slightly to exercise general 4-root path too
+                eps_mid = (
+                    EMpy.utils.euler_rotate(
+                        np.diag([2.1**2, 2.1**2, (2.1 + 1e-3) ** 2]), 0.2, 0.3, 0.4
+                    )
+                    * EMpy.constants.eps0
+                )
+                ml_a = EMpy.utils.Multilayer(
+                    [
+                        _make_aniso_multilayer([n0], [np.inf])[0],
+                        EMpy.utils.Layer(
+                            EMpy.materials.AnisotropicMaterial(
+                                "m",
+                                EMpy.materials.EpsilonTensor(
+                                    epsilon_tensor_const=eps_mid
+                                ),
+                            ),
+                            0.25e-6,
+                        ),
+                        _make_aniso_multilayer([1.0], [np.inf])[0],
+                    ]
+                )
+                sa = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                    ml_a, th_vac, 0.0
+                ).solve(wl)
+                if th_deg < 40.0:
+                    self.assertTrue(
+                        (0.0 <= si.Rs[0] <= 1.0) and (0.0 <= si.Ts[0] <= 1.0)
+                    )
+                    self.assertTrue(
+                        (0.0 <= si.Rp[0] <= 1.0) and (0.0 <= si.Tp[0] <= 1.0)
+                    )
+                errs_i.append(
+                    abs(si.Rs[0] - ref_i.Rs[0])
+                    + abs(si.Ts[0] - ref_i.Ts[0])
+                    + abs(si.Rp[0] - ref_i.Rp[0])
+                    + abs(si.Tp[0] - ref_i.Tp[0])
+                )
+                errs_a.append(
+                    abs(sa.R[0, :, 0].sum() - ref_i.Rs[0])
+                    + abs(sa.T[0, :, 0].sum() - ref_i.Ts[0])
+                )
+            self.assertLess(errs_i[0], 5e-3)
+            self.assertLess(errs_i[1], 0.01 * errs_i[0])
+            self.assertLess(errs_i[2], 0.01 * errs_i[1])
+            self.assertLess(errs_a[0], 5e-2)
+            self.assertLess(errs_a[1], 5e-2)

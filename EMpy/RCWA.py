@@ -46,10 +46,11 @@ def dispersion_relation_ordinary(kx, ky, k, nO):
     delta = np.asarray((k * nO) ** 2 - (kx**2 + ky**2), dtype=complex)
     kz = np.sqrt(delta)
 
-    # Choose the algebraic root +/-sqrt(delta) (preserving kz**2 == delta) that decays
-    # or propagates in +z under exp(+i*w*t - i*kz*z): Im(kz) < 0, or Re(kz) >= 0 if Im(kz) == 0.
-    tol = 1e-12 * np.maximum(1.0, np.abs(kz))
-    flip = (kz.imag > tol) | ((np.abs(kz.imag) <= tol) & (kz.real < 0))
+    # Choose the algebraic root +/-sqrt(delta) (preserving kz**2 == delta) with branch cut
+    # along the positive imaginary axis of delta (Re(kz) - Im(kz) >= 0): continuous across
+    # both propagating (Re(kz) >= 0, including lossy-superstrate Quadrant-I delta) and
+    # evanescent / TIR (Im(kz) < 0) regimes under exp(+i*w*t - i*kz*z).
+    flip = (kz.real - kz.imag < 0) | ((kz.real - kz.imag == 0) & (kz.real < 0))
     kz = np.where(flip, -kz, kz)
     if np.all(np.abs(delta.imag) == 0):
         kz = np.where(delta.real >= 0, kz.real + 0.0j, 1j * kz.imag)
@@ -72,31 +73,27 @@ def dispersion_relation_extraordinary(kx, ky, k, nO, nE, c):
             "kx and ky must have the same length and c must have 3 components"
         )
 
-    kz = np.empty(kx.shape, dtype=complex)
+    kx_c = np.asarray(kx, dtype=complex)
+    ky_c = np.asarray(ky, dtype=complex)
+    alpha = nE**2 - nO**2
+    beta = kx_c / k * c[0] + ky_c / k * c[1]
 
-    for ii in range(0, kx.size):
-        alpha = nE**2 - nO**2
-        beta = kx[ii] / k * c[0] + ky[ii] / k * c[1]
+    c2 = nO**2 + c[2] ** 2 * alpha
+    c1 = 2.0 * c[2] * beta * alpha
+    c0 = nO**2 * (kx_c**2 + ky_c**2) / k**2 + alpha * beta**2 - nO**2 * nE**2
 
-        # coeffs
-        C = np.array(
-            [
-                nO**2 + c[2] ** 2 * alpha,
-                2.0 * c[2] * beta * alpha,
-                nO**2 * (kx[ii] ** 2 + ky[ii] ** 2) / k**2
-                + alpha * beta**2
-                - nO**2 * nE**2,
-            ]
-        )
-
-        tmp_kz = k * np.roots(C)
-        tol = 1e-12 * max(1.0, float(np.max(np.abs(tmp_kz))))
-        if np.all(np.abs(tmp_kz.imag) <= tol):
-            # Propagating roots: select the forward (+z) root
-            kz[ii] = max(tmp_kz, key=lambda z: float(z.real)).real
-        else:
-            # Evanescent / lossy roots: select the decaying (-Im) root
-            kz[ii] = min(tmp_kz, key=lambda z: float(z.imag))
+    half_b = 0.5 * c1 / c2
+    disc = np.asarray(half_b**2 - c0 / c2, dtype=complex)
+    s = np.sqrt(disc)
+    flip = (s.real - s.imag < 0) | ((s.real - s.imag == 0) & (s.real < 0))
+    s = np.where(flip, -s, s)
+    kz = k * (-half_b + s)
+    if (
+        np.all(np.abs(disc.imag) == 0)
+        and np.all(np.abs(np.imag(half_b)) == 0)
+        and np.all(disc.real >= 0)
+    ):
+        kz = kz.real + 0.0j
 
     return kz
 

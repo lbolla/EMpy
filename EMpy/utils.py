@@ -1074,14 +1074,13 @@ def snell(theta_inc, n):
     theta = numpy.arcsin(sin_theta)
     theta[0] = theta_inc
 
-    # Enforce passive forward (+z) branch under exp(+i*w*t - i*k*z):
-    # kz / k0 = n * cos(theta) must satisfy Im(kz) <= 0 (decaying) and
-    # Re(kz) >= 0 when propagating. Replacing theta -> pi - theta preserves
-    # sin(theta) while negating cos(theta).
+    # Enforce passive forward (+z) branch under exp(+i*w*t - i*k*z) with branch cut on
+    # the positive imaginary axis of qz**2 (Re(qz) - Im(qz) >= 0): selects Re(qz) >= 0 for
+    # propagating waves (including complex kx from a lossy incident medium as kappa_0 -> 0+)
+    # and Im(qz) < 0 for evanescent / TIR waves.
     for i in range(1, n_c.size):
         qz = n_c[i] * numpy.cos(theta[i])
-        im_tol = 1e-12 * max(1.0, abs(qz))
-        if qz.imag > im_tol or (abs(qz.imag) <= im_tol and qz.real < 0):
+        if qz.real - qz.imag < 0 or (qz.real - qz.imag == 0 and qz.real < 0):
             theta[i] = numpy.pi - theta[i]
 
     if not is_complex_input and numpy.all(numpy.abs(theta.imag) == 0):

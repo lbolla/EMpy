@@ -78,8 +78,10 @@ class IsotropicRCWATest(TestCase):
             z = kz_e[ii] / k
             self.assertAlmostEqual(abs(c2 * z**2 + c1 * z + c0), 0.0, places=12)
 
-        # Quadrant-I complex delta (e.g. lossy superstrate launching complex kx into lossless medium):
-        # dispersion_relation_ordinary must satisfy kz**2 == delta identically and match extraordinary(nE=nO).
+        # Quadrant-I and Quadrant-II complex delta (e.g. lossy superstrate launching complex kx
+        # into lossless medium): dispersion_relation_ordinary must satisfy kz**2 == delta,
+        # select Re(kz) > 0 for propagating order [0] and Im(kz) < 0 for TIR order [1],
+        # and match dispersion_relation_extraordinary(nE=nO).
         kx_cplx = np.array([(0.8 - 0.15j) * k, (1.8 - 0.2j) * k])
         ky_cplx = np.array([(0.2 - 0.04j) * k, 0.0j])
         for kap in (0.1, 1e-5, 0.0):
@@ -90,8 +92,9 @@ class IsotropicRCWATest(TestCase):
                 kx_cplx, ky_cplx, k, no_v, no_v, c
             )
             np.testing.assert_allclose(kz_ord**2, delta_v, rtol=1e-13, atol=1e-13)
-            self.assertTrue(np.all(kz_ord.imag <= 0.0))
-            np.testing.assert_allclose(kz_ord, kz_ext, rtol=1e-11, atol=1e-11)
+            self.assertGreater(kz_ord[0].real, 0.0)
+            self.assertLess(kz_ord[1].imag, 0.0)
+            np.testing.assert_allclose(kz_ord, kz_ext, rtol=1e-12, atol=1e-12)
 
     def test_anisotropic_rcwa_anisotropic_end_layers(self):
         eps_air = EMpy.materials.EpsilonTensor(
@@ -791,7 +794,9 @@ class IsotropicRCWATest(TestCase):
             sup_errs.append(
                 float(np.max(np.abs(r_sk.DE1 - r_sr.DE1) + np.abs(r_sk.DE3 - r_sr.DE3)))
             )
-        self.assertLess(sup_errs[1], sup_errs[0])
+        self.assertLess(sup_errs[0], 5e-3)
+        self.assertLess(sup_errs[1], 0.01 * sup_errs[0])
+        self.assertLess(sup_errs[1], 5e-6)
         self.assertLess(sup_errs[2], 1e-14)
 
     def test_anisotropic_rcwa_thick_high_order_etm_stability_and_limits(self):

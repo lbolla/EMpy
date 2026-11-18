@@ -90,11 +90,10 @@ class IsotropicTransferMatrix(TransferMatrix):
             theta = snell(theta_inc, n)
 
             # Compute kz / k0 = n * cos(theta) directly from the radical on the
-            # passive forward (+z) branch (Im <= 0, or Re >= 0 when Im == 0) to
-            # avoid ~6e-17 real-part rounding from cos(pi/2 + i*eta) in lossless TIR.
+            # passive forward (+z) branch (cut along +i*R_+ of qz**2: Re(qz) - Im(qz) >= 0)
+            # to preserve continuity both in TIR and for lossy incident media (kappa_0 -> 0+).
             qz = np.sqrt(n**2 - (n[0] * np.sin(theta_inc)) ** 2 + 0j)
-            im_tol = 1e-12 * np.maximum(1.0, np.abs(qz))
-            flip = (qz.imag > im_tol) | ((np.abs(qz.imag) <= im_tol) & (qz.real < 0))
+            flip = (qz.real - qz.imag < 0) | ((qz.real - qz.imag == 0) & (qz.real < 0))
             qz = np.where(flip, -qz, qz)
             qz[0] = n[0] * np.cos(theta_inc)
             cos_t = qz / n
@@ -284,10 +283,9 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 - K[2, 0] * K[0, 2] * K[1, 1],
             ]
 
-            if np.allclose(K, K[0, 0] * np.eye(3), rtol=1e-12, atol=1e-12):
+            if np.allclose(K, K[0, 0] * np.eye(3), rtol=1e-13, atol=1e-13):
                 g = np.sqrt(K[0, 0] - alpha2 - beta2 + 0j)
-                im_tol = 1e-12 * max(1.0, abs(g))
-                if g.imag > im_tol or (abs(g.imag) <= im_tol and g.real < 0):
+                if g.real - g.imag < 0 or (g.real - g.imag == 0 and g.real < 0):
                     g = -g
                 gamma = np.array([g, -g, g, -g], dtype=complex)
                 raw_p = None
@@ -324,15 +322,43 @@ class AnisotropicTransferMatrix(TransferMatrix):
 
                 # Classify roots into 2 forward (+z) and 2 backward (-z) modes
                 # under exp(+i*w*t - i*k*z):
-                # - Modes with |Im(gamma)| > im_tol decay in +z iff Im(gamma) < 0
-                #   (even in tilted birefringent TIR where Re(gamma) != 0).
-                # - Propagating modes (|Im(gamma)| <= im_tol) carry flux in +z iff Sz > 0.
+                # - For real tangential (kx, ky), |Im(gamma)| > im_tol decays in +z iff
+                #   Im(gamma) < 0 (including tilted birefringent TIR where Re(gamma) != 0),
+                #   and propagating modes carry flux in +z iff Sz > 0.
+                # - For complex tangential (kx, ky) (e.g. lossy superstrate), inhomogeneous
+                #   propagating modes in a lossless/lower-loss layer have |Re(gamma)| > |Im(gamma)|
+                #   and Sz > 0 (even when Im(gamma) > 0), while TIR modes have |Im(gamma)| >= |Re(gamma)|
+                #   and decay in +z iff Im(gamma) < 0.
                 im_tol = 1e-6 * max(1.0, float(np.max(np.abs(raw_gamma))))
                 sz_tol = 1e-9 / (mu0 * c)
+                cplx_kt = (abs(np.imag(alpha)) + abs(np.imag(beta))) > 1e-14 * max(
+                    1.0, abs(alpha) + abs(beta)
+                )
 
                 def _fwd_rank(idx):
                     g = raw_gamma[idx]
                     sz = float(raw_sz[idx])
+                    if cplx_kt:
+                        if abs(g.imag) > max(im_tol, abs(g.real)):
+                            return (
+                                1 if g.imag < 0 else -1,
+                                -float(g.imag),
+                                sz,
+                                float(g.real),
+                            )
+                        if abs(sz) > sz_tol:
+                            return (
+                                0,
+                                1 if sz > 0 else -1,
+                                sz,
+                                float(g.real - g.imag),
+                            )
+                        return (
+                            0,
+                            1 if (g.real - g.imag >= 0) else -1,
+                            float(g.real - g.imag),
+                            -float(g.imag),
+                        )
                     if abs(g.imag) > im_tol:
                         return (
                             1 if g.imag < 0 else -1,
