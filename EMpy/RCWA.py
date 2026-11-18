@@ -283,13 +283,9 @@ class IsotropicRCWA(RCWA):
             # Fs = np.diag(np.sin(phi_i))
             fs = np.sin(phi_i)
 
-            MR = np.asarray(
-                np.bmat([[I, ZERO], [-1j * Y1, ZERO], [ZERO, I], [ZERO, -1j * Z1]])
-            )
+            MR = np.block([[I, ZERO], [-1j * Y1, ZERO], [ZERO, I], [ZERO, -1j * Z1]])
 
-            MT = np.asarray(
-                np.bmat([[I, ZERO], [1j * Y3, ZERO], [ZERO, I], [ZERO, 1j * Z3]])
-            )
+            MT = np.block([[I, ZERO], [1j * Y3, ZERO], [ZERO, I], [ZERO, 1j * Z3]])
 
             # internal layers (grating or layer)
             X.fill(0.0)
@@ -317,7 +313,7 @@ class IsotropicRCWA(RCWA):
                 # trattare separatamente (analiticamente) questi casi
                 if cond(A) > 1e10:
                     warning("BAD CONDITIONING: randomization of kx")
-                    rng = np.random.default_rng()
+                    rng = np.random.default_rng(0)
                     for _ in range(100):
                         if cond(A) <= 1e10:
                             break
@@ -377,15 +373,13 @@ class IsotropicRCWA(RCWA):
                     # Vps = np.dot(Fs, V11)
                     Vps = fs[:, np.newaxis] * V11
 
-                    Mc2bar = np.asarray(
-                        np.bmat(
-                            [
-                                [Vss, Vsp, Vss, Vsp],
-                                [Wss, Wsp, -Wss, -Wsp],
-                                [Wps, Wpp, -Wps, -Wpp],
-                                [Vps, Vpp, Vps, Vpp],
-                            ]
-                        )
+                    Mc2bar = np.block(
+                        [
+                            [Vss, Vsp, Vss, Vsp],
+                            [Wss, Wsp, -Wss, -Wsp],
+                            [Wps, Wpp, -Wps, -Wpp],
+                            [Vps, Vpp, Vps, Vpp],
+                        ]
                     )
 
                     x = np.r_[np.exp(-k * q1 * d), np.exp(-k * q2 * d)]
@@ -504,6 +498,8 @@ class AnisotropicRCWA(RCWA):
         DEO3 = np.zeros_like(DEO1)
         DEE1 = np.zeros_like(DEO1)
         DEE3 = np.zeros_like(DEO1)
+        DE1 = np.zeros_like(DEO1)
+        DE3 = np.zeros_like(DEO1)
 
         c1 = np.array([1.0, 0.0, 0.0])
         c3 = np.array([1.0, 0.0, 0.0])
@@ -537,6 +533,12 @@ class AnisotropicRCWA(RCWA):
 
         dlt = (i == 0).astype(int)
 
+        def _passive_sqrt(val):
+            rt = np.sqrt(np.asarray(val, dtype=complex)).item()
+            if rt.real - rt.imag < 0 or (rt.real - rt.imag == 0 and rt.real < 0):
+                rt = -rt
+            return rt
+
         def _end_layer_indices(mat, wl):
             if hasattr(mat, "n"):
                 n_val = mat.n(wl).item()
@@ -548,11 +550,30 @@ class AnisotropicRCWA(RCWA):
                 raise NotImplementedError(
                     "AnisotropicRCWA end layers only support isotropic or x-axis uniaxial materials."
                 )
-            return np.sqrt(eps_rel[1, 1] + 0j), np.sqrt(eps_rel[0, 0] + 0j)
+            return _passive_sqrt(eps_rel[1, 1]), _passive_sqrt(eps_rel[0, 0])
+
+        def _li_transform(eps):
+            inv_exx = 1.0 / eps[0, 0]
+            L = np.empty((3, 3), dtype=complex)
+            L[0, 0] = inv_exx
+            L[0, 1] = eps[0, 1] * inv_exx
+            L[0, 2] = eps[0, 2] * inv_exx
+            L[1, 0] = eps[1, 0] * inv_exx
+            L[2, 0] = eps[2, 0] * inv_exx
+            L[1, 1] = eps[1, 1] - eps[1, 0] * eps[0, 1] * inv_exx
+            L[1, 2] = eps[1, 2] - eps[1, 0] * eps[0, 2] * inv_exx
+            L[2, 1] = eps[2, 1] - eps[2, 0] * eps[0, 1] * inv_exx
+            L[2, 2] = eps[2, 2] - eps[2, 0] * eps[0, 2] * inv_exx
+            return L
+
+        def _toep(arr):
+            return toeplitz(arr[hmax::-1], arr[hmax:])
 
         for iwl, wl in enumerate(self.wls):
             nO1, nE1 = _end_layer_indices(multilayer[0].mat, wl)
             nO3, nE3 = _end_layer_indices(multilayer[-1].mat, wl)
+            iso_sup = bool(np.isclose(nO1, nE1, rtol=1e-12, atol=1e-14))
+            iso_sub = bool(np.isclose(nO3, nE3, rtol=1e-12, atol=1e-14))
 
             # wavevectors
             k = 2 * pi / wl
@@ -560,232 +581,12 @@ class AnisotropicRCWA(RCWA):
             eps1 = np.diag(np.asarray([nE1, nO1, nO1]) ** 2)
             eps3 = np.diag(np.asarray([nE3, nO3, nO3]) ** 2)
 
-            # ordinary and extraordinary incident wavevector magnitudes in region 1
-            abskO1 = k * nO1
-            abskE1 = (
-                k
-                * nO1
-                * nE1
-                / np.sqrt(nO1**2 + (nE1**2 - nO1**2) * np.dot(c1, dirk1) ** 2)
-            )
-
-            c_cross_s = np.cross(c1, dirk1)
-            norm_cs = float(np.linalg.norm(c_cross_s))
-            aniso_superstrate = (
-                not np.isclose(nO1, nE1, rtol=1e-12, atol=1e-14) and norm_cs > 1e-12
-            )
-            if aniso_superstrate:
-                dO_hat = c_cross_s / norm_cs
-                dE_hat = np.cross(dirk1, dO_hat)
-                aO = np.dot(dO_hat, u)
-                aE = np.dot(dE_hat, u)
-                absk_eff = np.abs(aO) ** 2 * abskO1 + np.abs(aE) ** 2 * abskE1
-                k1 = absk_eff * dirk1
-            else:
-                k1 = abskO1 * dirk1
-
-            kO1i[0, :] = k1[0] - i * K[0]
-            kO1i[1, :] = k1[1] * np.ones_like(i)
-            kO1i[2, :] = -dispersion_relation_ordinary(kO1i[0, :], kO1i[1, :], k, nO1)
-
-            kE1i[0, :] = kO1i[0, :]
-            kE1i[1, :] = kO1i[1, :]
-            kE1i[2, :] = -dispersion_relation_extraordinary(
-                kE1i[0, :], kE1i[1, :], k, nO1, nE1, c1
-            )
-
-            kO3i[0, :] = kO1i[0, :]
-            kO3i[1, :] = kO1i[1, :]
-            kO3i[2, :] = dispersion_relation_ordinary(kO3i[0, :], kO3i[1, :], k, nO3)
-
-            kE3i[0, :] = kO1i[0, :]
-            kE3i[1, :] = kO1i[1, :]
-            kE3i[2, :] = dispersion_relation_extraordinary(
-                kE3i[0, :], kE3i[1, :], k, nO3, nE3, c3
-            )
-
-            # k2i = np.r_[[k1[0] - i * K[0]], [k1[1] - i * K[1]], [k1[2] - i * K[2]]]
-            k2i = np.r_[[k1[0] - i * K[0]], [k1[1] - i * K[1]], [-i * K[2]]]
-
-            # aliases for constant wavevectors
-            kx = kO1i[0, :]  # o kE1i(1,;), tanto e' lo stesso
-            ky = k1[1]
-
-            # matrices
-            I = np.eye(nood, dtype=complex)
-            ZERO = np.zeros((nood, nood), dtype=complex)
-            Kx = np.diag(kx / k)
-            Ky = ky / k * I
-            Kz = np.diag(k2i[2, :] / k)
-            KO1z = np.diag(kO1i[2, :] / k)
-            KE1z = np.diag(kE1i[2, :] / k)
-            KO3z = np.diag(kO3i[2, :] / k)
-            KE3z = np.diag(kE3i[2, :] / k)
-
-            ARO = Kx * eps1[0, 0] + Ky * eps1[1, 0] + KO1z * eps1[2, 0]
-            BRO = Kx * eps1[0, 1] + Ky * eps1[1, 1] + KO1z * eps1[2, 1]
-            CRO_1 = inv(Kx * eps1[0, 2] + Ky * eps1[1, 2] + KO1z * eps1[2, 2])
-
-            ARE = Kx * eps1[0, 0] + Ky * eps1[1, 0] + KE1z * eps1[2, 0]
-            BRE = Kx * eps1[0, 1] + Ky * eps1[1, 1] + KE1z * eps1[2, 1]
-            CRE_1 = inv(Kx * eps1[0, 2] + Ky * eps1[1, 2] + KE1z * eps1[2, 2])
-
-            ATO = Kx * eps3[0, 0] + Ky * eps3[1, 0] + KO3z * eps3[2, 0]
-            BTO = Kx * eps3[0, 1] + Ky * eps3[1, 1] + KO3z * eps3[2, 1]
-            CTO_1 = inv(Kx * eps3[0, 2] + Ky * eps3[1, 2] + KO3z * eps3[2, 2])
-
-            ATE = Kx * eps3[0, 0] + Ky * eps3[1, 0] + KE3z * eps3[2, 0]
-            BTE = Kx * eps3[0, 1] + Ky * eps3[1, 1] + KE3z * eps3[2, 1]
-            CTE_1 = inv(Kx * eps3[0, 2] + Ky * eps3[1, 2] + KE3z * eps3[2, 2])
-
-            DRE = c1[1] * KE1z - c1[2] * Ky
-            ERE = c1[2] * Kx - c1[0] * KE1z
-            FRE = c1[0] * Ky - c1[1] * Kx
-
-            DTE = c3[1] * KE3z - c3[2] * Ky
-            ETE = c3[2] * Kx - c3[0] * KE3z
-            FTE = c3[0] * Ky - c3[1] * Kx
-
-            if aniso_superstrate:
-                kO1_inc = np.array([kx[n], ky, -kO1i[2, n]], dtype=complex)
-                kE1_inc = np.array([kx[n], ky, -kE1i[2, n]], dtype=complex)
-                c_cross_kO = np.cross(c1, kO1_inc)
-                EO_inc = aO * (c_cross_kO / np.linalg.norm(c_cross_kO))
-                HO_inc = np.cross(kO1_inc / k, EO_inc)
-
-                dE_k = np.cross(kE1_inc, np.cross(c1, kE1_inc))
-                dE_k_hat = dE_k / np.linalg.norm(dE_k)
-                EE_inc = aE * np.array(
-                    [(nO1 / nE1) ** 2 * dE_k_hat[0], dE_k_hat[1], dE_k_hat[2]],
-                    dtype=complex,
-                )
-                HE_inc = np.cross(kE1_inc / k, EE_inc)
-
-                E_inc = EO_inc + EE_inc
-                H_inc = HO_inc + HE_inc
-            else:
-                E_inc = u.astype(complex)
-                H_inc = np.cross(k1 / k, E_inc)
-
-            b = np.r_[
-                E_inc[0] * dlt,
-                E_inc[1] * dlt,
-                H_inc[0] * dlt,
-                H_inc[1] * dlt,
-            ]
-            Ky_CRO_1 = ky / k * CRO_1
-            Ky_CRE_1 = ky / k * CRE_1
-            Kx_CRO_1 = kx[:, np.newaxis] / k * CRO_1
-            Kx_CRE_1 = kx[:, np.newaxis] / k * CRE_1
-            MR31 = -np.dot(Ky_CRO_1, ARO)
-            MR32 = -np.dot(Ky_CRO_1, BRO) - KO1z
-            MR33 = -np.dot(Ky_CRE_1, ARE)
-            MR34 = -np.dot(Ky_CRE_1, BRE) - KE1z
-            MR41 = np.dot(Kx_CRO_1, ARO) + KO1z
-            MR42 = np.dot(Kx_CRO_1, BRO)
-            MR43 = np.dot(Kx_CRE_1, ARE) + KE1z
-            MR44 = np.dot(Kx_CRE_1, BRE)
-            MR = np.asarray(
-                np.bmat(
-                    [
-                        [I, ZERO, I, ZERO],
-                        [ZERO, I, ZERO, I],
-                        [MR31, MR32, MR33, MR34],
-                        [MR41, MR42, MR43, MR44],
-                    ]
-                )
-            )
-
-            Ky_CTO_1 = ky / k * CTO_1
-            Ky_CTE_1 = ky / k * CTE_1
-            Kx_CTO_1 = kx[:, np.newaxis] / k * CTO_1
-            Kx_CTE_1 = kx[:, np.newaxis] / k * CTE_1
-            MT31 = -np.dot(Ky_CTO_1, ATO)
-            MT32 = -np.dot(Ky_CTO_1, BTO) - KO3z
-            MT33 = -np.dot(Ky_CTE_1, ATE)
-            MT34 = -np.dot(Ky_CTE_1, BTE) - KE3z
-            MT41 = np.dot(Kx_CTO_1, ATO) + KO3z
-            MT42 = np.dot(Kx_CTO_1, BTO)
-            MT43 = np.dot(Kx_CTE_1, ATE) + KE3z
-            MT44 = np.dot(Kx_CTE_1, BTE)
-            MT = np.asarray(
-                np.bmat(
-                    [
-                        [I, ZERO, I, ZERO],
-                        [ZERO, I, ZERO, I],
-                        [MT31, MT32, MT33, MT34],
-                        [MT41, MT42, MT43, MT44],
-                    ]
-                )
-            )
-
-            # Reduced 2N-column eigenmode bases B1, B3 enforcing Glytsis eqs. (46)-(49)
-            # identically for c1 = c3 = [1, 0, 0] (ROx = 0, TOx = 0, and extraordinary
-            # orthogonality in regions 1 and 3), enabling Moharam's 4N x 2N Enhanced
-            # Transmittance Matrix recursion without inverting decaying exponentials.
-            q1_r = np.diag(DRE - np.dot(np.dot(FRE, CRE_1), ARE))
-            p1 = np.diag(ERE - np.dot(np.dot(FRE, CRE_1), BRE))
-            nrm1 = np.hypot(np.abs(p1), np.abs(q1_r))
-            zero1 = nrm1 == 0
-            p1 = np.where(zero1, 1.0, p1)
-            nrm1 = np.where(zero1, 1.0, nrm1)
-            B1 = np.asarray(
-                np.bmat(
-                    [
-                        [ZERO, ZERO],
-                        [I, ZERO],
-                        [ZERO, np.diag(p1 / nrm1)],
-                        [ZERO, np.diag(-q1_r / nrm1)],
-                    ]
-                )
-            )
-
-            q3_t = np.diag(DTE - np.dot(np.dot(FTE, CTE_1), ATE))
-            p3 = np.diag(ETE - np.dot(np.dot(FTE, CTE_1), BTE))
-            nrm3 = np.hypot(np.abs(p3), np.abs(q3_t))
-            zero3 = nrm3 == 0
-            p3 = np.where(zero3, 1.0, p3)
-            nrm3 = np.where(zero3, 1.0, nrm3)
-            B3 = np.asarray(
-                np.bmat(
-                    [
-                        [ZERO, ZERO],
-                        [I, ZERO],
-                        [ZERO, np.diag(p3 / nrm3)],
-                        [ZERO, np.diag(-q3_t / nrm3)],
-                    ]
-                )
-            )
-
-            MR_red = np.dot(MR, B1)
-            MT_curr = np.dot(MT, B3)
-            step_T.fill(0.0)
-
-            def _li_transform(eps):
-                inv_exx = 1.0 / eps[0, 0]
-                L = np.empty((3, 3), dtype=complex)
-                L[0, 0] = inv_exx
-                L[0, 1] = eps[0, 1] * inv_exx
-                L[0, 2] = eps[0, 2] * inv_exx
-                L[1, 0] = eps[1, 0] * inv_exx
-                L[2, 0] = eps[2, 0] * inv_exx
-                L[1, 1] = eps[1, 1] - eps[1, 0] * eps[0, 1] * inv_exx
-                L[1, 2] = eps[1, 2] - eps[1, 0] * eps[0, 2] * inv_exx
-                L[2, 1] = eps[2, 1] - eps[2, 0] * eps[0, 1] * inv_exx
-                L[2, 2] = eps[2, 2] - eps[2, 0] * eps[0, 2] * inv_exx
-                return L
-
-            def _toep(arr):
-                return toeplitz(arr[hmax::-1], arr[hmax:])
-
-            for nlayer in range(nlayers - 2, 0, -1):  # internal layers
+            # Precompute wavelength-only Fourier permittivity blocks per internal layer
+            layer_ops = []
+            h_idx = np.arange(-hmax, hmax + 1)
+            for nlayer in range(nlayers - 2, 0, -1):
                 layer = multilayer[nlayer]
                 thickness = layer.thickness
-
-                # Lifeng Li's anisotropic Fourier factorization (J. Opt. A 5, 345, 2003)
-                # enforces continuity of (D_x, E_y, E_z) across x-interfaces and reduces
-                # identically to the exact 3x3 permittivity tensor on homogeneous layers.
-                h_idx = np.arange(-hmax, hmax + 1)
                 if isinstance(layer, BinaryGrating):
                     e1 = layer.mat1.epsilonTensor(wl)[:, :, 0] / eps0
                     e2 = layer.mat2.epsilonTensor(wl)[:, :, 0] / eps0
@@ -845,30 +646,207 @@ class AnisotropicRCWA(RCWA):
                     Ezz = _toep(EPS2[2, 2, :])
                     Exx_1_1 = inv(_toep(EPS21[0, 0, :]))
 
-                # lalanne
                 Ezz_1 = inv(Ezz)
-                Ky_Ezz_1 = ky / k * Ezz_1
-                Kx_Ezz_1 = kx[:, np.newaxis] / k * Ezz_1
-                Exz_Ezz_1 = np.dot(Exz, Ezz_1)
-                Eyz_Ezz_1 = np.dot(Eyz, Ezz_1)
-                H11 = 1j * np.dot(Ky_Ezz_1, Ezy)
-                H12 = 1j * np.dot(Ky_Ezz_1, Ezx)
-                H13 = np.dot(Ky_Ezz_1, Kx)
-                H14 = I - np.dot(Ky_Ezz_1, Ky)
-                H21 = 1j * np.dot(Kx_Ezz_1, Ezy)
-                H22 = 1j * np.dot(Kx_Ezz_1, Ezx)
-                H23 = np.dot(Kx_Ezz_1, Kx) - I
-                H24 = -np.dot(Kx_Ezz_1, Ky)
-                H31 = np.dot(Kx, Ky) + Exy - np.dot(Exz_Ezz_1, Ezy)
-                H32 = Exx_1_1 - np.dot(Ky, Ky) - np.dot(Exz_Ezz_1, Ezx)
-                H33 = 1j * np.dot(Exz_Ezz_1, Kx)
-                H34 = -1j * np.dot(Exz_Ezz_1, Ky)
-                H41 = np.dot(Kx, Kx) - Eyy + np.dot(Eyz_Ezz_1, Ezy)
-                H42 = -np.dot(Kx, Ky) - Eyx + np.dot(Eyz_Ezz_1, Ezx)
-                H43 = -1j * np.dot(Eyz_Ezz_1, Kx)
-                H44 = 1j * np.dot(Eyz_Ezz_1, Ky)
-                H = 1j * np.diag(np.repeat(np.diag(Kz), 4)) + np.asarray(
-                    np.bmat(
+                layer_ops.append(
+                    (
+                        nlayer,
+                        thickness,
+                        Exx_1_1,
+                        Exy,
+                        Exz,
+                        Eyx,
+                        Eyy,
+                        Eyz,
+                        Ezx,
+                        Ezy,
+                        Ezz_1,
+                    )
+                )
+
+            def _solve_floquet(k1_vec, E_inc, H_inc):
+                kO1i[0, :] = k1_vec[0] - i * K[0]
+                kO1i[1, :] = k1_vec[1] * np.ones_like(i)
+                kz_o1 = dispersion_relation_ordinary(kO1i[0, :], kO1i[1, :], k, nO1)
+                kz_o1 = np.where(np.abs(kz_o1) < 1e-13 * k, -1e-13j * k, kz_o1)
+                kO1i[2, :] = -kz_o1
+
+                kE1i[0, :] = kO1i[0, :]
+                kE1i[1, :] = kO1i[1, :]
+                kz_e1 = dispersion_relation_extraordinary(
+                    kE1i[0, :], kE1i[1, :], k, nO1, nE1, c1
+                )
+                kz_e1 = np.where(np.abs(kz_e1) < 1e-13 * k, -1e-13j * k, kz_e1)
+                kE1i[2, :] = -kz_e1
+
+                kO3i[0, :] = kO1i[0, :]
+                kO3i[1, :] = kO1i[1, :]
+                kz_o3 = dispersion_relation_ordinary(kO3i[0, :], kO3i[1, :], k, nO3)
+                kO3i[2, :] = np.where(np.abs(kz_o3) < 1e-13 * k, -1e-13j * k, kz_o3)
+
+                kE3i[0, :] = kO1i[0, :]
+                kE3i[1, :] = kO1i[1, :]
+                kz_e3 = dispersion_relation_extraordinary(
+                    kE3i[0, :], kE3i[1, :], k, nO3, nE3, c3
+                )
+                kE3i[2, :] = np.where(np.abs(kz_e3) < 1e-13 * k, -1e-13j * k, kz_e3)
+
+                k2i = np.r_[[k1_vec[0] - i * K[0]], [k1_vec[1] - i * K[1]], [-i * K[2]]]
+                kx = kO1i[0, :]
+                ky = k1_vec[1]
+
+                I = np.eye(nood, dtype=complex)
+                ZERO = np.zeros((nood, nood), dtype=complex)
+                Kx = np.diag(kx / k)
+                Ky = ky / k * I
+                Kz = np.diag(k2i[2, :] / k)
+                KO1z = np.diag(kO1i[2, :] / k)
+                KE1z = np.diag(kE1i[2, :] / k)
+                KO3z = np.diag(kO3i[2, :] / k)
+                KE3z = np.diag(kE3i[2, :] / k)
+
+                ARO = Kx * eps1[0, 0] + Ky * eps1[1, 0] + KO1z * eps1[2, 0]
+                BRO = Kx * eps1[0, 1] + Ky * eps1[1, 1] + KO1z * eps1[2, 1]
+                CRO_1 = inv(Kx * eps1[0, 2] + Ky * eps1[1, 2] + KO1z * eps1[2, 2])
+
+                ARE = Kx * eps1[0, 0] + Ky * eps1[1, 0] + KE1z * eps1[2, 0]
+                BRE = Kx * eps1[0, 1] + Ky * eps1[1, 1] + KE1z * eps1[2, 1]
+                CRE_1 = inv(Kx * eps1[0, 2] + Ky * eps1[1, 2] + KE1z * eps1[2, 2])
+
+                ATO = Kx * eps3[0, 0] + Ky * eps3[1, 0] + KO3z * eps3[2, 0]
+                BTO = Kx * eps3[0, 1] + Ky * eps3[1, 1] + KO3z * eps3[2, 1]
+                CTO_1 = inv(Kx * eps3[0, 2] + Ky * eps3[1, 2] + KO3z * eps3[2, 2])
+
+                ATE = Kx * eps3[0, 0] + Ky * eps3[1, 0] + KE3z * eps3[2, 0]
+                BTE = Kx * eps3[0, 1] + Ky * eps3[1, 1] + KE3z * eps3[2, 1]
+                CTE_1 = inv(Kx * eps3[0, 2] + Ky * eps3[1, 2] + KE3z * eps3[2, 2])
+
+                DRE = c1[1] * KE1z - c1[2] * Ky
+                ERE = c1[2] * Kx - c1[0] * KE1z
+                FRE = c1[0] * Ky - c1[1] * Kx
+
+                DTE = c3[1] * KE3z - c3[2] * Ky
+                ETE = c3[2] * Kx - c3[0] * KE3z
+                FTE = c3[0] * Ky - c3[1] * Kx
+
+                b = np.r_[
+                    E_inc[0] * dlt,
+                    E_inc[1] * dlt,
+                    H_inc[0] * dlt,
+                    H_inc[1] * dlt,
+                ]
+                Ky_CRO_1 = ky / k * CRO_1
+                Ky_CRE_1 = ky / k * CRE_1
+                Kx_CRO_1 = kx[:, np.newaxis] / k * CRO_1
+                Kx_CRE_1 = kx[:, np.newaxis] / k * CRE_1
+                MR31 = -np.dot(Ky_CRO_1, ARO)
+                MR32 = -np.dot(Ky_CRO_1, BRO) - KO1z
+                MR33 = -np.dot(Ky_CRE_1, ARE)
+                MR34 = -np.dot(Ky_CRE_1, BRE) - KE1z
+                MR41 = np.dot(Kx_CRO_1, ARO) + KO1z
+                MR42 = np.dot(Kx_CRO_1, BRO)
+                MR43 = np.dot(Kx_CRE_1, ARE) + KE1z
+                MR44 = np.dot(Kx_CRE_1, BRE)
+                MR = np.block(
+                    [
+                        [I, ZERO, I, ZERO],
+                        [ZERO, I, ZERO, I],
+                        [MR31, MR32, MR33, MR34],
+                        [MR41, MR42, MR43, MR44],
+                    ]
+                )
+
+                Ky_CTO_1 = ky / k * CTO_1
+                Ky_CTE_1 = ky / k * CTE_1
+                Kx_CTO_1 = kx[:, np.newaxis] / k * CTO_1
+                Kx_CTE_1 = kx[:, np.newaxis] / k * CTE_1
+                MT31 = -np.dot(Ky_CTO_1, ATO)
+                MT32 = -np.dot(Ky_CTO_1, BTO) - KO3z
+                MT33 = -np.dot(Ky_CTE_1, ATE)
+                MT34 = -np.dot(Ky_CTE_1, BTE) - KE3z
+                MT41 = np.dot(Kx_CTO_1, ATO) + KO3z
+                MT42 = np.dot(Kx_CTO_1, BTO)
+                MT43 = np.dot(Kx_CTE_1, ATE) + KE3z
+                MT44 = np.dot(Kx_CTE_1, BTE)
+                MT = np.block(
+                    [
+                        [I, ZERO, I, ZERO],
+                        [ZERO, I, ZERO, I],
+                        [MT31, MT32, MT33, MT34],
+                        [MT41, MT42, MT43, MT44],
+                    ]
+                )
+
+                # Reduced 2N-column eigenmode bases B1, B3 enforcing Glytsis eqs. (46)-(49)
+                # identically for c1 = c3 = [1, 0, 0], enabling Moharam's 4N x 2N Enhanced
+                # Transmittance Matrix recursion without inverting decaying exponentials.
+                q1_r = np.diag(DRE - np.dot(np.dot(FRE, CRE_1), ARE))
+                p1 = np.diag(ERE - np.dot(np.dot(FRE, CRE_1), BRE))
+                nrm1 = np.hypot(np.abs(p1), np.abs(q1_r))
+                zero1 = nrm1 == 0
+                p1 = np.where(zero1, 1.0, p1)
+                nrm1 = np.where(zero1, 1.0, nrm1)
+                B1 = np.block(
+                    [
+                        [ZERO, ZERO],
+                        [I, ZERO],
+                        [ZERO, np.diag(p1 / nrm1)],
+                        [ZERO, np.diag(-q1_r / nrm1)],
+                    ]
+                )
+
+                q3_t = np.diag(DTE - np.dot(np.dot(FTE, CTE_1), ATE))
+                p3 = np.diag(ETE - np.dot(np.dot(FTE, CTE_1), BTE))
+                nrm3 = np.hypot(np.abs(p3), np.abs(q3_t))
+                zero3 = nrm3 == 0
+                p3 = np.where(zero3, 1.0, p3)
+                nrm3 = np.where(zero3, 1.0, nrm3)
+                B3 = np.block(
+                    [
+                        [ZERO, ZERO],
+                        [I, ZERO],
+                        [ZERO, np.diag(p3 / nrm3)],
+                        [ZERO, np.diag(-q3_t / nrm3)],
+                    ]
+                )
+
+                MR_red = np.dot(MR, B1)
+                MT_curr = np.dot(MT, B3)
+                step_T.fill(0.0)
+
+                for (
+                    nlayer,
+                    thickness,
+                    Exx_1_1,
+                    Exy,
+                    Exz,
+                    Eyx,
+                    Eyy,
+                    Eyz,
+                    Ezx,
+                    Ezy,
+                    Ezz_1,
+                ) in layer_ops:
+                    Ky_Ezz_1 = ky / k * Ezz_1
+                    Kx_Ezz_1 = kx[:, np.newaxis] / k * Ezz_1
+                    Exz_Ezz_1 = np.dot(Exz, Ezz_1)
+                    Eyz_Ezz_1 = np.dot(Eyz, Ezz_1)
+                    H11 = 1j * np.dot(Ky_Ezz_1, Ezy)
+                    H12 = 1j * np.dot(Ky_Ezz_1, Ezx)
+                    H13 = np.dot(Ky_Ezz_1, Kx)
+                    H14 = I - np.dot(Ky_Ezz_1, Ky)
+                    H21 = 1j * np.dot(Kx_Ezz_1, Ezy)
+                    H22 = 1j * np.dot(Kx_Ezz_1, Ezx)
+                    H23 = np.dot(Kx_Ezz_1, Kx) - I
+                    H24 = -np.dot(Kx_Ezz_1, Ky)
+                    H31 = np.dot(Kx, Ky) + Exy - np.dot(Exz_Ezz_1, Ezy)
+                    H32 = Exx_1_1 - np.dot(Ky, Ky) - np.dot(Exz_Ezz_1, Ezx)
+                    H33 = 1j * np.dot(Exz_Ezz_1, Kx)
+                    H34 = -1j * np.dot(Exz_Ezz_1, Ky)
+                    H41 = np.dot(Kx, Kx) - Eyy + np.dot(Eyz_Ezz_1, Ezy)
+                    H42 = -np.dot(Kx, Ky) - Eyx + np.dot(Eyz_Ezz_1, Ezx)
+                    H43 = -1j * np.dot(Eyz_Ezz_1, Kx)
+                    H44 = 1j * np.dot(Eyz_Ezz_1, Ky)
+                    H = 1j * np.diag(np.repeat(np.diag(Kz), 4)) + np.block(
                         [
                             [H11, H12, H13, H14],
                             [H21, H22, H23, H24],
@@ -876,139 +854,240 @@ class AnisotropicRCWA(RCWA):
                             [H41, H42, H43, H44],
                         ]
                     )
-                )
 
-                q, W = eig(H)
-                W1, W2, W3, W4 = np.split(W, 4)
-                W_full = np.r_[W2, W1, -1j * W4, -1j * W3]
+                    q, W = eig(H)
+                    W1, W2, W3, W4 = np.split(W, 4)
+                    W_full = np.r_[W2, W1, -1j * W4, -1j * W3]
 
-                # Partition the 4N layer eigenmodes into 2N forward (+z decaying or +z
-                # power-carrying) and 2N backward (-z decaying or -z power-carrying) modes
-                # so both exp(+k * q_f * d) and exp(-k * q_b * d) remain bounded (<= 1).
-                re_tol = 1e-10 * max(1.0, float(np.max(np.abs(q))))
-                sz = np.sum(
-                    np.real(
-                        W_full[0:nood, :] * np.conj(W_full[3 * nood : 4 * nood, :])
-                        - W_full[nood : 2 * nood, :]
-                        * np.conj(W_full[2 * nood : 3 * nood, :])
-                    ),
-                    axis=0,
-                )
-                w_norm2 = np.sum(np.abs(W_full) ** 2, axis=0)
+                    re_tol = 1e-10 * max(1.0, float(np.max(np.abs(q))))
+                    sz = np.sum(
+                        np.real(
+                            W_full[0:nood, :] * np.conj(W_full[3 * nood : 4 * nood, :])
+                            - W_full[nood : 2 * nood, :]
+                            * np.conj(W_full[2 * nood : 3 * nood, :])
+                        ),
+                        axis=0,
+                    )
+                    w_norm2 = np.sum(np.abs(W_full) ** 2, axis=0)
 
-                def _mode_sort_key(idx):
-                    qr = float(q[idx].real)
-                    qi = float(q[idx].imag)
-                    if qr < -re_tol:
-                        cat = 2
-                    elif qr > re_tol:
-                        cat = -2
-                    else:
-                        sz_rel = float(sz[idx]) / max(float(w_norm2[idx]), 1e-30)
-                        if sz_rel > 1e-10:
-                            cat = 1
-                        elif sz_rel < -1e-10:
-                            cat = -1
+                    def _mode_sort_key(idx):
+                        qr = float(q[idx].real)
+                        qi = float(q[idx].imag)
+                        if qr < -re_tol:
+                            cat = 2
+                        elif qr > re_tol:
+                            cat = -2
                         else:
-                            cat = 0
-                    return (cat, -qi, -qr)
+                            sz_rel = float(sz[idx]) / max(float(w_norm2[idx]), 1e-30)
+                            if sz_rel > 1e-10:
+                                cat = 1
+                            elif sz_rel < -1e-10:
+                                cat = -1
+                            else:
+                                cat = 0
+                        return (cat, -qi, -qr)
 
-                order = sorted(range(4 * nood), key=_mode_sort_key, reverse=True)
-                q_f = q[order[: 2 * nood]]
-                q_b = q[order[2 * nood :]]
-                W_ord = W_full[:, order]
-                W_f = W_ord[:, : 2 * nood]
-                W_b = W_ord[:, 2 * nood :]
+                    order = sorted(range(4 * nood), key=_mode_sort_key, reverse=True)
+                    q_f = q[order[: 2 * nood]]
+                    q_b = q[order[2 * nood :]]
+                    W_ord = W_full[:, order]
+                    W_f = W_ord[:, : 2 * nood]
+                    W_b = W_ord[:, 2 * nood :]
 
-                x_f = np.exp(k * q_f * thickness)
-                x_b = np.exp(-k * q_b * thickness)
-                D1_inv_4 = np.tile(np.exp(1j * k2i[2, :] * thickness), 4)
+                    x_f = np.exp(k * q_f * thickness)
+                    x_b = np.exp(-k * q_b * thickness)
+                    D1_inv_4 = np.tile(np.exp(1j * k2i[2, :] * thickness), 4)
 
-                MTp = linsolve(W_ord, D1_inv_4[:, np.newaxis] * MT_curr)
-                MTp1 = MTp[: 2 * nood, :]
-                MTp2 = MTp[2 * nood :, :]
-                step_T[:, :, nlayer] = linsolve(MTp1, np.diag(x_f))
-                MT_curr = W_f + np.dot(
-                    W_b * x_b[np.newaxis, :], np.dot(MTp2, step_T[:, :, nlayer])
+                    MTp = linsolve(W_ord, D1_inv_4[:, np.newaxis] * MT_curr)
+                    MTp1 = MTp[: 2 * nood, :]
+                    MTp2 = MTp[2 * nood :, :]
+                    step_T[:, :, nlayer] = linsolve(MTp1, np.diag(x_f))
+                    MT_curr = W_f + np.dot(
+                        W_b * x_b[np.newaxis, :], np.dot(MTp2, step_T[:, :, nlayer])
+                    )
+
+                sol = linsolve(np.c_[-MR_red, MT_curr], b)
+                r_red = sol[: 2 * nood]
+                t_curr = sol[2 * nood :]
+                for nlayer in range(1, nlayers - 1):
+                    t_curr = np.dot(step_T[:, :, nlayer], t_curr)
+
+                ROx, ROy, REx, REy = np.split(np.dot(B1, r_red), 4)
+                TOx, TOy, TEx, TEy = np.split(np.dot(B3, t_curr), 4)
+
+                ROz = -np.dot(CRO_1, (np.dot(ARO, ROx) + np.dot(BRO, ROy)))
+                REz = -np.dot(CRE_1, (np.dot(ARE, REx) + np.dot(BRE, REy)))
+                TOz = -np.dot(CTO_1, (np.dot(ATO, TOx) + np.dot(BTO, TOy)))
+                TEz = -np.dot(CTE_1, (np.dot(ATE, TEx) + np.dot(BTE, TEy)))
+
+                zero_kt = (np.abs(kx.real) <= 1e-15 * k) & (abs(ky.real) <= 1e-15 * k)
+                phi_i = np.where(zero_kt, delta, np.arctan2(ky.real, kx.real))
+                sx_hat = -np.sin(phi_i)
+                sy_hat = np.cos(phi_i)
+
+                RO_vec = np.vstack([ROx, ROy, ROz])
+                RE_vec = np.vstack([REx, REy, REz])
+                R_tot_vec = RO_vec + RE_vec
+                if iso_sup:
+                    r_s_amp = R_tot_vec[0, :] * sx_hat + R_tot_vec[1, :] * sy_hat
+                    RO_vec = np.vstack(
+                        [r_s_amp * sx_hat, r_s_amp * sy_hat, 0 * r_s_amp]
+                    )
+                    RE_vec = R_tot_vec - RO_vec
+
+                TO_vec = np.vstack([TOx, TOy, TOz])
+                TE_vec = np.vstack([TEx, TEy, TEz])
+                T_tot_vec = TO_vec + TE_vec
+                if iso_sub:
+                    t_s_amp = T_tot_vec[0, :] * sx_hat + T_tot_vec[1, :] * sy_hat
+                    TO_vec = np.vstack(
+                        [t_s_amp * sx_hat, t_s_amp * sy_hat, 0 * t_s_amp]
+                    )
+                    TE_vec = T_tot_vec - TO_vec
+
+                HR_O = np.cross(kO1i / k, RO_vec, axis=0)
+                HR_E = np.cross(kE1i / k, RE_vec, axis=0)
+                HR_tot = HR_O + HR_E
+
+                HT_O = np.cross(kO3i / k, TO_vec, axis=0)
+                HT_E = np.cross(kE3i / k, TE_vec, axis=0)
+                HT_tot = HT_O + HT_E
+
+                denom = float(
+                    (E_inc[0] * np.conj(H_inc[1]) - E_inc[1] * np.conj(H_inc[0])).real
                 )
-
-            sol = linsolve(np.c_[-MR_red, MT_curr], b)
-            r_red = sol[: 2 * nood]
-            t_curr = sol[2 * nood :]
-            for nlayer in range(1, nlayers - 1):
-                t_curr = np.dot(step_T[:, :, nlayer], t_curr)
-
-            ROx, ROy, REx, REy = np.split(np.dot(B1, r_red), 4)
-            TOx, TOy, TEx, TEy = np.split(np.dot(B3, t_curr), 4)
-
-            ROz = -np.dot(CRO_1, (np.dot(ARO, ROx) + np.dot(BRO, ROy)))
-            REz = -np.dot(CRE_1, (np.dot(ARE, REx) + np.dot(BRE, REy)))
-            TOz = -np.dot(CTO_1, (np.dot(ATO, TOx) + np.dot(BTO, TOy)))
-            TEz = -np.dot(CTE_1, (np.dot(ATE, TEx) + np.dot(BTE, TEy)))
-
-            denom = (
-                E_inc[0] * np.conj(k * H_inc[1]) - E_inc[1] * np.conj(k * H_inc[0])
-            ).real
-            DEO1[:, iwl] = (
-                -(
-                    (
-                        np.absolute(ROx) ** 2
-                        + np.absolute(ROy) ** 2
-                        + np.absolute(ROz) ** 2
-                    )
-                    * np.conj(kO1i[2, :])
-                    - (
-                        ROx * np.conj(kO1i[0, :])
-                        + ROy * np.conj(kO1i[1, :])
-                        + ROz * np.conj(kO1i[2, :])
-                    )
-                    * np.conj(ROz)
+                num_deo1 = -(
+                    RO_vec[0, :] * np.conj(HR_O[1, :])
+                    - RO_vec[1, :] * np.conj(HR_O[0, :])
                 ).real
-                / denom
-            )
-            DEE1[:, iwl] = (
-                -(
-                    (
-                        np.absolute(REx) ** 2
-                        + np.absolute(REy) ** 2
-                        + np.absolute(REz) ** 2
-                    )
-                    * np.conj(kE1i[2, :])
-                    - (
-                        REx * np.conj(kE1i[0, :])
-                        + REy * np.conj(kE1i[1, :])
-                        + REz * np.conj(kE1i[2, :])
-                    )
-                    * np.conj(REz)
+                num_dee1 = -(
+                    RE_vec[0, :] * np.conj(HR_E[1, :])
+                    - RE_vec[1, :] * np.conj(HR_E[0, :])
                 ).real
-                / denom
+                num_de1 = -(
+                    R_tot_vec[0, :] * np.conj(HR_tot[1, :])
+                    - R_tot_vec[1, :] * np.conj(HR_tot[0, :])
+                ).real
+                num_deo3 = (
+                    TO_vec[0, :] * np.conj(HT_O[1, :])
+                    - TO_vec[1, :] * np.conj(HT_O[0, :])
+                ).real
+                num_dee3 = (
+                    TE_vec[0, :] * np.conj(HT_E[1, :])
+                    - TE_vec[1, :] * np.conj(HT_E[0, :])
+                ).real
+                num_de3 = (
+                    T_tot_vec[0, :] * np.conj(HT_tot[1, :])
+                    - T_tot_vec[1, :] * np.conj(HT_tot[0, :])
+                ).real
+
+                return denom, num_deo1, num_dee1, num_de1, num_deo3, num_dee3, num_de3
+
+            # ordinary and extraordinary incident wavevector magnitudes in region 1
+            abskO1 = k * nO1
+            abskE1 = (
+                k
+                * nO1
+                * nE1
+                / np.sqrt(nO1**2 + (nE1**2 - nO1**2) * np.dot(c1, dirk1) ** 2)
             )
-            DEO3[:, iwl] = (
-                (np.absolute(TOx) ** 2 + np.absolute(TOy) ** 2 + np.absolute(TOz) ** 2)
-                * np.conj(kO3i[2, :])
-                - (
-                    TOx * np.conj(kO3i[0, :])
-                    + TOy * np.conj(kO3i[1, :])
-                    + TOz * np.conj(kO3i[2, :])
+
+            c_cross_s = np.cross(c1, dirk1)
+            norm_cs = float(np.linalg.norm(c_cross_s))
+            aniso_superstrate = not iso_sup and norm_cs > 1e-12
+
+            if not aniso_superstrate:
+                k1_inc = abskO1 * dirk1
+                E_inc = u.astype(complex)
+                H_inc = np.cross(k1_inc / k, E_inc)
+                (
+                    denom,
+                    n_deo1,
+                    n_dee1,
+                    n_de1,
+                    n_deo3,
+                    n_dee3,
+                    n_de3,
+                ) = _solve_floquet(k1_inc, E_inc, H_inc)
+            else:
+                dO_hat = c_cross_s / norm_cs
+                dE_hat = np.cross(dirk1, dO_hat)
+                aO = np.dot(dO_hat, u)
+                aE = np.dot(dE_hat, u)
+
+                kO1_inc = np.asarray(abskO1 * dirk1, dtype=complex)
+                kE1_inc = np.asarray(abskE1 * dirk1, dtype=complex)
+
+                EO_inc = aO * dO_hat.astype(complex)
+                HO_inc = np.cross(kO1_inc / k, EO_inc)
+
+                dE_k = np.cross(kE1_inc, np.cross(c1, kE1_inc))
+                dE_k_hat = dE_k / np.linalg.norm(dE_k)
+                EE_inc = aE * np.array(
+                    [(nO1 / nE1) ** 2 * dE_k_hat[0], dE_k_hat[1], dE_k_hat[2]],
+                    dtype=complex,
                 )
-                * np.conj(TOz)
-            ).real / denom
-            DEE3[:, iwl] = (
-                (np.absolute(TEx) ** 2 + np.absolute(TEy) ** 2 + np.absolute(TEz) ** 2)
-                * np.conj(kE3i[2, :])
-                - (
-                    TEx * np.conj(kE3i[0, :])
-                    + TEy * np.conj(kE3i[1, :])
-                    + TEz * np.conj(kE3i[2, :])
-                )
-                * np.conj(TEz)
-            ).real / denom
+                HE_inc = np.cross(kE1_inc / k, EE_inc)
+
+                if np.allclose(kO1_inc[:2], kE1_inc[:2], rtol=0.0, atol=1e-14 * k):
+                    # Normal incidence (k_parallel == 0): O and E share one Floquet space
+                    (
+                        denom,
+                        n_deo1,
+                        n_dee1,
+                        n_de1,
+                        n_deo3,
+                        n_dee3,
+                        n_de3,
+                    ) = _solve_floquet(kO1_inc, EO_inc + EE_inc, HO_inc + HE_inc)
+                elif abs(aE) <= 1e-15:
+                    (
+                        denom,
+                        n_deo1,
+                        n_dee1,
+                        n_de1,
+                        n_deo3,
+                        n_dee3,
+                        n_de3,
+                    ) = _solve_floquet(kO1_inc, EO_inc, HO_inc)
+                elif abs(aO) <= 1e-15:
+                    (
+                        denom,
+                        n_deo1,
+                        n_dee1,
+                        n_de1,
+                        n_deo3,
+                        n_dee3,
+                        n_de3,
+                    ) = _solve_floquet(kE1_inc, EE_inc, HE_inc)
+                else:
+                    # Oblique mixed O+E incidence in a birefringent superstrate: solve
+                    # the two distinct tangential-wavevector Floquet problems independently
+                    # and superpose their period-averaged fluxes weighted by incident Sz.
+                    res_O = _solve_floquet(kO1_inc, EO_inc, HO_inc)
+                    res_E = _solve_floquet(kE1_inc, EE_inc, HE_inc)
+                    denom = res_O[0] + res_E[0]
+                    n_deo1 = res_O[1] + res_E[1]
+                    n_dee1 = res_O[2] + res_E[2]
+                    n_de1 = res_O[3] + res_E[3]
+                    n_deo3 = res_O[4] + res_E[4]
+                    n_dee3 = res_O[5] + res_E[5]
+                    n_de3 = res_O[6] + res_E[6]
+
+            DEO1[:, iwl] = n_deo1 / denom
+            DEE1[:, iwl] = n_dee1 / denom
+            DE1[:, iwl] = n_de1 / denom
+            DEO3[:, iwl] = n_deo3 / denom
+            DEE3[:, iwl] = n_dee3 / denom
+            DE3[:, iwl] = n_de3 / denom
 
         # save the results
         self.DEO1 = DEO1
         self.DEE1 = DEE1
+        self.DE1 = DE1
         self.DEO3 = DEO3
         self.DEE3 = DEE3
+        self.DE3 = DE3
 
         return self
 

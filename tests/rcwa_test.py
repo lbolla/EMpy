@@ -369,16 +369,15 @@ class IsotropicRCWATest(TestCase):
             ml_iso, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=2
         ).solve([wl])
 
-        # 1. Weak-birefringence 3D-Euler-rotated grating + uniaxial superstrate -> IsotropicRCWA (dn = 1e-4, 1e-8, 0)
+        # 1. Weak-birefringence 3D-Euler-rotated grating + uniaxial substrate -> IsotropicRCWA (dn = 1e-4, 1e-8, 0)
+        sup_iso_a = EMpy.materials.AnisotropicMaterial(
+            "sup_iso",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * 1.45**2 * np.eye(3)
+            ),
+        )
         dn_errs = []
         for dn in (1e-4, 1e-8, 0.0):
-            sup_a = EMpy.materials.AnisotropicMaterial(
-                "sup",
-                epsilon_tensor=EMpy.materials.EpsilonTensor(
-                    epsilon_tensor_const=eps0
-                    * np.diag([(1.45 + dn) ** 2, 1.45**2, 1.45**2])
-                ),
-            )
             ridge_a = EMpy.materials.AnisotropicMaterial(
                 "ridge",
                 epsilon_tensor=EMpy.materials.EpsilonTensor(
@@ -400,25 +399,20 @@ class IsotropicRCWATest(TestCase):
             )
             ml_a = EMpy.utils.Multilayer(
                 [
-                    EMpy.utils.Layer(sup_a, np.inf),
-                    EMpy.utils.BinaryGrating(ridge_a, sup_a, 0.43, 1.1e-6, 0.25e-6),
+                    EMpy.utils.Layer(sup_iso_a, np.inf),
+                    EMpy.utils.BinaryGrating(ridge_a, sup_iso_a, 0.43, 1.1e-6, 0.25e-6),
                     EMpy.utils.Layer(sub_a, np.inf),
                 ]
             )
             ra = EMpy.RCWA.AnisotropicRCWA(
                 ml_a, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=2
             ).solve([wl])
-            self.assertAlmostEqual(
-                float((ra.DEO1 + ra.DEE1 + ra.DEO3 + ra.DEE3).sum()), 1.0, places=12
-            )
-            err = float(
-                np.max(
-                    np.abs((ra.DEO1 + ra.DEE1) - r_iso.DE1)
-                    + np.abs((ra.DEO3 + ra.DEE3) - r_iso.DE3)
-                )
-            )
+            self.assertAlmostEqual(float((ra.DE1 + ra.DE3).sum()), 1.0, places=12)
+            err = float(np.max(np.abs(ra.DE1 - r_iso.DE1) + np.abs(ra.DE3 - r_iso.DE3)))
             dn_errs.append(err)
-        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[0], 5e-4)
+        self.assertLess(dn_errs[1], 0.01 * dn_errs[0])
+        self.assertLess(dn_errs[1], 1e-7)
         self.assertLess(dn_errs[2], 1e-12)
 
         # 2. Passive lossy rotated anisotropic layer -> lossless limit (kap = 1e-2, 1e-5, 0.0 + 0j)
@@ -1074,3 +1068,127 @@ class IsotropicRCWATest(TestCase):
         np.testing.assert_allclose(
             r_lani_iso.DEO3 + r_lani_iso.DEE3, r_liso.DE3, atol=1e-11
         )
+
+    def test_anisotropic_rcwa_lossy_substrate_superposition_and_rayleigh(self):
+        """Verify lossy end-medium DE1/DE3 conservation, mixed-psi birefringent superstrate superposition, and Rayleigh anomalies."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        air = EMpy.materials.Air
+        si = EMpy.materials.IsotropicMaterial(
+            "si", n0=EMpy.materials.RefractiveIndex(n0_const=3.48)
+        )
+        sio2 = EMpy.materials.IsotropicMaterial(
+            "sio2", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+
+        # 1. Conical diffraction into a LOSSY isotropic substrate: AniRCWA DEO3+DEE3 == DE3 == IsoRCWA.DE3
+        sub_lossy_i = EMpy.materials.IsotropicMaterial(
+            "sli", n0=EMpy.materials.RefractiveIndex(n0_const=1.5 - 0.35j)
+        )
+        sub_lossy_a = EMpy.materials.AnisotropicMaterial(
+            "sla",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * (1.5 - 0.35j) ** 2 * np.eye(3)
+            ),
+        )
+        ml_ls_i = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(si, sio2, 0.45, 1.1e-6, 0.25e-6),
+                EMpy.utils.Layer(sub_lossy_i, np.inf),
+            ]
+        )
+        ml_ls_a = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(si, sio2, 0.45, 1.1e-6, 0.25e-6),
+                EMpy.utils.Layer(sub_lossy_a, np.inf),
+            ]
+        )
+        ri_ls = EMpy.RCWA.IsotropicRCWA(
+            ml_ls_i, alpha=0.35, delta=0.7, psi=0.4, phi=np.pi / 2, n=2
+        ).solve([wl])
+        ra_ls = EMpy.RCWA.AnisotropicRCWA(
+            ml_ls_a, alpha=0.35, delta=0.7, psi=0.4, phi=np.pi / 2, n=2
+        ).solve([wl])
+        np.testing.assert_allclose(ra_ls.DE1, ri_ls.DE1, atol=1e-13)
+        np.testing.assert_allclose(ra_ls.DE3, ri_ls.DE3, atol=1e-13)
+        np.testing.assert_allclose(ra_ls.DEO3 + ra_ls.DEE3, ri_ls.DE3, atol=1e-13)
+        # Lossless grating between lossless air and lossy substrate: flux across z = d is conserved (R + T == 1)
+        self.assertAlmostEqual(float((ra_ls.DE1 + ra_ls.DE3).sum()), 1.0, places=12)
+
+        # 2. Lossless grating on a LOSSY uniaxial substrate: total flux DE1 + DE3 == 1 (includes O-E cross term)
+        sub_uni_l = EMpy.materials.AnisotropicMaterial(
+            "sul",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0
+                * np.diag([(1.9 - 0.4j) ** 2, (1.5 - 0.1j) ** 2, (1.5 - 0.1j) ** 2])
+            ),
+        )
+        ml_ul = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(si, sio2, 0.45, 1.1e-6, 0.25e-6),
+                EMpy.utils.Layer(sub_uni_l, np.inf),
+            ]
+        )
+        ra_ul = EMpy.RCWA.AnisotropicRCWA(
+            ml_ul, alpha=0.35, delta=0.7, psi=0.4, phi=np.pi / 2, n=2
+        ).solve([wl])
+        self.assertAlmostEqual(float((ra_ul.DE1 + ra_ul.DE3).sum()), 1.0, places=12)
+
+        # 3. Birefringent superstrate mixed polarization at delta = 0 on planar film: exact flux-weighted superposition
+        nO1, nE1 = 1.4, 1.9
+        sup_u = EMpy.materials.AnisotropicMaterial(
+            "su",
+            epsilon_tensor=EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * np.diag([nE1**2, nO1**2, nO1**2])
+            ),
+        )
+        ml_film = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(sup_u, np.inf),
+                EMpy.utils.Layer(sio2, 0.3e-6),
+                EMpy.utils.Layer(sio2, np.inf),
+            ]
+        )
+        al_b = EMpy.utils.deg2rad(25.0)
+        r_e = EMpy.RCWA.AnisotropicRCWA(ml_film, al_b, 0.0, 0.0, np.pi / 2, 0).solve(
+            [wl]
+        )
+        r_o = EMpy.RCWA.AnisotropicRCWA(
+            ml_film, al_b, 0.0, np.pi / 2, np.pi / 2, 0
+        ).solve([wl])
+        r_mix = EMpy.RCWA.AnisotropicRCWA(
+            ml_film, al_b, 0.0, np.pi / 4, np.pi / 2, 0
+        ).solve([wl])
+        # Compute exact incident Poynting flux weights for unit-D projections aO = aE = 1/sqrt(2)
+        dirk = np.array([np.sin(al_b), 0.0, np.cos(al_b)])
+        abskE = nO1 * nE1 / np.sqrt(nO1**2 + (nE1**2 - nO1**2) * dirk[0] ** 2)
+        dE = np.cross(dirk, np.cross([1.0, 0.0, 0.0], dirk))
+        dE /= np.linalg.norm(dE)
+        EE = np.array([(nO1 / nE1) ** 2 * dE[0], dE[1], dE[2]])
+        HE = np.cross(abskE * dirk, EE)
+        sz_O = nO1 * np.cos(al_b)
+        sz_E = float((EE[0] * HE[1] - EE[1] * HE[0]).real)
+        r_expected = (sz_O * r_o.DE1[0, 0] + sz_E * r_e.DE1[0, 0]) / (sz_O + sz_E)
+        self.assertAlmostEqual(float(r_mix.DE1[0, 0]), float(r_expected), places=14)
+        self.assertAlmostEqual(float((r_mix.DE1 + r_mix.DE3).sum()), 1.0, places=14)
+
+        # 4. Exact Rayleigh anomaly (wl == pitch at normal incidence in air): no LinAlgError and matches IsoRCWA
+        ml_ra = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(si, sio2, 0.5, 1.0e-6, 0.2e-6),
+                EMpy.utils.Layer(sio2, np.inf),
+            ]
+        )
+        ri_ra = EMpy.RCWA.IsotropicRCWA(
+            ml_ra, alpha=0.0, delta=0.0, psi=0.4, phi=np.pi / 2, n=2
+        ).solve([1.0e-6])
+        ra_ra = EMpy.RCWA.AnisotropicRCWA(
+            ml_ra, alpha=0.0, delta=0.0, psi=0.4, phi=np.pi / 2, n=2
+        ).solve([1.0e-6])
+        self.assertAlmostEqual(float((ra_ra.DE1 + ra_ra.DE3).sum()), 1.0, places=11)
+        np.testing.assert_allclose(ra_ra.DE1, ri_ra.DE1, atol=1e-7)
+        np.testing.assert_allclose(ra_ra.DE3, ri_ra.DE3, atol=1e-7)

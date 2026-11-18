@@ -1242,7 +1242,10 @@ def find_peaks(x, y, threshold=1e-6):
 def cond(M):
     """Return the condition number of the 2D array M."""
     svdv = scipy.linalg.svdvals(M)
-    return svdv.max() / svdv.min()
+    smin = svdv.min()
+    if smin == 0:
+        return numpy.inf
+    return svdv.max() / smin
 
 
 def interp2(x, y, xp, yp, fp):
