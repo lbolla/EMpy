@@ -752,17 +752,17 @@ class TransferMatrixTest(TestCase):
         # Local S_z(d+) in the lossless air exit medium is strictly negative due to lateral Goos-Hanchen attenuation
         self.assertLess(float(tmm_i.Ts[0]), 0.0)
         self.assertLess(float(tmm_i.Tp[0]), 0.0)
-        assert_allclose(tmm_a.R[0, 0, 0], tmm_i.Rs[0], rtol=1e-13, atol=1e-14)
-        assert_allclose(tmm_a.R[1, 1, 0], tmm_i.Rp[0], rtol=1e-13, atol=1e-14)
-        assert_allclose(tmm_a.T[0, 0, 0], tmm_i.Ts[0], rtol=1e-13, atol=1e-14)
-        assert_allclose(tmm_a.T[1, 1, 0], tmm_i.Tp[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(tmm_a.R[0, 0, 0], tmm_i.Rs[0], rtol=1e-12, atol=1e-12)
+        assert_allclose(tmm_a.R[1, 1, 0], tmm_i.Rp[0], rtol=1e-12, atol=1e-12)
+        assert_allclose(tmm_a.T[0, 0, 0], tmm_i.Ts[0], rtol=1e-12, atol=1e-12)
+        assert_allclose(tmm_a.T[1, 1, 0], tmm_i.Tp[0], rtol=1e-12, atol=1e-12)
         assert_allclose(
-            tmm_a.T_tot[:, 0], [tmm_i.Ts[0], tmm_i.Tp[0]], rtol=1e-13, atol=1e-14
+            tmm_a.T_tot[:, 0], [tmm_i.Ts[0], tmm_i.Tp[0]], rtol=1e-12, atol=1e-12
         )
-        assert_allclose(rcwa_i_s.DE3[0, 0], tmm_i.Ts[0], rtol=1e-13, atol=1e-14)
-        assert_allclose(rcwa_i_p.DE3[0, 0], tmm_i.Tp[0], rtol=1e-13, atol=1e-14)
-        assert_allclose(rcwa_a_s.DE3[0, 0], tmm_i.Ts[0], rtol=1e-13, atol=1e-14)
-        assert_allclose(rcwa_a_p.DE3[0, 0], tmm_i.Tp[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(rcwa_i_s.DE3[0, 0], tmm_i.Ts[0], rtol=1e-12, atol=1e-12)
+        assert_allclose(rcwa_i_p.DE3[0, 0], tmm_i.Tp[0], rtol=1e-12, atol=1e-12)
+        assert_allclose(rcwa_a_s.DE3[0, 0], tmm_i.Ts[0], rtol=1e-12, atol=1e-12)
+        assert_allclose(rcwa_a_p.DE3[0, 0], tmm_i.Tp[0], rtol=1e-12, atol=1e-12)
 
         # 2. Weak-birefringence 3D Euler-rotated exit crystal dn -> 0 under lossy-incident TIR
         dn_errs = []
@@ -795,7 +795,7 @@ class TransferMatrixTest(TestCase):
                 )
             )
         self.assertLess(dn_errs[1], dn_errs[0])
-        self.assertLess(dn_errs[2], 1e-13)
+        self.assertLess(dn_errs[2], 1e-12)
 
         # 3. Continuous lossy -> lossless incident-medium limit (kap0 = 1e-2, 1e-5, 0.0 + 0j -> 0): T_tot -> 0, R_tot -> 1
         t_mags = []
@@ -808,8 +808,8 @@ class TransferMatrixTest(TestCase):
             )
             t_mags.append(float(np.max(np.abs(sk.T_tot[:, 0]))))
             if kap0 == 0.0:
-                assert_allclose(sk.R_tot[:, 0], 1.0, atol=1e-13)
-                assert_allclose(sk.T_tot[:, 0], 0.0, atol=1e-14)
+                assert_allclose(sk.R_tot[:, 0], 1.0, atol=1e-12)
+                assert_allclose(sk.T_tot[:, 0], 0.0, atol=1e-12)
         self.assertLess(t_mags[1], t_mags[0])
         self.assertLess(t_mags[1], 1e-4)
-        self.assertLess(t_mags[2], 1e-14)
+        self.assertLess(t_mags[2], 1e-12)

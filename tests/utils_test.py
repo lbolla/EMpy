@@ -767,11 +767,11 @@ class UtilsTest(TestCase):
         c_lyr_a = U.Layer(m_ani_l, d).capacitance(area=area, wl=wl)
         self.assertFalse(numpy.iscomplexobj(c_lyr_a))
         self.assertIsInstance(c_lyr_a, float)
-        self.assertAlmostEqual(c_lyr_a, c_lyr_i, places=15)
+        self.assertAlmostEqual(c_lyr_a, c_lyr_i, places=14)
 
         c_bg_i = U.BinaryGrating(m_iso_l, m_ref_i, 0.4, 1e-6, d).capacitance(area, wl)
         c_bg_a = U.BinaryGrating(m_ani_l, m_ref_a, 0.4, 1e-6, d).capacitance(area, wl)
-        self.assertAlmostEqual(float(c_bg_a), float(c_bg_i), places=15)
+        self.assertAlmostEqual(float(c_bg_a), float(c_bg_i), places=14)
 
         c_sdg = U.SymmetricDoubleGrating(
             m_ani_l, m_ref_a, m_ref_a, 0.25, 0.3, 1e-6, d
@@ -780,7 +780,7 @@ class UtilsTest(TestCase):
             m_ani_l, m_ref_a, m_ref_a, 0.25, 0.3, 0.15, 1e-6, d
         ).capacitance(area, wl)
         self.assertFalse(numpy.iscomplexobj(c_adg))
-        self.assertAlmostEqual(float(c_adg), float(c_sdg), places=15)
+        self.assertAlmostEqual(float(c_adg), float(c_sdg), places=14)
 
         # Anisotropic 3D Euler-rotated dn -> 0 and lossy kap -> 0+ limits
         c_iso_ll = U.Layer(

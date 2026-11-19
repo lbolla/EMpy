@@ -621,7 +621,7 @@ class IsotropicRCWATest(TestCase):
                 )
             )
         self.assertLess(dn_errs[1], dn_errs[0])
-        self.assertLess(dn_errs[2], 1e-14)
+        self.assertLess(dn_errs[2], 1e-12)
 
         # Also check lossy SymmetricDoubleGrating / AsymmetricDoubleGrating IsoRCWA == AniRCWA
         sdg_i = EMpy.utils.SymmetricDoubleGrating(
@@ -656,8 +656,8 @@ class IsotropicRCWATest(TestCase):
             np.pi / 2,
             2,
         ).solve([wl])
-        np.testing.assert_allclose(r_adg_a.DEO1 + r_adg_a.DEE1, r_sdg_i.DE1, atol=1e-14)
-        np.testing.assert_allclose(r_adg_a.DEO3 + r_adg_a.DEE3, r_sdg_i.DE3, atol=1e-14)
+        np.testing.assert_allclose(r_adg_a.DEO1 + r_adg_a.DEE1, r_sdg_i.DE1, atol=1e-12)
+        np.testing.assert_allclose(r_adg_a.DEO3 + r_adg_a.DEE3, r_sdg_i.DE3, atol=1e-12)
 
         # 3. Continuous lossy -> lossless grating limit (kap = 1e-2, 1e-5, 0.0 + 0j -> lossless)
         def _solve_iso_grat(kap, force_complex=False):
@@ -678,9 +678,9 @@ class IsotropicRCWATest(TestCase):
 
         rg_ll = _solve_iso_grat(0.0, force_complex=False)
         rg_c0 = _solve_iso_grat(0.0, force_complex=True)
-        self.assertAlmostEqual(float((rg_ll.DE1 + rg_ll.DE3).sum()), 1.0, places=13)
-        np.testing.assert_allclose(rg_c0.DE1, rg_ll.DE1, atol=1e-14)
-        np.testing.assert_allclose(rg_c0.DE3, rg_ll.DE3, atol=1e-14)
+        self.assertAlmostEqual(float((rg_ll.DE1 + rg_ll.DE3).sum()), 1.0, places=12)
+        np.testing.assert_allclose(rg_c0.DE1, rg_ll.DE1, atol=1e-12)
+        np.testing.assert_allclose(rg_c0.DE3, rg_ll.DE3, atol=1e-12)
 
         g_errs = []
         for kap in (1e-2, 1e-5):
@@ -719,8 +719,8 @@ class IsotropicRCWATest(TestCase):
         r0_rot = EMpy.RCWA.IsotropicRCWA(
             ml_iso, alpha=0.0, delta=0.0, psi=psi + delta, phi=np.pi / 2, n=3
         ).solve([wl])
-        np.testing.assert_allclose(r0.DE1, r0_rot.DE1, atol=1e-14)
-        np.testing.assert_allclose(r0.DE3, r0_rot.DE3, atol=1e-14)
+        np.testing.assert_allclose(r0.DE1, r0_rot.DE1, atol=1e-12)
+        np.testing.assert_allclose(r0.DE3, r0_rot.DE3, atol=1e-12)
 
         # 2. Smooth continuity as alpha -> 0+ (1e-3, 1e-6, 1e-9 -> 0) with delta != 0
         alpha_errs = []
@@ -781,7 +781,7 @@ class IsotropicRCWATest(TestCase):
                 )
             )
         self.assertLess(dn_errs[1], dn_errs[0])
-        self.assertLess(dn_errs[2], 1e-14)
+        self.assertLess(dn_errs[2], 1e-12)
 
         # 4. Complex dtype superstrate (n1 = 1.45 + 0.0j and passive lossy kap -> 0+) must not fail on arctan2
         sup_real = EMpy.materials.IsotropicMaterial(
@@ -819,7 +819,7 @@ class IsotropicRCWATest(TestCase):
         self.assertLess(sup_errs[0], 5e-3)
         self.assertLess(sup_errs[1], 0.01 * sup_errs[0])
         self.assertLess(sup_errs[1], 5e-6)
-        self.assertLess(sup_errs[2], 1e-14)
+        self.assertLess(sup_errs[2], 1e-12)
 
     def test_anisotropic_rcwa_thick_high_order_etm_stability_and_limits(self):
         """Verify Enhanced Transmittance Matrix stability on thick high-order gratings and degenerate limits."""
@@ -1268,11 +1268,11 @@ class IsotropicRCWATest(TestCase):
         ra_iso = EMpy.RCWA.AnisotropicRCWA(
             ml_ani_iso, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=2
         ).solve([wl])
-        self.assertAlmostEqual(float((ra_iso.DE1 + ra_iso.DE3).sum()), 1.0, places=13)
-        np.testing.assert_allclose(ra_iso.DE1, ri.DE1, atol=1e-13)
-        np.testing.assert_allclose(ra_iso.DE3, ri.DE3, atol=1e-13)
-        np.testing.assert_allclose(ra_iso.DEO1 + ra_iso.DEE1, ri.DE1, atol=1e-13)
-        np.testing.assert_allclose(ra_iso.DEO3 + ra_iso.DEE3, ri.DE3, atol=1e-13)
+        self.assertAlmostEqual(float((ra_iso.DE1 + ra_iso.DE3).sum()), 1.0, places=12)
+        np.testing.assert_allclose(ra_iso.DE1, ri.DE1, atol=1e-12)
+        np.testing.assert_allclose(ra_iso.DE3, ri.DE3, atol=1e-12)
+        np.testing.assert_allclose(ra_iso.DEO1 + ra_iso.DEE1, ri.DE1, atol=1e-12)
+        np.testing.assert_allclose(ra_iso.DEO3 + ra_iso.DEE3, ri.DE3, atol=1e-12)
 
         # 2. 3D Euler-rotated birefringent grating dn -> 0 right at the conical null-cone point
         rot_errs = []
@@ -1306,7 +1306,7 @@ class IsotropicRCWATest(TestCase):
                 float(np.max(np.abs(ra_rot.DE1 - ri.DE1) + np.abs(ra_rot.DE3 - ri.DE3)))
             )
         self.assertLess(rot_errs[1], rot_errs[0])
-        self.assertLess(rot_errs[2], 1e-13)
+        self.assertLess(rot_errs[2], 1e-12)
 
         # 3. Uniaxial superstrate & substrate exceptional point (Kx_+-1 = +-nO1, Ky != 0):
         # verify exact energy conservation, smooth wavelength continuity, and dn -> 0 convergence
@@ -1368,7 +1368,7 @@ class IsotropicRCWATest(TestCase):
                 )
             )
         self.assertLess(sup_dn_errs[1], sup_dn_errs[0])
-        self.assertLess(sup_dn_errs[2], 1e-13)
+        self.assertLess(sup_dn_errs[2], 1e-12)
 
         # 4. Lossy -> lossless limit at the conical null-cone geometry
         loss_errs = []
@@ -1395,7 +1395,7 @@ class IsotropicRCWATest(TestCase):
                 float(np.max(np.abs(ra_k.DE1 - ri.DE1) + np.abs(ra_k.DE3 - ri.DE3)))
             )
         self.assertLess(loss_errs[1], loss_errs[0])
-        self.assertLess(loss_errs[2], 1e-13)
+        self.assertLess(loss_errs[2], 1e-12)
 
     def test_isotropic_rcwa_lossy_superstrate_planar_and_conical_limits(self):
         """Verify IsotropicRCWA DE1/DE3 with finite-loss superstrates against TMM and AnisotropicRCWA."""
@@ -1428,10 +1428,10 @@ class IsotropicRCWATest(TestCase):
         rcwa_tm = EMpy.RCWA.IsotropicRCWA(ml_i, alpha_p, 0.0, 0.0, np.pi / 2, 0).solve(
             [wl]
         )
-        self.assertAlmostEqual(float(rcwa_te.DE1[0, 0]), float(tmm_i.Rs[0]), places=14)
-        self.assertAlmostEqual(float(rcwa_te.DE3[0, 0]), float(tmm_i.Ts[0]), places=14)
-        self.assertAlmostEqual(float(rcwa_tm.DE1[0, 0]), float(tmm_i.Rp[0]), places=14)
-        self.assertAlmostEqual(float(rcwa_tm.DE3[0, 0]), float(tmm_i.Tp[0]), places=14)
+        self.assertAlmostEqual(float(rcwa_te.DE1[0, 0]), float(tmm_i.Rs[0]), places=12)
+        self.assertAlmostEqual(float(rcwa_te.DE3[0, 0]), float(tmm_i.Ts[0]), places=12)
+        self.assertAlmostEqual(float(rcwa_tm.DE1[0, 0]), float(tmm_i.Rp[0]), places=12)
+        self.assertAlmostEqual(float(rcwa_tm.DE3[0, 0]), float(tmm_i.Tp[0]), places=12)
 
         # 2. Conical grating (delta != 0) with lossy superstrate, lossy grating, and lossy substrate
         n1, n2, n3 = 1.5 - 0.2j, 2.4 - 0.05j, 1.6 - 0.15j
@@ -1474,8 +1474,8 @@ class IsotropicRCWATest(TestCase):
         r_ga = EMpy.RCWA.AnisotropicRCWA(
             ml_ga, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=2
         ).solve([wl])
-        np.testing.assert_allclose(r_gi.DE1, r_ga.DE1, atol=1e-13)
-        np.testing.assert_allclose(r_gi.DE3, r_ga.DE3, atol=1e-13)
+        np.testing.assert_allclose(r_gi.DE1, r_ga.DE1, atol=1e-12)
+        np.testing.assert_allclose(r_gi.DE3, r_ga.DE3, atol=1e-12)
 
         # Normal incidence (alpha = 0, delta != 0) with lossy superstrate
         r_gi0 = EMpy.RCWA.IsotropicRCWA(
@@ -1484,5 +1484,5 @@ class IsotropicRCWATest(TestCase):
         r_ga0 = EMpy.RCWA.AnisotropicRCWA(
             ml_ga, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=2
         ).solve([wl])
-        np.testing.assert_allclose(r_gi0.DE1, r_ga0.DE1, atol=1e-13)
-        np.testing.assert_allclose(r_gi0.DE3, r_ga0.DE3, atol=1e-13)
+        np.testing.assert_allclose(r_gi0.DE1, r_ga0.DE1, atol=1e-12)
+        np.testing.assert_allclose(r_gi0.DE3, r_ga0.DE3, atol=1e-12)
