@@ -229,8 +229,8 @@ class IsotropicRCWA(RCWA):
         )
 
         # usefull matrices
-        I = np.eye(i.size)
-        I2 = np.eye(i.size * 2)
+        I = np.eye(i.size, dtype=complex)
+        I2 = np.eye(i.size * 2, dtype=complex)
         ZERO = np.zeros_like(I)
 
         X = np.zeros((2 * nood, 2 * nood, nlayers), dtype=complex)
@@ -267,10 +267,20 @@ class IsotropicRCWA(RCWA):
             kx = k1i[0, :]
             ky = k1[1]
 
-            # Azimuthal plane-of-diffraction angles; at normal diffraction (kx == ky == 0,
-            # e.g. m = 0 at normal incidence alpha = 0), preserve delta for continuity as alpha -> 0+.
-            zero_kt = (np.abs(kx.real) <= 1e-15 * k) & (abs(ky.real) <= 1e-15 * k)
-            phi_i = np.where(zero_kt, delta, np.arctan2(ky.real, kx.real))
+            # Complex plane-of-diffraction direction cosines (fc, fs) = (kx, ky) / kt
+            # on the passive branch Re(kt) - Im(kt) >= 0 so k_t . (-fs, fc) == 0 holds
+            # identically even for conical diffraction in a lossy superstrate; at normal
+            # diffraction (kx == ky == 0), preserve delta for continuity as alpha -> 0+.
+            zero_kt = (np.abs(kx) <= 1e-15 * k) & (np.abs(ky) <= 1e-15 * k)
+            kt = np.sqrt(kx**2 + ky**2 + 0j)
+            flip_kt = (kt.real - kt.imag < 0) | (
+                (kt.real - kt.imag == 0) & (kt.real < 0)
+            )
+            kt = np.where(flip_kt, -kt, kt)
+            kt = np.where((~zero_kt) & (np.abs(kt) < 1e-13 * k), 1e-13 * k + 0j, kt)
+            kt_safe = np.where(zero_kt, 1.0 + 0j, kt)
+            fc = np.where(zero_kt, np.cos(delta) + 0j, kx / kt_safe)
+            fs = np.where(zero_kt, np.sin(delta) + 0j, ky / kt_safe)
 
             Kx = np.diag(kx / k)
             Ky = ky / k * I
@@ -278,10 +288,6 @@ class IsotropicRCWA(RCWA):
             Y1 = np.diag(k1i[2, :] / k)
             Z3 = np.diag(k3i[2, :] / (k * n3**2))
             Y3 = np.diag(k3i[2, :] / k)
-            # Fc = np.diag(np.cos(phi_i))
-            fc = np.cos(phi_i)
-            # Fs = np.diag(np.sin(phi_i))
-            fs = np.sin(phi_i)
 
             MR = np.block([[I, ZERO], [-1j * Y1, ZERO], [ZERO, I], [ZERO, -1j * Z1]])
 
@@ -409,11 +415,24 @@ class IsotropicRCWA(RCWA):
 
             # M = np.asarray(np.bmat([-MR, MT]))
             M = np.c_[-MR, MT]
+            E_inc = np.array(
+                [
+                    np.cos(psi) * np.cos(alpha) * np.cos(delta)
+                    - np.sin(psi) * np.sin(delta),
+                    np.cos(psi) * np.cos(alpha) * np.sin(delta)
+                    + np.sin(psi) * np.cos(delta),
+                    -np.cos(psi) * np.sin(alpha),
+                ],
+                dtype=complex,
+            )
+            H_inc = np.cross(k1 / k, E_inc)
+            fc0 = fc[n]
+            fs0 = fs[n]
             b = np.r_[
-                np.sin(psi) * dlt,
-                1j * np.sin(psi) * n1 * np.cos(alpha) * dlt,
-                -1j * np.cos(psi) * n1 * dlt,
-                np.cos(psi) * np.cos(alpha) * dlt,
+                (-fs0 * E_inc[0] + fc0 * E_inc[1]) * dlt,
+                -1j * (fc0 * H_inc[0] + fs0 * H_inc[1]) * dlt,
+                -1j * (-fs0 * H_inc[0] + fc0 * H_inc[1]) * dlt,
+                (fc0 * E_inc[0] + fs0 * E_inc[1]) * dlt,
             ]
 
             x = linsolve(M, b)
@@ -423,12 +442,26 @@ class IsotropicRCWA(RCWA):
                 T = np.dot(linsolve(MTp1[:, :, ii], X[:, :, ii]), T)
             Ts, Tp = np.split(T, 2)
 
-            DE1[:, iwl] = (k1i[2, :] / (k1[2])).real * np.absolute(Rs) ** 2 + (
-                k1i[2, :] / (k1[2] * n1**2)
-            ).real * np.absolute(Rp) ** 2
-            DE3[:, iwl] = (k3i[2, :] / (k1[2])).real * np.absolute(Ts) ** 2 + (
-                k3i[2, :] / (k1[2] * n3**2)
-            ).real * np.absolute(Tp) ** 2
+            z1_d = k1i[2, :] / (k * n1**2)
+            y1_d = k1i[2, :] / k
+            z3_d = k3i[2, :] / (k * n3**2)
+            y3_d = k3i[2, :] / k
+
+            ERx = -fs * Rs - 1j * fc * z1_d * Rp
+            ERy = fc * Rs - 1j * fs * z1_d * Rp
+            HRx = fc * y1_d * Rs - 1j * fs * Rp
+            HRy = fs * y1_d * Rs + 1j * fc * Rp
+
+            ETx = -fs * Ts + 1j * fc * z3_d * Tp
+            ETy = fc * Ts + 1j * fs * z3_d * Tp
+            HTx = -fc * y3_d * Ts - 1j * fs * Tp
+            HTy = -fs * y3_d * Ts + 1j * fc * Tp
+
+            denom = float(
+                (E_inc[0] * np.conj(H_inc[1]) - E_inc[1] * np.conj(H_inc[0])).real
+            )
+            DE1[:, iwl] = -(ERx * np.conj(HRy) - ERy * np.conj(HRx)).real / denom
+            DE3[:, iwl] = (ETx * np.conj(HTy) - ETy * np.conj(HTx)).real / denom
 
         # save the results
         self.DE1 = DE1
@@ -578,8 +611,8 @@ class AnisotropicRCWA(RCWA):
             # wavevectors
             k = 2 * pi / wl
 
-            eps1 = np.diag(np.asarray([nE1, nO1, nO1]) ** 2)
-            eps3 = np.diag(np.asarray([nE3, nO3, nO3]) ** 2)
+            eps1 = np.diag(np.asarray([nO1 if iso_sup else nE1, nO1, nO1]) ** 2)
+            eps3 = np.diag(np.asarray([nO3 if iso_sub else nE3, nO3, nO3]) ** 2)
 
             # Precompute wavelength-only Fourier permittivity blocks per internal layer
             layer_ops = []
@@ -672,11 +705,14 @@ class AnisotropicRCWA(RCWA):
 
                 kE1i[0, :] = kO1i[0, :]
                 kE1i[1, :] = kO1i[1, :]
-                kz_e1 = dispersion_relation_extraordinary(
-                    kE1i[0, :], kE1i[1, :], k, nO1, nE1, c1
-                )
-                kz_e1 = np.where(np.abs(kz_e1) < 1e-13 * k, -1e-13j * k, kz_e1)
-                kE1i[2, :] = -kz_e1
+                if iso_sup:
+                    kE1i[2, :] = kO1i[2, :]
+                else:
+                    kz_e1 = dispersion_relation_extraordinary(
+                        kE1i[0, :], kE1i[1, :], k, nO1, nE1, c1
+                    )
+                    kz_e1 = np.where(np.abs(kz_e1) < 1e-13 * k, -1e-13j * k, kz_e1)
+                    kE1i[2, :] = -kz_e1
 
                 kO3i[0, :] = kO1i[0, :]
                 kO3i[1, :] = kO1i[1, :]
@@ -685,10 +721,13 @@ class AnisotropicRCWA(RCWA):
 
                 kE3i[0, :] = kO1i[0, :]
                 kE3i[1, :] = kO1i[1, :]
-                kz_e3 = dispersion_relation_extraordinary(
-                    kE3i[0, :], kE3i[1, :], k, nO3, nE3, c3
-                )
-                kE3i[2, :] = np.where(np.abs(kz_e3) < 1e-13 * k, -1e-13j * k, kz_e3)
+                if iso_sub:
+                    kE3i[2, :] = kO3i[2, :]
+                else:
+                    kz_e3 = dispersion_relation_extraordinary(
+                        kE3i[0, :], kE3i[1, :], k, nO3, nE3, c3
+                    )
+                    kE3i[2, :] = np.where(np.abs(kz_e3) < 1e-13 * k, -1e-13j * k, kz_e3)
 
                 k2i = np.r_[[k1_vec[0] - i * K[0]], [k1_vec[1] - i * K[1]], [-i * K[2]]]
                 kx = kO1i[0, :]
@@ -734,83 +773,47 @@ class AnisotropicRCWA(RCWA):
                     H_inc[0] * dlt,
                     H_inc[1] * dlt,
                 ]
-                Ky_CRO_1 = ky / k * CRO_1
-                Ky_CRE_1 = ky / k * CRE_1
-                Kx_CRO_1 = kx[:, np.newaxis] / k * CRO_1
-                Kx_CRE_1 = kx[:, np.newaxis] / k * CRE_1
-                MR31 = -np.dot(Ky_CRO_1, ARO)
-                MR32 = -np.dot(Ky_CRO_1, BRO) - KO1z
-                MR33 = -np.dot(Ky_CRE_1, ARE)
-                MR34 = -np.dot(Ky_CRE_1, BRE) - KE1z
-                MR41 = np.dot(Kx_CRO_1, ARO) + KO1z
-                MR42 = np.dot(Kx_CRO_1, BRO)
-                MR43 = np.dot(Kx_CRE_1, ARE) + KE1z
-                MR44 = np.dot(Kx_CRE_1, BRE)
-                MR = np.block(
-                    [
-                        [I, ZERO, I, ZERO],
-                        [ZERO, I, ZERO, I],
-                        [MR31, MR32, MR33, MR34],
-                        [MR41, MR42, MR43, MR44],
-                    ]
-                )
 
-                Ky_CTO_1 = ky / k * CTO_1
-                Ky_CTE_1 = ky / k * CTE_1
-                Kx_CTO_1 = kx[:, np.newaxis] / k * CTO_1
-                Kx_CTE_1 = kx[:, np.newaxis] / k * CTE_1
-                MT31 = -np.dot(Ky_CTO_1, ATO)
-                MT32 = -np.dot(Ky_CTO_1, BTO) - KO3z
-                MT33 = -np.dot(Ky_CTE_1, ATE)
-                MT34 = -np.dot(Ky_CTE_1, BTE) - KE3z
-                MT41 = np.dot(Kx_CTO_1, ATO) + KO3z
-                MT42 = np.dot(Kx_CTO_1, BTO)
-                MT43 = np.dot(Kx_CTE_1, ATE) + KE3z
-                MT44 = np.dot(Kx_CTE_1, BTE)
-                MT = np.block(
-                    [
-                        [I, ZERO, I, ZERO],
-                        [ZERO, I, ZERO, I],
-                        [MT31, MT32, MT33, MT34],
-                        [MT41, MT42, MT43, MT44],
-                    ]
-                )
+                # Singularity-free 4N x 2N reduced end-layer matrices spanning the exact
+                # 2N outgoing eigenmode subspace (c1 = c3 = [1, 0, 0]) with unit-conditioned
+                # tangential electric block [[ZERO, I], [I, ZERO]], remaining full-rank both
+                # on isotropic end layers (nE == nO) and at the conical evanescent uniaxial
+                # exceptional point Kx^2 == nO^2, Ky != 0 (where (KEz - KOz)/(nO^2 - Kx^2)
+                # cancels analytically to (nE^2 - nO^2) / (nO^2 * (KEz + KOz))).
+                def _build_end_red(kzO_signed, kzE_signed, nO, nE, iso_flag):
+                    Kx_d = kx / k
+                    Ky_d = ky / k
+                    KOz_d = kzO_signed / k
+                    KEz_d = KOz_d if iso_flag else kzE_signed / k
+                    m31 = -(Ky_d**2) / KOz_d - KOz_d
+                    m41 = (Kx_d * Ky_d) / KOz_d
+                    if iso_flag:
+                        m32 = -(Kx_d * Ky_d) / KOz_d
+                        m42 = (Kx_d**2) / KOz_d + KOz_d
+                    else:
+                        dn2 = nE**2 - nO**2
+                        denom_sum = KEz_d + KOz_d
+                        m32 = -(Kx_d * Ky_d * nE**2) / (nO**2 * KEz_d) - (
+                            Kx_d * Ky_d * dn2
+                        ) / (nO**2 * denom_sum) * ((Ky_d**2) / (KEz_d * KOz_d) - 1.0)
+                        m42 = (
+                            (Kx_d**2 * nE**2) / (nO**2 * KEz_d)
+                            + KEz_d
+                            + (Kx_d**2 * Ky_d**2 * dn2)
+                            / (nO**2 * KEz_d * KOz_d * denom_sum)
+                        )
+                    return np.block(
+                        [
+                            [ZERO, I],
+                            [I, ZERO],
+                            [np.diag(m31), np.diag(m32)],
+                            [np.diag(m41), np.diag(m42)],
+                        ]
+                    )
 
-                # Reduced 2N-column eigenmode bases B1, B3 enforcing Glytsis eqs. (46)-(49)
-                # identically for c1 = c3 = [1, 0, 0], enabling Moharam's 4N x 2N Enhanced
-                # Transmittance Matrix recursion without inverting decaying exponentials.
-                q1_r = np.diag(DRE - np.dot(np.dot(FRE, CRE_1), ARE))
-                p1 = np.diag(ERE - np.dot(np.dot(FRE, CRE_1), BRE))
-                nrm1 = np.hypot(np.abs(p1), np.abs(q1_r))
-                zero1 = nrm1 == 0
-                p1 = np.where(zero1, 1.0, p1)
-                nrm1 = np.where(zero1, 1.0, nrm1)
-                B1 = np.block(
-                    [
-                        [ZERO, ZERO],
-                        [I, ZERO],
-                        [ZERO, np.diag(p1 / nrm1)],
-                        [ZERO, np.diag(-q1_r / nrm1)],
-                    ]
-                )
-
-                q3_t = np.diag(DTE - np.dot(np.dot(FTE, CTE_1), ATE))
-                p3 = np.diag(ETE - np.dot(np.dot(FTE, CTE_1), BTE))
-                nrm3 = np.hypot(np.abs(p3), np.abs(q3_t))
-                zero3 = nrm3 == 0
-                p3 = np.where(zero3, 1.0, p3)
-                nrm3 = np.where(zero3, 1.0, nrm3)
-                B3 = np.block(
-                    [
-                        [ZERO, ZERO],
-                        [I, ZERO],
-                        [ZERO, np.diag(p3 / nrm3)],
-                        [ZERO, np.diag(-q3_t / nrm3)],
-                    ]
-                )
-
-                MR_red = np.dot(MR, B1)
-                MT_curr = np.dot(MT, B3)
+                MR_red = _build_end_red(kO1i[2, :], kE1i[2, :], nO1, nE1, iso_sup)
+                MT_red = _build_end_red(kO3i[2, :], kE3i[2, :], nO3, nE3, iso_sub)
+                MT_curr = MT_red.copy()
                 step_T.fill(0.0)
 
                 for (
@@ -912,46 +915,85 @@ class AnisotropicRCWA(RCWA):
                 for nlayer in range(1, nlayers - 1):
                     t_curr = np.dot(step_T[:, :, nlayer], t_curr)
 
-                ROx, ROy, REx, REy = np.split(np.dot(B1, r_red), 4)
-                TOx, TOy, TEx, TEy = np.split(np.dot(B3, t_curr), 4)
-
-                ROz = -np.dot(CRO_1, (np.dot(ARO, ROx) + np.dot(BRO, ROy)))
-                REz = -np.dot(CRE_1, (np.dot(ARE, REx) + np.dot(BRE, REy)))
-                TOz = -np.dot(CTO_1, (np.dot(ATO, TOx) + np.dot(BTO, TOy)))
-                TEz = -np.dot(CTE_1, (np.dot(ATE, TEx) + np.dot(BTE, TEy)))
+                r_y, r_x = np.split(r_red, 2)
+                t_y, t_x = np.split(t_curr, 2)
+                HR_tot_x, HR_tot_y = np.split(np.dot(MR_red[2 * nood :, :], r_red), 2)
+                HT_tot_x, HT_tot_y = np.split(np.dot(MT_red[2 * nood :, :], t_curr), 2)
 
                 zero_kt = (np.abs(kx.real) <= 1e-15 * k) & (abs(ky.real) <= 1e-15 * k)
                 phi_i = np.where(zero_kt, delta, np.arctan2(ky.real, kx.real))
                 sx_hat = -np.sin(phi_i)
                 sy_hat = np.cos(phi_i)
 
-                RO_vec = np.vstack([ROx, ROy, ROz])
-                RE_vec = np.vstack([REx, REy, REz])
-                R_tot_vec = RO_vec + RE_vec
                 if iso_sup:
+                    ROz_tot = -np.dot(CRO_1, (np.dot(ARO, r_x) + np.dot(BRO, r_y)))
+                    R_tot_vec = np.vstack([r_x, r_y, ROz_tot])
                     r_s_amp = R_tot_vec[0, :] * sx_hat + R_tot_vec[1, :] * sy_hat
                     RO_vec = np.vstack(
                         [r_s_amp * sx_hat, r_s_amp * sy_hat, 0 * r_s_amp]
                     )
                     RE_vec = R_tot_vec - RO_vec
+                    HR_O = np.cross(kO1i / k, RO_vec, axis=0)
+                    HR_E = np.cross(kE1i / k, RE_vec, axis=0)
+                    HR_tot = HR_O + HR_E
+                else:
+                    q1_r = np.diag(DRE - np.dot(np.dot(FRE, CRE_1), ARE))
+                    p1 = np.diag(ERE - np.dot(np.dot(FRE, CRE_1), BRE))
+                    nrm1 = np.hypot(np.abs(p1), np.abs(q1_r))
+                    ep1 = np.abs(p1) <= 1e-12 * np.maximum(nrm1, 1e-30)
+                    p1_safe = np.where(ep1, 1.0 + 0j, p1)
+                    ratio1 = np.where(ep1, 0.0 + 0j, q1_r / p1_safe)
+                    ROx = np.where(ep1, r_x, 0.0 + 0j)
+                    ROy = np.where(ep1, r_y, r_y + ratio1 * r_x)
+                    REx = np.where(ep1, 0.0 + 0j, r_x)
+                    REy = np.where(ep1, 0.0 + 0j, -ratio1 * r_x)
+                    ROz = -np.dot(CRO_1, (np.dot(ARO, ROx) + np.dot(BRO, ROy)))
+                    REz = -np.dot(CRE_1, (np.dot(ARE, REx) + np.dot(BRE, REy)))
+                    RO_vec = np.vstack([ROx, ROy, ROz])
+                    RE_vec = np.vstack([REx, REy, REz])
+                    R_tot_vec = RO_vec + RE_vec
+                    HR_O = np.cross(kO1i / k, RO_vec, axis=0)
+                    HR_E = np.cross(kE1i / k, RE_vec, axis=0)
+                    HR_O[0, :] = np.where(ep1, HR_tot_x, HR_O[0, :])
+                    HR_O[1, :] = np.where(ep1, HR_tot_y, HR_O[1, :])
+                    HR_E[0, :] = np.where(ep1, 0.0 + 0j, HR_E[0, :])
+                    HR_E[1, :] = np.where(ep1, 0.0 + 0j, HR_E[1, :])
+                    HR_tot = np.vstack([HR_tot_x, HR_tot_y, HR_O[2, :] + HR_E[2, :]])
 
-                TO_vec = np.vstack([TOx, TOy, TOz])
-                TE_vec = np.vstack([TEx, TEy, TEz])
-                T_tot_vec = TO_vec + TE_vec
                 if iso_sub:
+                    TOz_tot = -np.dot(CTO_1, (np.dot(ATO, t_x) + np.dot(BTO, t_y)))
+                    T_tot_vec = np.vstack([t_x, t_y, TOz_tot])
                     t_s_amp = T_tot_vec[0, :] * sx_hat + T_tot_vec[1, :] * sy_hat
                     TO_vec = np.vstack(
                         [t_s_amp * sx_hat, t_s_amp * sy_hat, 0 * t_s_amp]
                     )
                     TE_vec = T_tot_vec - TO_vec
-
-                HR_O = np.cross(kO1i / k, RO_vec, axis=0)
-                HR_E = np.cross(kE1i / k, RE_vec, axis=0)
-                HR_tot = HR_O + HR_E
-
-                HT_O = np.cross(kO3i / k, TO_vec, axis=0)
-                HT_E = np.cross(kE3i / k, TE_vec, axis=0)
-                HT_tot = HT_O + HT_E
+                    HT_O = np.cross(kO3i / k, TO_vec, axis=0)
+                    HT_E = np.cross(kE3i / k, TE_vec, axis=0)
+                    HT_tot = HT_O + HT_E
+                else:
+                    q3_t = np.diag(DTE - np.dot(np.dot(FTE, CTE_1), ATE))
+                    p3 = np.diag(ETE - np.dot(np.dot(FTE, CTE_1), BTE))
+                    nrm3 = np.hypot(np.abs(p3), np.abs(q3_t))
+                    ep3 = np.abs(p3) <= 1e-12 * np.maximum(nrm3, 1e-30)
+                    p3_safe = np.where(ep3, 1.0 + 0j, p3)
+                    ratio3 = np.where(ep3, 0.0 + 0j, q3_t / p3_safe)
+                    TOx = np.where(ep3, t_x, 0.0 + 0j)
+                    TOy = np.where(ep3, t_y, t_y + ratio3 * t_x)
+                    TEx = np.where(ep3, 0.0 + 0j, t_x)
+                    TEy = np.where(ep3, 0.0 + 0j, -ratio3 * t_x)
+                    TOz = -np.dot(CTO_1, (np.dot(ATO, TOx) + np.dot(BTO, TOy)))
+                    TEz = -np.dot(CTE_1, (np.dot(ATE, TEx) + np.dot(BTE, TEy)))
+                    TO_vec = np.vstack([TOx, TOy, TOz])
+                    TE_vec = np.vstack([TEx, TEy, TEz])
+                    T_tot_vec = TO_vec + TE_vec
+                    HT_O = np.cross(kO3i / k, TO_vec, axis=0)
+                    HT_E = np.cross(kE3i / k, TE_vec, axis=0)
+                    HT_O[0, :] = np.where(ep3, HT_tot_x, HT_O[0, :])
+                    HT_O[1, :] = np.where(ep3, HT_tot_y, HT_O[1, :])
+                    HT_E[0, :] = np.where(ep3, 0.0 + 0j, HT_E[0, :])
+                    HT_E[1, :] = np.where(ep3, 0.0 + 0j, HT_E[1, :])
+                    HT_tot = np.vstack([HT_tot_x, HT_tot_y, HT_O[2, :] + HT_E[2, :]])
 
                 denom = float(
                     (E_inc[0] * np.conj(H_inc[1]) - E_inc[1] * np.conj(H_inc[0])).real

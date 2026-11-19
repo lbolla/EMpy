@@ -2,6 +2,7 @@
 
 from matplotlib import pyplot as plt
 import numpy
+import scipy.linalg
 
 from EMpy.modesolvers.interface import interface_matrix
 
@@ -154,6 +155,8 @@ class SimpleJoint:
         #        self.cs1 = cs1
         if method not in ("passive", "reciprocal"):
             raise ValueError("method must be 'passive' or 'reciprocal'.")
+        if solver1.nmodes != solver2.nmodes:
+            raise ValueError("solver1 and solver2 must have the same number of modes.")
         self.solver1 = solver1
         #        self.cs2 = cs2
         self.solver2 = solver2
@@ -181,81 +184,221 @@ class SimpleJoint:
         """Vector mode-matching S-matrix at a zero-length waveguide junction.
 
         With ``method="passive"`` (default), projects transverse E_t = sum (a + b) E_m
-        and H_t = sum (+-a -+ b) H_m onto the modes of each side using conjugated power
-        overlaps O_pq = 0.5 * int (E_p x H_q^*)_z:
-          Side 1: O11^T (a1 + b1) = O21^T (b2 + a2),  O11^* (a1 - b1) = O12^* (b2 - a2)
-          Side 2: O22^T (b2 + a2) = O12^T (a1 + b1),  O22^* (b2 - a2) = O21^* (a1 - b1)
-        This guarantees unconditional passivity (||S||_2 <= 1) under basis truncation so
-        cascaded GenericDevice circuits remain stable, reproduces exact Fresnel reflection
-        and transmission in homogeneous/1D limits (lossless and lossy), and converges to
-        Lorentz reciprocity as nmodes increases.
+        and H_t = sum (+-a -+ b) H_m onto the power-orthonormalized modes of each side
+        using conjugated Poynting overlaps O_pq = 0.5 * int (E_p x H_q^*)_z, contracting
+        oblique biorthogonal truncation overshoot when the truncated overlap operator
+        exceeds completeness. This guarantees unconditional passivity (||S||_2 <= 1 on
+        all lossless propagating-mode junctions and non-negative Poynting dissipation
+        under basis truncation) so cascaded GenericDevice circuits remain stable,
+        reproduces exact Fresnel reflection and transmission in homogeneous/1D limits
+        (lossless and lossy), and converges to Lorentz reciprocity as nmodes increases.
 
-        With ``method="reciprocal"``, uses unconjugated Lorentz-reaction overlaps
-        R_pq = 0.5 * int (E_p x H_q)_z (normalized to unit self-reaction) to enforce
-        exact S == S^T at any finite truncation order.
+        With ``method="reciprocal"``, uses bilateral unconjugated Lorentz-reaction
+        overlaps R_pq = 0.5 * int (E_p x H_q)_z (via the polar midpoint involution of
+        the two single-sided Cayley S-matrices) to enforce exact S == S^T and exact
+        port-swap symmetry at any finite truncation order (unitary when lossless,
+        non-unitary in lossy traveling-wave coordinates).
         """
         if self.method == "reciprocal":
             dim = self.solver1.nmodes
 
-            def _unconj_overlap(m1, m2):
-                x = m2.get_x()
-                y = m2.get_y()
-                if hasattr(m1, "fields"):
-                    Ex1, Ey1, _, _, _, _ = m1.fields(x, y)
-                    Ex1, Ey1 = Ex1.T, Ey1.T
-                else:
-                    Ex1 = m1.get_field("Ex", x, y)
-                    Ey1 = m1.get_field("Ey", x, y)
-                if hasattr(m2, "fields"):
-                    _, _, _, Hx2, Hy2, _ = m2.fields(x, y)
-                    Hx2, Hy2 = Hx2.T, Hy2.T
-                else:
-                    Hx2 = m2.get_field("Hx", x, y)
-                    Hy2 = m2.get_field("Hy", x, y)
+            def _eval_eh(m, x, y):
+                if hasattr(m, "fields"):
+                    Ex, Ey, _, Hx, Hy, _ = m.fields(x, y)
+                    return Ex.T, Ey.T, Hx.T, Hy.T
+                return (
+                    m.get_field("Ex", x, y),
+                    m.get_field("Ey", x, y),
+                    m.get_field("Hx", x, y),
+                    m.get_field("Hy", x, y),
+                )
+
+            def _unconj_overlap(m1, m2, x, y):
+                Ex1, Ey1, _, _ = _eval_eh(m1, x, y)
+                _, _, Hx2, Hy2 = _eval_eh(m2, x, y)
                 return 0.5 * numpy.trapezoid(
                     numpy.trapezoid(Ex1 * Hy2 - Ey1 * Hx2, x=y, axis=1), x=x, axis=0
                 )
 
-            d1 = numpy.array(
-                [_unconj_overlap(m, m) for m in self.solver1.modes], dtype=complex
+            def _sym_inv_sqrt(M):
+                sv = numpy.linalg.svd(M, compute_uv=False)
+                if sv.size and sv[-1] > 1e-11 * max(1.0, float(sv[0])):
+                    root = numpy.asarray(scipy.linalg.sqrtm(M), dtype=complex)
+                    return numpy.linalg.inv(root)
+                vals, vecs = numpy.linalg.eig(M)
+                s = numpy.sqrt(vals + 0j)
+                inv_s = numpy.where(numpy.abs(s) > 1e-11, 1.0 / s, 0.0)
+                return (vecs * inv_s[None, :]) @ numpy.linalg.pinv(vecs)
+
+            x1 = self.solver1.modes[0].get_x()
+            y1 = self.solver1.modes[0].get_y()
+            x2 = self.solver2.modes[0].get_x()
+            y2 = self.solver2.modes[0].get_y()
+            xc = x1 if numpy.array_equal(x1, x2) else numpy.unique(numpy.r_[x1, x2])
+            yc = y1 if numpy.array_equal(y1, y2) else numpy.unique(numpy.r_[y1, y2])
+
+            R11 = numpy.array(
+                [
+                    [
+                        _unconj_overlap(
+                            self.solver1.modes[i], self.solver1.modes[j], x1, y1
+                        )
+                        for j in range(dim)
+                    ]
+                    for i in range(dim)
+                ],
+                dtype=complex,
             )
-            d2 = numpy.array(
-                [_unconj_overlap(m, m) for m in self.solver2.modes], dtype=complex
+            R22 = numpy.array(
+                [
+                    [
+                        _unconj_overlap(
+                            self.solver2.modes[i], self.solver2.modes[j], x2, y2
+                        )
+                        for j in range(dim)
+                    ]
+                    for i in range(dim)
+                ],
+                dtype=complex,
             )
-            X = numpy.zeros((dim, dim), dtype=complex)
-            for i in range(dim):
-                for j in range(dim):
-                    X[i, j] = _unconj_overlap(
-                        self.solver1.modes[i], self.solver2.modes[j]
-                    ) / numpy.sqrt(d1[i] * d2[j])
+            R12 = numpy.array(
+                [
+                    [
+                        _unconj_overlap(
+                            self.solver1.modes[i], self.solver2.modes[j], xc, yc
+                        )
+                        for j in range(dim)
+                    ]
+                    for i in range(dim)
+                ],
+                dtype=complex,
+            )
+            R21 = numpy.array(
+                [
+                    [
+                        _unconj_overlap(
+                            self.solver2.modes[i], self.solver1.modes[j], xc, yc
+                        )
+                        for j in range(dim)
+                    ]
+                    for i in range(dim)
+                ],
+                dtype=complex,
+            )
+
+            r1_diag = numpy.diag(R11)
+            r2_diag = numpy.diag(R22)
+            d1_inv = numpy.where(
+                numpy.abs(r1_diag) > 1e-30, 1.0 / numpy.sqrt(r1_diag), 1.0 + 0j
+            )
+            d2_inv = numpy.where(
+                numpy.abs(r2_diag) > 1e-30, 1.0 / numpy.sqrt(r2_diag), 1.0 + 0j
+            )
+            R11_n = d1_inv[:, None] * (0.5 * (R11 + R11.T)) * d1_inv[None, :]
+            R22_n = d2_inv[:, None] * (0.5 * (R22 + R22.T)) * d2_inv[None, :]
+            W1 = _sym_inv_sqrt(R11_n) * d1_inv[None, :]
+            W2 = _sym_inv_sqrt(R22_n) * d2_inv[None, :]
+            A = W1 @ R12 @ W2.T
+            B = W2 @ R21 @ W1.T
+
             ident = numpy.eye(dim, dtype=complex)
-            s11 = numpy.linalg.solve(ident + X @ X.T, ident - X @ X.T).T
-            s21 = 2.0 * numpy.linalg.solve(ident + X.T @ X, X.T)
-            s22 = -numpy.linalg.solve(ident + X.T @ X, ident - X.T @ X).T
-            s12 = 2.0 * numpy.linalg.solve(ident + X @ X.T, X)
-            self.S = numpy.block([[s11, s12], [s21, s22]])
+            zeros = numpy.zeros((dim, dim), dtype=complex)
+            P_swap = numpy.block([[zeros, ident], [ident, zeros]])
+
+            def _cayley(X):
+                s11 = numpy.linalg.solve(ident + X @ X.T, ident - X @ X.T).T
+                s21 = 2.0 * numpy.linalg.solve(ident + X.T @ X, X.T)
+                s22 = -numpy.linalg.solve(ident + X.T @ X, ident - X.T @ X).T
+                s12 = 2.0 * numpy.linalg.solve(ident + X @ X.T, X)
+                return numpy.block([[s11, s12], [s21, s22]])
+
+            M = 0.5 * (_cayley(A) + P_swap @ _cayley(B) @ P_swap.T)
+            M2 = M @ M
+            sv_m2 = numpy.linalg.svd(M2, compute_uv=False)
+            if sv_m2.size and sv_m2[-1] > 1e-11 * max(1.0, float(sv_m2[0])):
+                root_m2 = numpy.asarray(scipy.linalg.sqrtm(M2), dtype=complex)
+                S = M @ numpy.linalg.inv(root_m2)
+            else:
+                vals, vecs = numpy.linalg.eig(M2)
+                s = numpy.sqrt(vals + 0j)
+                flip = (s.real - s.imag < 0) | ((s.real - s.imag == 0) & (s.real < 0))
+                s = numpy.where(flip, -s, s)
+                coupled = numpy.abs(s) > 1e-6
+                inv_s = numpy.where(coupled, 1.0 / s, 0.0)
+                S_range = M @ (vecs * inv_s[None, :]) @ numpy.linalg.pinv(vecs)
+                V_ker = scipy.linalg.null_space(M, rcond=1e-6)
+                if V_ker.shape[1]:
+                    P_ker = V_ker @ numpy.linalg.solve(V_ker.T @ V_ker, V_ker.T)
+                    S = S_range - P_ker
+                else:
+                    S = S_range
+            self.S = 0.5 * (S + S.T)
             self.T = S2T(self.S)
             return
 
         O11, O22, O12, O21 = interface_matrix(self.solver1, self.solver2)
         dim = O11.shape[0]
 
-        E1_from_2 = numpy.linalg.solve(O11.T, O21.T)
-        H1_from_2 = numpy.linalg.solve(O11.conj(), O12.conj())
-        E2_from_1 = numpy.linalg.solve(O22.T, O12.T)
-        H2_from_1 = numpy.linalg.solve(O22.conj(), O21.conj())
+        d1 = numpy.diag(O11)
+        u1 = numpy.where(numpy.abs(d1) > 0, d1 / numpy.abs(d1), 1.0 + 0j)
+        d2 = numpy.diag(O22)
+        u2 = numpy.where(numpy.abs(d2) > 0, d2 / numpy.abs(d2), 1.0 + 0j)
 
-        R12 = 0.5 * (E1_from_2 - H1_from_2)
-        T12 = 0.5 * (E1_from_2 + H1_from_2)
-        T21 = 0.5 * (E2_from_1 + H2_from_1)
-        R21 = 0.5 * (E2_from_1 - H2_from_1)
+        G_m1 = u1[:, None].conj() * O11.T
+        P1 = 0.5 * (G_m1 + G_m1.conj().T)
+        w1, V1 = numpy.linalg.eigh(P1)
+        P1_inv_half = (V1 * (1.0 / numpy.sqrt(numpy.maximum(w1, 1e-15)))) @ V1.conj().T
+
+        G_m2 = u2[:, None].conj() * O22.T
+        P2 = 0.5 * (G_m2 + G_m2.conj().T)
+        w2, V2 = numpy.linalg.eigh(P2)
+        P2_inv_half = (V2 * (1.0 / numpy.sqrt(numpy.maximum(w2, 1e-15)))) @ V2.conj().T
+
+        E1_from_2 = P1_inv_half @ (u1[:, None].conj() * O21.T) @ P2_inv_half
+        H1_from_2 = P1_inv_half @ (u1[:, None] * O12.conj()) @ P2_inv_half
+        E2_from_1 = P2_inv_half @ (u2[:, None].conj() * O12.T) @ P1_inv_half
+        H2_from_1 = P2_inv_half @ (u2[:, None] * O21.conj()) @ P1_inv_half
 
         ident = numpy.eye(dim, dtype=complex)
         zeros = numpy.zeros((dim, dim), dtype=complex)
-        lhs = numpy.block([[ident, -R12], [-R21, ident]])
-        rhs = numpy.block([[zeros, T12], [T21, zeros]])
 
-        self.S = numpy.linalg.solve(lhs, rhs)
+        def _solve_scaled(sc):
+            e12 = sc * E1_from_2
+            h12 = sc * H1_from_2
+            e21 = sc * E2_from_1
+            h21 = sc * H2_from_1
+            r12 = 0.5 * (e12 - h12)
+            t12 = 0.5 * (e12 + h12)
+            t21 = 0.5 * (e21 + h21)
+            r21 = 0.5 * (e21 - h21)
+            lhs = numpy.block([[ident, -r12], [-r21, ident]])
+            rhs = numpy.block([[zeros, t12], [t21, zeros]])
+            return numpy.linalg.solve(lhs, rhs)
+
+        G1 = 0.5 * (E1_from_2 @ E2_from_1 + H1_from_2 @ H2_from_1)
+        G2 = 0.5 * (E2_from_1 @ E1_from_2 + H2_from_1 @ H1_from_2)
+        lam_max = max(
+            float(numpy.max(numpy.linalg.eigvalsh(0.5 * (G1 + G1.conj().T)))),
+            float(numpy.max(numpy.linalg.eigvalsh(0.5 * (G2 + G2.conj().T)))),
+        )
+        scale = 1.0 / (numpy.sqrt(lam_max) * (1.0 + 1e-15)) if lam_max > 1.0 else 1.0
+        S = _solve_scaled(scale)
+
+        if lam_max > 1.0 + 1e-12:
+            if float(numpy.linalg.svd(S, compute_uv=False)[0]) > 1.0:
+                lo, hi = 0.0, scale
+                for _ in range(52):
+                    mid = 0.5 * (lo + hi)
+                    if (
+                        float(numpy.linalg.svd(_solve_scaled(mid), compute_uv=False)[0])
+                        <= 1.0
+                    ):
+                        lo = mid
+                    else:
+                        hi = mid
+                S = _solve_scaled(lo)
+
+        self.S = S
         self.T = S2T(self.S)
 
     def plot(self, sumx=1, nxy=100, nz=100, z0=0):

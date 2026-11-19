@@ -52,6 +52,8 @@ def overlap(m1, m2, x=None, y=None):
 
 
 def interface_matrix(solver1, solver2, x=None, y=None):
+    if solver1.nmodes != solver2.nmodes:
+        raise ValueError("solver1 and solver2 must have the same number of modes.")
     neigs = solver1.nmodes
 
     O11 = numpy.zeros((neigs, neigs), dtype=complex)

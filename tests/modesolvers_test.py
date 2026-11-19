@@ -1425,6 +1425,16 @@ class GeometriesTest(TestCase):
         with self.assertRaises(ValueError):
             EMpy.modesolvers.geometries.SimpleJoint(s1, s2, method="unknown")
 
+        s1_one = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_step(0.5e-6, 0.0), "0000"
+        ).solve(1, 1e-10)
+        with self.assertRaises(ValueError):
+            EMpy.modesolvers.geometries.SimpleJoint(s1_one, s2, method="passive")
+        with self.assertRaises(ValueError):
+            EMpy.modesolvers.geometries.SimpleJoint(s1_one, s2, method="reciprocal")
+        with self.assertRaises(ValueError):
+            EMpy.modesolvers.interface.interface_matrix(s1_one, s2)
+
         # Exact 1D symmetric slab waveguide analytical dispersion (TE and TM, lossless and passive lossy)
         wl_1d = 1.55
         k0 = 2.0 * numpy.pi / wl_1d
@@ -1446,3 +1456,194 @@ class GeometriesTest(TestCase):
                 lhs = kc * numpy.tan(0.5 * kc * d_core)
                 rhs = ratio * gc
                 numpy.testing.assert_allclose(lhs, rhs, rtol=1e-10, atol=1e-10)
+
+    def test_simple_joint_high_contrast_passivity_reciprocal_swap_and_limits(self):
+        """Verify SimpleJoint passivity on slot-spiked high-contrast junctions and reciprocal swap symmetry."""
+        wl = 1.55e-6
+        xg = numpy.linspace(0.0, 2.4e-6, 33)
+        yg = numpy.linspace(0.0, 1.8e-6, 25)
+
+        def _eps_hc(w, h, kap=0.0, dn=0.0, force_complex=False):
+            if kap > 0 or force_complex:
+                nc = complex(3.48, -kap)
+                ncl = complex(1.44, -0.1 * kap)
+            else:
+                nc = 3.48
+                ncl = 1.44
+            ph = 0.5
+
+            def _f(x_, y_):
+                core = (numpy.abs(x_[:, None] - 1.2e-6) <= w / 2.0) & (
+                    numpy.abs(y_[None, :] - 0.9e-6) <= h / 2.0
+                )
+                no = numpy.where(core, nc, ncl)
+                ne = no + dn
+                if dn == 0.0 and not force_complex and kap == 0.0:
+                    return no**2
+                exx = ne**2 * numpy.cos(ph) ** 2 + no**2 * numpy.sin(ph) ** 2
+                eyy = ne**2 * numpy.sin(ph) ** 2 + no**2 * numpy.cos(ph) ** 2
+                exy = (ne**2 - no**2) * numpy.sin(ph) * numpy.cos(ph)
+                return numpy.stack([exx, exy, exy, eyy, no**2], axis=-1)
+
+            return _f
+
+        # 1. High-contrast 0.35x0.18 -> 1.4x0.5 um junction (where raw O12*O21 > 1):
+        # verify ||S||_2 <= 1 for method="passive" and exact swap + reciprocity + unitarity for method="reciprocal"
+        for nm in (1, 4):
+            for kap in (0.0, 0.05):
+                for dn in (0.0, 0.3):
+                    s1 = EMpy.modesolvers.FD.VFDModeSolver(
+                        wl,
+                        xg,
+                        yg,
+                        _eps_hc(0.35e-6, 0.18e-6, kap, dn, force_complex=(dn > 0)),
+                        "0000",
+                    ).solve(nm, 1e-10)
+                    s2 = EMpy.modesolvers.FD.VFDModeSolver(
+                        wl,
+                        xg,
+                        yg,
+                        _eps_hc(1.4e-6, 0.5e-6, kap, dn, force_complex=(dn > 0)),
+                        "0000",
+                    ).solve(nm, 1e-10)
+                    sj_p12 = EMpy.modesolvers.geometries.SimpleJoint(
+                        s1, s2, method="passive"
+                    )
+                    sj_p21 = EMpy.modesolvers.geometries.SimpleJoint(
+                        s2, s1, method="passive"
+                    )
+                    P_swap = numpy.block(
+                        [
+                            [numpy.zeros((nm, nm)), numpy.eye(nm)],
+                            [numpy.eye(nm), numpy.zeros((nm, nm))],
+                        ]
+                    )
+                    self.assertTrue(
+                        numpy.all(numpy.linalg.svd(sj_p12.S, compute_uv=False) <= 1.0)
+                    )
+                    numpy.testing.assert_allclose(
+                        numpy.abs(sj_p12.S),
+                        numpy.abs(P_swap @ sj_p21.S @ P_swap.T),
+                        atol=1e-12,
+                    )
+
+                    sj_r12 = EMpy.modesolvers.geometries.SimpleJoint(
+                        s1, s2, method="reciprocal"
+                    )
+                    sj_r21 = EMpy.modesolvers.geometries.SimpleJoint(
+                        s2, s1, method="reciprocal"
+                    )
+                    numpy.testing.assert_allclose(sj_r12.S, sj_r12.S.T, atol=1e-12)
+                    numpy.testing.assert_allclose(
+                        sj_r12.S, P_swap @ sj_r21.S @ P_swap.T, atol=1e-12
+                    )
+                    if kap == 0.0:
+                        numpy.testing.assert_allclose(
+                            sj_r12.S.conj().T @ sj_r12.S,
+                            numpy.eye(2 * nm),
+                            atol=1e-10,
+                        )
+
+        # 2. Smooth anisotropic -> isotropic (dn = 1e-4, 1e-8, 0) and lossy -> lossless (kap = 1e-2, 1e-5, 0+0j) limits
+        s1_iso = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_hc(0.35e-6, 0.18e-6, 0.0, 0.0), "0000"
+        ).solve(2, 1e-10)
+        s2_iso = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, xg, yg, _eps_hc(1.4e-6, 0.5e-6, 0.0, 0.0), "0000"
+        ).solve(2, 1e-10)
+        sj_iso_p = EMpy.modesolvers.geometries.SimpleJoint(
+            s1_iso, s2_iso, method="passive"
+        )
+        sj_iso_r = EMpy.modesolvers.geometries.SimpleJoint(
+            s1_iso, s2_iso, method="reciprocal"
+        )
+
+        dn_errs_p, dn_errs_r = [], []
+        for dn in (1e-4, 1e-8, 0.0):
+            s1_d = EMpy.modesolvers.FD.VFDModeSolver(
+                wl,
+                xg,
+                yg,
+                _eps_hc(0.35e-6, 0.18e-6, 0.0, dn, force_complex=True),
+                "0000",
+            ).solve(2, 1e-10)
+            s2_d = EMpy.modesolvers.FD.VFDModeSolver(
+                wl,
+                xg,
+                yg,
+                _eps_hc(1.4e-6, 0.5e-6, 0.0, dn, force_complex=True),
+                "0000",
+            ).solve(2, 1e-10)
+            sjp = EMpy.modesolvers.geometries.SimpleJoint(s1_d, s2_d, method="passive")
+            sjr = EMpy.modesolvers.geometries.SimpleJoint(
+                s1_d, s2_d, method="reciprocal"
+            )
+            self.assertTrue(numpy.all(numpy.linalg.svd(sjp.S, compute_uv=False) <= 1.0))
+            dn_errs_p.append(
+                float(numpy.max(numpy.abs(numpy.abs(sjp.S) - numpy.abs(sj_iso_p.S))))
+            )
+            dn_errs_r.append(
+                float(numpy.max(numpy.abs(numpy.abs(sjr.S) - numpy.abs(sj_iso_r.S))))
+            )
+        self.assertLess(dn_errs_p[1], dn_errs_p[0])
+        self.assertLess(dn_errs_p[2], 1e-9)
+        self.assertLess(dn_errs_r[1], dn_errs_r[0])
+        self.assertLess(dn_errs_r[2], 1e-9)
+
+        kap_errs_p, kap_errs_r = [], []
+        for kap in (1e-2, 1e-5, 0.0):
+            s1_k = EMpy.modesolvers.FD.VFDModeSolver(
+                wl,
+                xg,
+                yg,
+                _eps_hc(0.35e-6, 0.18e-6, kap, 0.0, force_complex=True),
+                "0000",
+            ).solve(2, 1e-10)
+            s2_k = EMpy.modesolvers.FD.VFDModeSolver(
+                wl,
+                xg,
+                yg,
+                _eps_hc(1.4e-6, 0.5e-6, kap, 0.0, force_complex=True),
+                "0000",
+            ).solve(2, 1e-10)
+            sjp = EMpy.modesolvers.geometries.SimpleJoint(s1_k, s2_k, method="passive")
+            sjr = EMpy.modesolvers.geometries.SimpleJoint(
+                s1_k, s2_k, method="reciprocal"
+            )
+            self.assertTrue(numpy.all(numpy.linalg.svd(sjp.S, compute_uv=False) <= 1.0))
+            kap_errs_p.append(
+                float(numpy.max(numpy.abs(numpy.abs(sjp.S) - numpy.abs(sj_iso_p.S))))
+            )
+            kap_errs_r.append(
+                float(numpy.max(numpy.abs(numpy.abs(sjr.S) - numpy.abs(sj_iso_r.S))))
+            )
+        self.assertLess(kap_errs_p[1], kap_errs_p[0])
+        self.assertLess(kap_errs_p[2], 1e-9)
+        self.assertLess(kap_errs_r[1], kap_errs_r[0])
+        self.assertLess(kap_errs_r[2], 1e-9)
+
+        # 3. Degenerate square-core self-joint: zero spurious reflection in both passive and reciprocal modes
+        xsq = numpy.linspace(0.0, 2.4e-6, 33)
+        ysq = numpy.linspace(0.0, 2.4e-6, 33)
+        s_sq = EMpy.modesolvers.FD.VFDModeSolver(
+            wl,
+            xsq,
+            ysq,
+            lambda x_, y_: numpy.where(
+                (numpy.abs(x_[:, None] - 1.2e-6) <= 0.25e-6)
+                & (numpy.abs(y_[None, :] - 1.2e-6) <= 0.25e-6),
+                3.45**2,
+                1.45**2,
+            ),
+            "0000",
+        ).solve(2, 1e-10)
+        for meth in ("passive", "reciprocal"):
+            sj_sq = EMpy.modesolvers.geometries.SimpleJoint(s_sq, s_sq, method=meth)
+            numpy.testing.assert_allclose(sj_sq.S[:2, :2], 0.0, atol=1e-12)
+            numpy.testing.assert_allclose(sj_sq.S[2:, 2:], 0.0, atol=1e-12)
+            numpy.testing.assert_allclose(
+                sj_sq.S[:2, 2:], numpy.eye(2), atol=1e-12
+            )
+            numpy.testing.assert_allclose(
+                sj_sq.S[2:, :2], numpy.eye(2), atol=1e-12
+            )
