@@ -91,13 +91,27 @@ class UtilsTest(TestCase):
         self.assertAlmostEqual(mono_peaks[0].x, 10.0)
         self.assertIsInstance(mono_peaks[0].y, float)
 
-        # Flat-top plateau must deduplicate to a single peak and return Python floats
+        # Flat-top plateaus (2, 3, and 5 samples) must each return a single centered peak,
+        # and monotonic staircase inflections must fall back to the boundary max
         plat_peaks = U.find_peaks(
             numpy.arange(6, dtype=float), numpy.array([0.0, 1.0, 2.0, 2.0, 1.0, 0.0])
         )
         self.assertEqual(len(plat_peaks), 1)
         self.assertAlmostEqual(plat_peaks[0].x, 2.5, places=4)
         self.assertIsInstance(plat_peaks[0].y, float)
+
+        for n_flat, expected_x in ((3, 3.0), (5, 4.0)):
+            y_flat = numpy.array([0.0, 1.0] + [2.0] * n_flat + [1.0, 0.0])
+            p_flat = U.find_peaks(numpy.arange(len(y_flat), dtype=float), y_flat)
+            self.assertEqual(len(p_flat), 1)
+            self.assertAlmostEqual(p_flat[0].x, expected_x, places=12)
+            self.assertAlmostEqual(p_flat[0].y, 2.0, places=12)
+
+        stair_peaks = U.find_peaks(
+            numpy.arange(6, dtype=float), numpy.array([0.0, 1.0, 2.0, 2.0, 3.0, 4.0])
+        )
+        self.assertEqual(len(stair_peaks), 1)
+        self.assertAlmostEqual(stair_peaks[0].x, 5.0, places=12)
 
     def test_multilayer_slicing(self):
         l1 = U.Layer(EMpy.materials.Air, 1.0)
@@ -725,3 +739,86 @@ class UtilsTest(TestCase):
             kap_errs.append(float(numpy.max(numpy.abs(tk.T - t_ll.T))))
         self.assertLess(kap_errs[1], kap_errs[0])
         self.assertLess(kap_errs[1], 1e-3)
+
+    def test_layer_and_grating_capacitance_aniso_and_lossy_limits(self):
+        """Verify Layer and Grating capacitance return real values and obey aniso/lossy -> iso/lossless limits."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        area = 2.5e-8
+        d = 0.4e-6
+
+        n_lossy = 2.3 - 0.4j
+        m_iso_l = EMpy.materials.IsotropicMaterial(
+            "il", n0=EMpy.materials.RefractiveIndex(n0_const=n_lossy)
+        )
+        m_ani_l = EMpy.materials.AnisotropicMaterial(
+            "al",
+            EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps0 * n_lossy**2 * numpy.eye(3)),
+        )
+        m_ref_i = EMpy.materials.IsotropicMaterial(
+            "ri", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+        m_ref_a = EMpy.materials.AnisotropicMaterial(
+            "ra",
+            EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps0 * 1.45**2 * numpy.eye(3)),
+        )
+
+        c_lyr_i = U.Layer(m_iso_l, d).capacitance(area=area, wl=wl)
+        c_lyr_a = U.Layer(m_ani_l, d).capacitance(area=area, wl=wl)
+        self.assertFalse(numpy.iscomplexobj(c_lyr_a))
+        self.assertIsInstance(c_lyr_a, float)
+        self.assertAlmostEqual(c_lyr_a, c_lyr_i, places=15)
+
+        c_bg_i = U.BinaryGrating(m_iso_l, m_ref_i, 0.4, 1e-6, d).capacitance(area, wl)
+        c_bg_a = U.BinaryGrating(m_ani_l, m_ref_a, 0.4, 1e-6, d).capacitance(area, wl)
+        self.assertAlmostEqual(float(c_bg_a), float(c_bg_i), places=15)
+
+        c_sdg = U.SymmetricDoubleGrating(
+            m_ani_l, m_ref_a, m_ref_a, 0.25, 0.3, 1e-6, d
+        ).capacitance(area, wl)
+        c_adg = U.AsymmetricDoubleGrating(
+            m_ani_l, m_ref_a, m_ref_a, 0.25, 0.3, 0.15, 1e-6, d
+        ).capacitance(area, wl)
+        self.assertFalse(numpy.iscomplexobj(c_adg))
+        self.assertAlmostEqual(float(c_adg), float(c_sdg), places=15)
+
+        # Anisotropic 3D Euler-rotated dn -> 0 and lossy kap -> 0+ limits
+        c_iso_ll = U.Layer(
+            EMpy.materials.IsotropicMaterial(
+                "ill", n0=EMpy.materials.RefractiveIndex(n0_const=2.3)
+            ),
+            d,
+        ).capacitance(area=area, wl=wl)
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            eps_rot = eps0 * U.euler_rotate(
+                numpy.diag([2.3**2, (2.3 + 0.5 * dn) ** 2, (2.3 + dn) ** 2]),
+                0.3,
+                0.5,
+                0.7,
+            )
+            c_dn = U.Layer(
+                EMpy.materials.AnisotropicMaterial(
+                    "dn", EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps_rot)
+                ),
+                d,
+            ).capacitance(area=area, wl=wl)
+            dn_errs.append(abs(c_dn - c_iso_ll))
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-18)
+
+        kap_errs = []
+        for kap in (1e-2, 1e-5, 0.0):
+            nk = complex(2.3, -kap)
+            c_k = U.Layer(
+                EMpy.materials.AnisotropicMaterial(
+                    "lk",
+                    EMpy.materials.EpsilonTensor(
+                        epsilon_tensor_const=eps0 * nk**2 * numpy.eye(3)
+                    ),
+                ),
+                d,
+            ).capacitance(area=area, wl=wl)
+            kap_errs.append(abs(c_k - c_iso_ll))
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[2], 1e-18)

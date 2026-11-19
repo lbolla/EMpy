@@ -100,7 +100,10 @@ class RefractiveIndex:
             self.get_rix = partial(self.__from_function, n0_func)
 
         elif n0_known is not None:
-            self.get_rix = partial(self.__from_known, n0_known)
+            if len(n0_known) == 0:
+                raise ValueError("n0_known must not be empty.")
+            self.n0_known = dict(n0_known)
+            self.get_rix = partial(self.__from_known, self.n0_known)
 
         else:
             raise ValueError("Please provide at least one parameter.")
@@ -134,9 +137,30 @@ class RefractiveIndex:
 
     @staticmethod
     def __from_known(n0_known, wls):
-        wls = numpy.atleast_1d(wls)
-        # Note: we should interpolate...
-        return numpy.array([n0_known.get(wl.item(), 0) for wl in wls.ravel()])
+        wls_arr = numpy.atleast_1d(wls)
+        wls_flat = numpy.real(wls_arr.ravel())
+        ks = numpy.array(sorted(n0_known.keys()), dtype=float)
+        vs = numpy.array([n0_known[k] for k in ks])
+        if ks.size == 1:
+            return numpy.full(wls_flat.shape, vs[0])
+
+        def _interp_extrap(yq):
+            res = numpy.interp(wls_flat, ks, yq)
+            left = wls_flat < ks[0]
+            if numpy.any(left):
+                slope_l = (yq[1] - yq[0]) / (ks[1] - ks[0])
+                res[left] = yq[0] + slope_l * (wls_flat[left] - ks[0])
+            right = wls_flat > ks[-1]
+            if numpy.any(right):
+                slope_r = (yq[-1] - yq[-2]) / (ks[-1] - ks[-2])
+                res[right] = yq[-1] + slope_r * (wls_flat[right] - ks[-1])
+            return res
+
+        if numpy.iscomplexobj(vs):
+            return _interp_extrap(numpy.real(vs)) + 1j * _interp_extrap(
+                numpy.imag(vs)
+            )
+        return _interp_extrap(vs.astype(float))
 
     def __call__(self, wls):
         return self.get_rix(wls)

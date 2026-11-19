@@ -252,9 +252,41 @@ class IsotropicRCWA(RCWA):
             # incident plane wave wavevector
             k1 = k * n1 * dirk1
 
-            # all the other wavevectors
+            if np.absolute(K[2] / k) > 1e-10:
+                raise ValueError(
+                    "First Order Helmholtz Operator not implemented, yet!"
+                )
+
+            # Precompute wavelength-only Toeplitz permittivity blocks per internal layer
+            # and apply any Helmholtz singularity shift uniformly to the incident Bloch
+            # wavevector BEFORE constructing superstrate/substrate/layer matrices so all
+            # layers share one consistent Floquet lattice kx_m = k1x_eff - m * Kx.
+            layer_mats = []
+            for nlayer in range(nlayers - 2, 0, -1):
+                layer = multilayer[nlayer]
+                EPS2, EPS21 = layer.getEPSFourierCoeffs(wl, n, anisotropic=False)
+                E = toeplitz(EPS2[hmax::-1], EPS2[hmax:])
+                E1 = toeplitz(EPS21[hmax::-1], EPS21[hmax:])
+                layer_mats.append((nlayer, layer.thickness, E, inv(E1)))
+
             tmp_x = k1[0] - i * K[0]
             tmp_y = k1[1] * np.ones_like(i)
+            if any(
+                cond(np.diag((tmp_x / k) ** 2) - E_l) > 1e10
+                for _, _, E_l, _ in layer_mats
+            ):
+                warning("BAD CONDITIONING: randomization of kx")
+                rng = np.random.default_rng(0)
+                dk_x = 0.0
+                for _ in range(100):
+                    if all(
+                        cond(np.diag((tmp_x / k) ** 2) - E_l) <= 1e10
+                        for _, _, E_l, _ in layer_mats
+                    ):
+                        break
+                    dk_x += 1e-9 * k * (0.5 + float(rng.random()))
+                    tmp_x = (k1[0] + dk_x) - i * K[0]
+
             tmp_z = dispersion_relation_ordinary(tmp_x, tmp_y, k, n1)
             k1i = np.r_[[tmp_x], [tmp_y], [tmp_z]]
 
@@ -297,45 +329,11 @@ class IsotropicRCWA(RCWA):
             X.fill(0.0)
             MTp1.fill(0.0)
             MTp2.fill(0.0)
-            for nlayer in range(nlayers - 2, 0, -1):  # internal layers
-                layer = multilayer[nlayer]
-                d = layer.thickness
-
-                EPS2, EPS21 = layer.getEPSFourierCoeffs(wl, n, anisotropic=False)
-
-                E = toeplitz(EPS2[hmax::-1], EPS2[hmax:])
-                E1 = toeplitz(EPS21[hmax::-1], EPS21[hmax:])
-                E11 = inv(E1)
-                # B = np.dot(Kx, linsolve(E,Kx)) - I
+            for nlayer, d, E, E11 in layer_mats:
                 B = kx[:, np.newaxis] / k * linsolve(E, Kx) - I
-                # A = np.dot(Kx, Kx) - E
                 A = np.diag((kx / k) ** 2) - E
 
-                # Note: solution bug alfredo
-                # randomizzo Kx un po' a caso finche' cond(A) e' piccolo (<1e10)
-                # soluzione sporca... :-(
-                # per certi kx, l'operatore di helmholtz ha 2 autovalori nulli e A, B
-                # non sono invertibili --> cambio leggermente i kx... ma dovrei invece
-                # trattare separatamente (analiticamente) questi casi
-                if cond(A) > 1e10:
-                    warning("BAD CONDITIONING: randomization of kx")
-                    rng = np.random.default_rng(0)
-                    for _ in range(100):
-                        if cond(A) <= 1e10:
-                            break
-                        kx = kx * (1 + 1e-9 * rng.random(kx.shape)) + (
-                            1e-9 * k * rng.random(kx.shape)
-                        )
-                        Kx = np.diag(kx / k)
-                        B = kx[:, np.newaxis] / k * linsolve(E, Kx) - I
-                        A = np.diag((kx / k) ** 2) - E
-
-                if np.absolute(K[2] / k) > 1e-10:
-                    raise ValueError(
-                        "First Order Helmholtz Operator not implemented, yet!"
-                    )
-
-                elif ky == 0 or np.allclose(np.diag(Ky / ky * k), 1):
+                if ky == 0 or np.allclose(np.diag(Ky / ky * k), 1):
                     # lalanne
                     # H_U_reduced = np.dot(Ky, Ky) + A
                     H_U_reduced = (ky / k) ** 2 * I + A

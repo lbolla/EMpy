@@ -40,9 +40,37 @@ class IsotropicRCWATest(TestCase):
             0.0,
         ).solve(wl)
 
-        self.assertAlmostEqual(rcwa.DE1.sum(), tmm.Rp[0], places=5)
-        self.assertAlmostEqual(rcwa.DE3.sum(), tmm.Tp[0], places=5)
-        self.assertAlmostEqual(rcwa.DE1.sum() + rcwa.DE3.sum(), 1.0, places=5)
+        self.assertAlmostEqual(rcwa.DE1.sum(), tmm.Rp[0], places=10)
+        self.assertAlmostEqual(rcwa.DE3.sum(), tmm.Tp[0], places=10)
+        self.assertAlmostEqual(rcwa.DE1.sum() + rcwa.DE3.sum(), 1.0, places=12)
+
+        # Multilayer grating + singular internal air layer: uniform pre-loop Bloch shift
+        # keeps all layers on a single Floquet lattice, conserving energy and matching wl*(1+1e-7)
+        sio2 = EMpy.materials.IsotropicMaterial(
+            "SiO2", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+        ml_multi = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(si, sio2, 0.4, 1.0e-6, 0.25e-6),
+                EMpy.utils.Layer(air, 0.2e-6),
+                EMpy.utils.Layer(sio2, np.inf),
+            ]
+        )
+        r_at = EMpy.RCWA.IsotropicRCWA(
+            ml_multi, alpha=0.0, delta=0.35, psi=0.3, phi=np.pi / 2, n=2
+        ).solve([1.0e-6])
+        r_near = EMpy.RCWA.IsotropicRCWA(
+            ml_multi, alpha=0.0, delta=0.35, psi=0.3, phi=np.pi / 2, n=2
+        ).solve([1.0e-6 * (1.0 + 1e-9)])
+        r_ani = EMpy.RCWA.AnisotropicRCWA(
+            ml_multi, alpha=0.0, delta=0.35, psi=0.3, phi=np.pi / 2, n=2
+        ).solve([1.0e-6])
+        self.assertAlmostEqual(float((r_at.DE1 + r_at.DE3).sum()), 1.0, places=12)
+        np.testing.assert_allclose(r_at.DE1, r_near.DE1, atol=2e-4)
+        np.testing.assert_allclose(r_at.DE3, r_near.DE3, atol=2e-4)
+        np.testing.assert_allclose(r_at.DE1, r_ani.DE1, atol=5e-3)
+        np.testing.assert_allclose(r_at.DE3, r_ani.DE3, atol=5e-3)
 
     def test_dispersion_relations_propagating_and_evanescent(self):
         k = 2 * np.pi / 1.55e-6

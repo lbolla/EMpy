@@ -59,7 +59,7 @@ class Layer:
             eps = EMpy.constants.eps0 * numpy.real(self.mat.n(wl).item() ** 2)
         else:
             # suppose to compute the capacitance along the z-axis
-            eps = self.mat.epsilonTensor(wl)[2, 2, 0]
+            eps = float(numpy.real(self.mat.epsilonTensor(wl)[2, 2, 0]))
 
         return eps * area / self.thickness
 
@@ -121,13 +121,16 @@ class BinaryGrating:
         """Capacitance = eps0 * eps_r * area / thickness."""
 
         if self.isIsotropic():
-            eps = EMpy.constants.eps0 * numpy.real(
-                self.mat1.n(wl) ** 2 * self.dc + self.mat2.n(wl) ** 2 * (1 - self.dc)
+            eps = EMpy.constants.eps0 * float(
+                numpy.real(
+                    self.mat1.n(wl).item() ** 2 * self.dc
+                    + self.mat2.n(wl).item() ** 2 * (1 - self.dc)
+                )
             )
         else:
             eps1 = self.mat1.epsilonTensor(wl)[2, 2, 0]
             eps2 = self.mat2.epsilonTensor(wl)[2, 2, 0]
-            eps = numpy.real(eps1 * self.dc + eps2 * (1 - self.dc))
+            eps = float(numpy.real(eps1 * self.dc + eps2 * (1 - self.dc)))
 
         return eps * area / self.thickness
 
@@ -253,17 +256,23 @@ class SymmetricDoubleGrating:
         """Capacitance = eps0 * eps_r * area / thickness."""
 
         if self.isIsotropic():
-            eps = EMpy.constants.eps0 * numpy.real(
-                self.mat1.n(wl) ** 2 * self.dc1
-                + self.mat2.n(wl) ** 2 * self.dc2
-                + self.mat3.n(wl) ** 2 * (1 - self.dc1 - self.dc2)
+            eps = EMpy.constants.eps0 * float(
+                numpy.real(
+                    self.mat1.n(wl).item() ** 2 * self.dc1
+                    + self.mat2.n(wl).item() ** 2 * self.dc2
+                    + self.mat3.n(wl).item() ** 2 * (1 - self.dc1 - self.dc2)
+                )
             )
         else:
             eps1 = self.mat1.epsilonTensor(wl)[2, 2, 0]
             eps2 = self.mat2.epsilonTensor(wl)[2, 2, 0]
             eps3 = self.mat3.epsilonTensor(wl)[2, 2, 0]
-            eps = numpy.real(
-                eps1 * self.dc1 + eps2 * self.dc2 + eps3 * (1 - self.dc1 - self.dc2)
+            eps = float(
+                numpy.real(
+                    eps1 * self.dc1
+                    + eps2 * self.dc2
+                    + eps3 * (1 - self.dc1 - self.dc2)
+                )
             )
 
         return eps * area / self.thickness
@@ -376,25 +385,6 @@ class AsymmetricDoubleGrating(SymmetricDoubleGrating):
                     + inv_eps3 * (hh == 0)
                 )
             return EPS, EPS1
-
-    def capacitance(self, area=1.0, wl=0):
-        """Capacitance = eps0 * eps_r * area / thickness."""
-
-        if self.isIsotropic():
-            eps = EMpy.constants.eps0 * numpy.real(
-                self.mat1.n(wl) ** 2 * self.dc1
-                + self.mat2.n(wl) ** 2 * self.dc2
-                + self.mat3.n(wl) ** 2 * (1 - self.dc1 - self.dc2)
-            )
-        else:
-            eps1 = self.mat1.epsilonTensor(wl)[2, 2, 0]
-            eps2 = self.mat2.epsilonTensor(wl)[2, 2, 0]
-            eps3 = self.mat3.epsilonTensor(wl)[2, 2, 0]
-            eps = numpy.real(
-                eps1 * self.dc1 + eps2 * self.dc2 + eps3 * (1 - self.dc1 - self.dc2)
-            )
-
-        return eps * area / self.thickness
 
     def __str__(self):
         """Return the description of a binary grating."""
@@ -1215,13 +1205,21 @@ def find_peaks(x, y, threshold=1e-6):
     x = numpy.asarray(x)
     y = numpy.asarray(y)
 
-    # find peaks' candidates
-    dy = numpy.diff(y)
-    ddy = numpy.diff(numpy.sign(dy))
-    idxs = numpy.where(ddy < 0)[0] + 1
+    # find interior local maxima (including multi-sample flat-top plateaus,
+    # while ignoring monotonic staircase inflections)
+    n_pts = len(y)
+    plateaus = []
+    left = 1
+    while left < n_pts - 1:
+        right = left
+        while right + 1 < n_pts and y[right + 1] == y[left]:
+            right += 1
+        if right < n_pts - 1 and y[left] > y[left - 1] and y[right] > y[right + 1]:
+            plateaus.append((left, right))
+        left = right + 1
 
-    if len(idxs) == 0:
-        # there is only 1 min in f, so the max is on either boundary
+    if len(plateaus) == 0:
+        # there is no interior local max, so the max is on a boundary
         # get the max and set FWHM = 0
         idx = int(numpy.argmax(y))
         x_b = float(x[idx])
@@ -1233,23 +1231,28 @@ def find_peaks(x, y, threshold=1e-6):
     # refine search with splines
     tck = scipy.interpolate.splrep(x, y)
 
-    # look for zero derivative
-    def absdy(x_):
-        return numpy.abs(scipy.interpolate.splev(x_, tck, der=1))
+    def neg_spline(x_):
+        return -float(scipy.interpolate.splev(x_, tck))
 
     peaks = []
     xtol = float(x.max() - x.min()) * 1e-6
-    for idx in idxs:
-        idx_i = int(idx)
-        # look around the candidate
-        xopt = float(
-            scipy.optimize.fminbound(
-                absdy, x[idx_i - 1], x[idx_i + 1], xtol=xtol, disp=False
+    for left, right in plateaus:
+        idx_i = (left + right) // 2
+        if right - left >= 2:
+            # Wide flat plateau (>= 3 equal samples): cubic spline exhibits
+            # symmetric shoulder overshoot around a mid-plateau dip, so use
+            # the exact plateau midpoint and height directly.
+            xopt = 0.5 * (float(x[left]) + float(x[right]))
+            yopt = float(y[idx_i])
+        else:
+            xopt = float(
+                scipy.optimize.fminbound(
+                    neg_spline, x[left - 1], x[right + 1], xtol=xtol, disp=False
+                )
             )
-        )
+            yopt = float(scipy.interpolate.splev(xopt, tck))
         if any(abs(xopt - prev.x) <= max(10.0 * xtol, 1e-12) for prev in peaks):
             continue
-        yopt = float(scipy.interpolate.splev(xopt, tck))
 
         if yopt > threshold * y.max():
             # FWHM

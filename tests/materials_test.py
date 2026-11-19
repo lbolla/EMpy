@@ -53,11 +53,33 @@ class RefractiveIndexTest(TestCase):
         assert_almost_equal(b.get_rix([1.0, 1.5]), array([2.5, 3.0]))
 
     def test_known(self):
+        with assert_raises(ValueError):
+            mat.RefractiveIndex(n0_known={})
+
         test_rix = 1.50
         test_wl = 1.0
         n0_known = {test_wl: test_rix}
         a = mat.RefractiveIndex(n0_known=n0_known)
+        n0_known[2.0] = 9.9
         self.assertEqual(a.get_rix(test_wl)[0], array([test_rix]))
+        self.assertEqual(a.get_rix(1.7)[0], array([test_rix]))
+
+        # Linear interpolation + endpoint extrapolation (lossless and lossy -> lossless limit)
+        r_ll = mat.RefractiveIndex(n0_known={1.5e-6: 2.0, 1.6e-6: 2.2})
+        assert_almost_equal(
+            r_ll.get_rix([1.45e-6, 1.55e-6, 1.65e-6]), array([1.9, 2.1, 2.3])
+        )
+        errs = []
+        for kap in (1e-2, 1e-5, 0.0):
+            rk = mat.RefractiveIndex(
+                n0_known={1.5e-6: complex(2.0, -kap), 1.6e-6: complex(2.2, -2 * kap)}
+            )
+            vals = rk.get_rix([1.45e-6, 1.55e-6, 1.65e-6])
+            if kap > 0:
+                self.assertTrue((vals.imag < 0).all())
+            errs.append(float(abs(vals - r_ll.get_rix([1.45e-6, 1.55e-6, 1.65e-6])).max()))
+        self.assertLess(errs[1], errs[0])
+        self.assertLess(errs[2], 1e-15)
 
 
 class EpsilonTensorTest(TestCase):

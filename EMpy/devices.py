@@ -978,7 +978,9 @@ class NRR(Device):
         if wl is None:
             wl = self.wl
         Hs = []
-        for K, neff, l1, l2 in zip(self.Ks, self.neffs, self.l1s, self.l2s):
+        for K, neff, l1, l2 in zip(
+            self.Ks[:-1], self.neffs, self.l1s, self.l2s, strict=True
+        ):
             Hs.append(
                 composeTMlist(
                     [
@@ -1390,38 +1392,12 @@ class Etalon(Device):
 
         # Compute group index ng = Re(n - wl * dn/dwl) for dispersive cavities
         dw = wls * 1e-7
-        dn_dwl = None
         try:
-            n_plus = self.layer.mat.n(wls + dw)
-            n_minus = self.layer.mat.n(wls - dw)
-            # RefractiveIndex(n0_known=...) returns 0 at unstored shifted wavelengths
-            if not (
-                numpy.any(n != 0)
-                and (numpy.any(n_plus == 0) or numpy.any(n_minus == 0))
-            ):
-                dn_dwl = (n_plus - n_minus) / (2.0 * dw)
+            dn_dwl = (self.layer.mat.n(wls + dw) - self.layer.mat.n(wls - dw)) / (
+                2.0 * dw
+            )
         except (KeyError, ValueError):
-            dn_dwl = None
-
-        if dn_dwl is None:
-            if wls.size > 1:
-                dn_dwl = numpy.gradient(n, wls)
-            else:
-                known_dict = None
-                n0_obj = getattr(self.layer.mat, "n0", None)
-                get_rix = getattr(n0_obj, "get_rix", None)
-                args = getattr(get_rix, "args", ())
-                if len(args) == 1 and isinstance(args[0], dict) and len(args[0]) >= 2:
-                    known_dict = args[0]
-                if known_dict is not None:
-                    ks = numpy.array(sorted(known_dict.keys()), dtype=float)
-                    vs = numpy.array([known_dict[k_] for k_ in ks])
-                    grad = numpy.gradient(vs, ks)
-                    dn_dwl = numpy.interp(
-                        wls.real, ks, numpy.real(grad)
-                    ) + 1j * numpy.interp(wls.real, ks, numpy.imag(grad))
-                else:
-                    dn_dwl = numpy.zeros_like(n)
+            dn_dwl = numpy.gradient(n, wls) if wls.size > 1 else numpy.zeros_like(n)
         ng = numpy.real(n - wls * dn_dwl)
 
         # Round-trip complex phase (under exp(+i*w*t - i*k*z), Im(n) <= 0 attenuates exp(-i*delta))
