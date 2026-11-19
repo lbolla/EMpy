@@ -717,3 +717,99 @@ class TransferMatrixTest(TestCase):
                     0.15,
                 ).solve([wl])
                 self.assertTrue(np.all(sl_slab.R_tot[:, 0] + sl_slab.T_tot[:, 0] < 1.0))
+
+    def test_lossy_incident_tir_local_poynting_flux_consistency(self):
+        """Verify unclamped local S_z(d+) under lossy-incident TIR matches across all TMM and RCWA solvers."""
+        import EMpy.RCWA
+
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        alpha = EMpy.utils.deg2rad(60.0)
+        n1 = 1.5 - 0.05j
+        n3 = 1.0
+        th_vac = np.arcsin(n1 * np.sin(alpha) + 0j)
+
+        # 1. Exact 4-solver agreement (IsoTM, AnisoTM, IsoRCWA, AnisoRCWA) on [1.5 - 0.05j, 2.1, 1.0] under TIR
+        ml_i = _make_iso_multilayer([n1, 2.1, n3], [np.inf, 0.25e-6, np.inf])
+        ml_a = _make_aniso_multilayer([n1, 2.1, n3], [np.inf, 0.25e-6, np.inf])
+        tmm_i = EMpy.transfer_matrix.IsotropicTransferMatrix(ml_i, alpha).solve([wl])
+        tmm_a = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml_a, th_vac, 0.0).solve(
+            [wl]
+        )
+        rcwa_i_s = EMpy.RCWA.IsotropicRCWA(
+            ml_i, alpha, 0.0, np.pi / 2, np.pi / 2, 0
+        ).solve([wl])
+        rcwa_i_p = EMpy.RCWA.IsotropicRCWA(ml_i, alpha, 0.0, 0.0, np.pi / 2, 0).solve(
+            [wl]
+        )
+        rcwa_a_s = EMpy.RCWA.AnisotropicRCWA(
+            ml_a, alpha, 0.0, np.pi / 2, np.pi / 2, 0
+        ).solve([wl])
+        rcwa_a_p = EMpy.RCWA.AnisotropicRCWA(ml_a, alpha, 0.0, 0.0, np.pi / 2, 0).solve(
+            [wl]
+        )
+
+        # Local S_z(d+) in the lossless air exit medium is strictly negative due to lateral Goos-Hanchen attenuation
+        self.assertLess(float(tmm_i.Ts[0]), 0.0)
+        self.assertLess(float(tmm_i.Tp[0]), 0.0)
+        assert_allclose(tmm_a.R[0, 0, 0], tmm_i.Rs[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(tmm_a.R[1, 1, 0], tmm_i.Rp[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(tmm_a.T[0, 0, 0], tmm_i.Ts[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(tmm_a.T[1, 1, 0], tmm_i.Tp[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(
+            tmm_a.T_tot[:, 0], [tmm_i.Ts[0], tmm_i.Tp[0]], rtol=1e-13, atol=1e-14
+        )
+        assert_allclose(rcwa_i_s.DE3[0, 0], tmm_i.Ts[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(rcwa_i_p.DE3[0, 0], tmm_i.Tp[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(rcwa_a_s.DE3[0, 0], tmm_i.Ts[0], rtol=1e-13, atol=1e-14)
+        assert_allclose(rcwa_a_p.DE3[0, 0], tmm_i.Tp[0], rtol=1e-13, atol=1e-14)
+
+        # 2. Weak-birefringence 3D Euler-rotated exit crystal dn -> 0 under lossy-incident TIR
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            eps_exit = eps0 * EMpy.utils.euler_rotate(
+                np.diag([1.0, (1.0 + 0.5 * dn) ** 2, (1.0 + dn) ** 2]), 0.3, 0.5, 0.7
+            )
+            ml_dn = EMpy.utils.Multilayer(
+                [
+                    ml_a[0],
+                    ml_a[1],
+                    EMpy.utils.Layer(
+                        EMpy.materials.AnisotropicMaterial(
+                            "ex",
+                            EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps_exit),
+                        ),
+                        np.inf,
+                    ),
+                ]
+            )
+            s_dn = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                ml_dn, th_vac, 0.0
+            ).solve([wl])
+            dn_errs.append(
+                float(
+                    np.max(
+                        np.abs(s_dn.R_tot[:, 0] - [tmm_i.Rs[0], tmm_i.Rp[0]])
+                        + np.abs(s_dn.T_tot[:, 0] - [tmm_i.Ts[0], tmm_i.Tp[0]])
+                    )
+                )
+            )
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-13)
+
+        # 3. Continuous lossy -> lossless incident-medium limit (kap0 = 1e-2, 1e-5, 0.0 + 0j -> 0): T_tot -> 0, R_tot -> 1
+        t_mags = []
+        for kap0 in (1e-2, 1e-5, 0.0):
+            n1_k = complex(1.5, -kap0)
+            th_k = np.arcsin(n1_k * np.sin(alpha) + 0j)
+            ml_k = _make_aniso_multilayer([n1_k, 2.1, 1.0], [np.inf, 0.25e-6, np.inf])
+            sk = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml_k, th_k, 0.0).solve(
+                [wl]
+            )
+            t_mags.append(float(np.max(np.abs(sk.T_tot[:, 0]))))
+            if kap0 == 0.0:
+                assert_allclose(sk.R_tot[:, 0], 1.0, atol=1e-13)
+                assert_allclose(sk.T_tot[:, 0], 0.0, atol=1e-14)
+        self.assertLess(t_mags[1], t_mags[0])
+        self.assertLess(t_mags[1], 1e-4)
+        self.assertLess(t_mags[2], 1e-14)

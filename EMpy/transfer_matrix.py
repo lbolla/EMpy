@@ -57,7 +57,11 @@ class IsotropicTransferMatrix(TransferMatrix):
 
         OUTPUT
         self.Rs, self.Ts, self.Rp, self.Tp = power reflected and
-        transmitted on s and p polarizations.
+        transmitted on s and p polarizations, normalized to incident
+        normal Poynting flux at the entry (z = 0-) and exit (z = d+)
+        interfaces (under TIR from a lossy incident medium into a
+        lossless exit medium, lateral Goos-Hanchen attenuation yields
+        local S_z(d+) < 0).
         """
 
         self.wls = np.atleast_1d(wls)
@@ -186,7 +190,12 @@ class AnisotropicTransferMatrix(TransferMatrix):
         wls = wavelengths to scan (any asarray-able object).
 
         OUTPUT
-        self.R, self.T = power reflected and transmitted.
+        self.R, self.T = mode-resolved power reflected and transmitted.
+        self.R_tot, self.T_tot = total normal Poynting flux reflected at
+        z = 0- and transmitted at z = d+, normalized to incident Sz(0-)
+        (including cross-mode interference and, under TIR from a lossy
+        incident medium into a lossless exit medium, negative local
+        S_z(d+) from lateral Goos-Hanchen attenuation).
         """
 
         self.wls = np.atleast_1d(wls)
@@ -578,11 +587,8 @@ class AnisotropicTransferMatrix(TransferMatrix):
             sz_ref = np.array(
                 [-_sz(p[1, :, 0], q[1, :, 0]), -_sz(p[3, :, 0], q[3, :, 0])]
             )
-            sz_tr = np.maximum(
-                np.array(
-                    [_sz(p[0, :, -1], q[0, :, -1]), _sz(p[2, :, -1], q[2, :, -1])]
-                ),
-                0.0,
+            sz_tr = np.array(
+                [_sz(p[0, :, -1], q[0, :, -1]), _sz(p[2, :, -1], q[2, :, -1])]
             )
 
             R[:, :, iwl] = np.absolute(r) ** 2 * (sz_ref[None, :] / sz_inc[:, None])
@@ -596,12 +602,7 @@ class AnisotropicTransferMatrix(TransferMatrix):
                 e_tr = t[m_in, 0] * p[0, :, -1] + t[m_in, 1] * p[2, :, -1]
                 h_tr = t[m_in, 0] * q[0, :, -1] + t[m_in, 1] * q[2, :, -1]
                 R_tot[m_in, iwl] = -_sz(e_ref, h_ref) / sz_inc[m_in]
-                sz_tot_tr = _sz(e_tr, h_tr)
-                if np.allclose(epsilon[:, :, -1], epsilon[:, :, -1].conj().T) and (
-                    sz_tr[0] == 0.0 and sz_tr[1] == 0.0
-                ):
-                    sz_tot_tr = max(sz_tot_tr, 0.0)
-                T_tot[m_in, iwl] = sz_tot_tr / sz_inc[m_in]
+                T_tot[m_in, iwl] = _sz(e_tr, h_tr) / sz_inc[m_in]
 
         self.R = R
         self.T = T
