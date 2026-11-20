@@ -1359,9 +1359,7 @@ class IsotropicRCWATest(TestCase):
             ra_dn = EMpy.RCWA.AnisotropicRCWA(
                 ml_dn, alpha=alpha, delta=delta, psi=np.pi / 2, phi=np.pi / 2, n=2
             ).solve([wl])
-            self.assertAlmostEqual(
-                float((ra_dn.DE1 + ra_dn.DE3).sum()), 1.0, places=13
-            )
+            self.assertAlmostEqual(float((ra_dn.DE1 + ra_dn.DE3).sum()), 1.0, places=13)
             sup_dn_errs.append(
                 float(
                     np.max(np.abs(ra_dn.DE1 - ri_e.DE1) + np.abs(ra_dn.DE3 - ri_e.DE3))
@@ -1486,3 +1484,165 @@ class IsotropicRCWATest(TestCase):
         ).solve([wl])
         np.testing.assert_allclose(r_gi0.DE1, r_ga0.DE1, atol=1e-12)
         np.testing.assert_allclose(r_gi0.DE3, r_ga0.DE3, atol=1e-12)
+
+    def test_anisotropic_rcwa_lossy_uniaxial_superstrate_and_limits(self):
+        """Verify AnisotropicRCWA mixed O+E incidence on lossy uniaxial superstrates and aniso/lossy limits."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        delta = EMpy.utils.deg2rad(25.0)
+        psi = EMpy.utils.deg2rad(35.0)
+
+        def _build_stack(kap, dn_sup, dn_film):
+            nO1 = complex(1.5, -0.15 * kap) if kap > 0 else 1.5
+            nE1 = complex(1.5 + dn_sup, -0.35 * kap) if kap > 0 else (1.5 + dn_sup)
+            nOf = complex(1.9, -0.02 * kap) if kap > 0 else 1.9
+            nEf = complex(1.9 + dn_film, -0.05 * kap) if kap > 0 else (1.9 + dn_film)
+            n3 = complex(1.45, -0.01 * kap) if kap > 0 else 1.45
+            m1 = EMpy.materials.AnisotropicMaterial(
+                "sup",
+                EMpy.materials.EpsilonTensor(eps0 * np.diag([nE1**2, nO1**2, nO1**2])),
+            )
+            eps_f = EMpy.utils.euler_rotate(
+                np.diag([nEf**2, nOf**2, nOf**2]), 0.4, 0.6, 0.3
+            )
+            mf = EMpy.materials.AnisotropicMaterial(
+                "film", EMpy.materials.EpsilonTensor(eps0 * eps_f)
+            )
+            m3 = EMpy.materials.AnisotropicMaterial(
+                "sub", EMpy.materials.EpsilonTensor(eps0 * n3**2 * np.eye(3))
+            )
+            return EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(m1, np.inf),
+                    EMpy.utils.Layer(mf, 0.4e-6),
+                    EMpy.utils.Layer(m3, np.inf),
+                ]
+            ), (nO1, nE1, n3)
+
+        # 1. Exact agreement against coherent 4x4 Berreman amplitude superposition at normal incidence
+        ml_lu, (nO1, nE1, n3) = _build_stack(kap=1.0, dn_sup=0.3, dn_film=0.3)
+        rcwa_lu = EMpy.RCWA.AnisotropicRCWA(
+            ml_lu, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=0
+        ).solve([wl])
+        self.assertLess(float(rcwa_lu.DE1[0, 0] + rcwa_lu.DE3[0, 0]), 1.0)
+
+        # Pure O (delta=0, psi=pi/2) and pure E (delta=0, psi=0) match AnisotropicTransferMatrix R_tot/T_tot
+        atm_lu = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml_lu, 0.0, 0.0).solve(
+            [wl]
+        )
+        r_pure_o = EMpy.RCWA.AnisotropicRCWA(
+            ml_lu, alpha=0.0, delta=0.0, psi=np.pi / 2, phi=np.pi / 2, n=0
+        ).solve([wl])
+        r_pure_e = EMpy.RCWA.AnisotropicRCWA(
+            ml_lu, alpha=0.0, delta=0.0, psi=0.0, phi=np.pi / 2, n=0
+        ).solve([wl])
+        # In AnisotropicTransferMatrix, fwd modes are sorted by Re(gamma) descending:
+        # since Re(nE1) > Re(nO1), mode 0 is E (x-polarized) and mode 1 is O (y-polarized).
+        self.assertAlmostEqual(
+            float(r_pure_o.DE1[0, 0]), float(atm_lu.R_tot[1, 0]), places=12
+        )
+        self.assertAlmostEqual(
+            float(r_pure_o.DE3[0, 0]), float(atm_lu.T_tot[1, 0]), places=12
+        )
+        self.assertAlmostEqual(
+            float(r_pure_e.DE1[0, 0]), float(atm_lu.R_tot[0, 0]), places=12
+        )
+        self.assertAlmostEqual(
+            float(r_pure_e.DE3[0, 0]), float(atm_lu.T_tot[0, 0]), places=12
+        )
+
+        # 2. Lossy -> lossless limit (kap = 1.0, 1e-4, 1e-8, 0.0): energy conservation R + T == 1 at kap = 0
+        ml_ll, _ = _build_stack(kap=0.0, dn_sup=0.3, dn_film=0.3)
+        rcwa_ll = EMpy.RCWA.AnisotropicRCWA(
+            ml_ll, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=0
+        ).solve([wl])
+        self.assertAlmostEqual(
+            float(rcwa_ll.DE1[0, 0] + rcwa_ll.DE3[0, 0]), 1.0, places=12
+        )
+        kap_errs = []
+        for kap in (1e-2, 1e-6, 0.0):
+            ml_k, _ = _build_stack(kap=kap, dn_sup=0.3, dn_film=0.3)
+            rk = EMpy.RCWA.AnisotropicRCWA(
+                ml_k, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=0
+            ).solve([wl])
+            if kap > 0:
+                self.assertLess(float(rk.DE1[0, 0] + rk.DE3[0, 0]), 1.0)
+            kap_errs.append(
+                abs(float(rk.DE1[0, 0] - rcwa_ll.DE1[0, 0]))
+                + abs(float(rk.DE3[0, 0] - rcwa_ll.DE3[0, 0]))
+            )
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[2], 1e-12)
+
+        # 3. Anisotropic -> isotropic limit (dn_sup = dn_film -> 0) on lossy superstrate against IsotropicRCWA
+        m1_i = EMpy.materials.IsotropicMaterial(
+            "s1", EMpy.materials.RefractiveIndex(n0_const=1.5 - 0.15j)
+        )
+        mf_i = EMpy.materials.IsotropicMaterial(
+            "sf", EMpy.materials.RefractiveIndex(n0_const=1.9 - 0.02j)
+        )
+        m3_i = EMpy.materials.IsotropicMaterial(
+            "s3", EMpy.materials.RefractiveIndex(n0_const=1.45 - 0.01j)
+        )
+        ml_iso_ref = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m1_i, np.inf),
+                EMpy.utils.Layer(mf_i, 0.4e-6),
+                EMpy.utils.Layer(m3_i, np.inf),
+            ]
+        )
+        rcwa_iso_ref = EMpy.RCWA.IsotropicRCWA(
+            ml_iso_ref, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=0
+        ).solve([wl])
+        dn_errs = []
+        for dn in (1e-3, 1e-7, 0.0):
+            nO1_d = 1.5 - 0.15j
+            nE1_d = (1.5 + dn) - 0.15j
+            nOf_d = 1.9 - 0.02j
+            nEf_d = (1.9 + dn) - 0.02j
+            ml_d = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(
+                        EMpy.materials.AnisotropicMaterial(
+                            "s1",
+                            EMpy.materials.EpsilonTensor(
+                                eps0 * np.diag([nE1_d**2, nO1_d**2, nO1_d**2])
+                            ),
+                        ),
+                        np.inf,
+                    ),
+                    EMpy.utils.Layer(
+                        EMpy.materials.AnisotropicMaterial(
+                            "sf",
+                            EMpy.materials.EpsilonTensor(
+                                eps0
+                                * EMpy.utils.euler_rotate(
+                                    np.diag([nEf_d**2, nOf_d**2, nOf_d**2]),
+                                    0.4,
+                                    0.6,
+                                    0.3,
+                                )
+                            ),
+                        ),
+                        0.4e-6,
+                    ),
+                    EMpy.utils.Layer(
+                        EMpy.materials.AnisotropicMaterial(
+                            "s3",
+                            EMpy.materials.EpsilonTensor(
+                                eps0 * (1.45 - 0.01j) ** 2 * np.eye(3)
+                            ),
+                        ),
+                        np.inf,
+                    ),
+                ]
+            )
+            rd = EMpy.RCWA.AnisotropicRCWA(
+                ml_d, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=0
+            ).solve([wl])
+            dn_errs.append(
+                abs(float(rd.DE1[0, 0] - rcwa_iso_ref.DE1[0, 0]))
+                + abs(float(rd.DE3[0, 0] - rcwa_iso_ref.DE3[0, 0]))
+            )
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-12)

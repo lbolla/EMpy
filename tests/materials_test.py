@@ -77,9 +77,16 @@ class RefractiveIndexTest(TestCase):
             vals = rk.get_rix([1.45e-6, 1.55e-6, 1.65e-6])
             if kap > 0:
                 self.assertTrue((vals.imag < 0).all())
-            errs.append(float(abs(vals - r_ll.get_rix([1.45e-6, 1.55e-6, 1.65e-6])).max()))
+            errs.append(
+                float(abs(vals - r_ll.get_rix([1.45e-6, 1.55e-6, 1.65e-6])).max())
+            )
         self.assertLess(errs[1], errs[0])
         self.assertLess(errs[2], 1e-15)
+
+        # Multi-dimensional wls shape preservation (1-point and multi-point n0_known)
+        wls_2d = array([[1.45e-6, 1.55e-6], [1.60e-6, 1.65e-6]])
+        self.assertEqual(a.get_rix(wls_2d).shape, (2, 2))
+        assert_almost_equal(r_ll.get_rix(wls_2d), array([[1.9, 2.1], [2.2, 2.3]]))
 
 
 class EpsilonTensorTest(TestCase):

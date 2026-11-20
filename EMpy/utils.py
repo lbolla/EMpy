@@ -269,9 +269,7 @@ class SymmetricDoubleGrating:
             eps3 = self.mat3.epsilonTensor(wl)[2, 2, 0]
             eps = float(
                 numpy.real(
-                    eps1 * self.dc1
-                    + eps2 * self.dc2
-                    + eps3 * (1 - self.dc1 - self.dc2)
+                    eps1 * self.dc1 + eps2 * self.dc2 + eps3 * (1 - self.dc1 - self.dc2)
                 )
             )
 
@@ -448,6 +446,10 @@ class LiquidCrystalCell:
         self.data_file = data_file
         if self.nlayers < 3:
             raise ValueError("nlayers must be at least 3.")
+        if self.t_anchoring < 0 or self.t_tot <= 2.0 * self.t_anchoring:
+            raise ValueError(
+                "t_tot must be strictly greater than 2 * t_anchoring (with t_anchoring >= 0)."
+            )
         # thicknesses of internal layers
         tlc_internal = (
             (self.t_tot - 2.0 * self.t_anchoring)

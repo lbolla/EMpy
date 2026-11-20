@@ -816,6 +816,127 @@ class FMMModeSolverTest(TestCase):
             self.assertGreater(cross_solver_ov, 0.95)
             self.assertLessEqual(cross_solver_ov, 1.01)
 
+    def test_fmm_scale_invariance_and_cross_solver_fd_overlap(self):
+        """Verify FMM1d/FMM2d SI-meter scale invariance and bidirectional FDMode <-> FMMMode2d overlaps."""
+        # 1. FMM1d exact scale invariance (microns vs SI meters, lossless and lossy)
+        uy_um = numpy.array([0.0, 2.0, 2.22, 4.22])
+        for kap in (0.0, 1e-3):
+            ny = numpy.array([1.446, complex(3.4757, -kap), 1.446])
+            for pol in ("TE", "TM"):
+                s1_um = EMpy.modesolvers.FMM.FMM1d(uy_um, ny, "SS").solve(1.55, 2, pol)
+                s1_m = EMpy.modesolvers.FMM.FMM1d(uy_um * 1e-6, ny, "SS").solve(
+                    1.55e-6, 2, pol
+                )
+                n_um = [m.keff.item() / (2.0 * numpy.pi / 1.55) for m in s1_um.modes]
+                n_m = [m.keff.item() / (2.0 * numpy.pi / 1.55e-6) for m in s1_m.modes]
+                numpy.testing.assert_allclose(n_m, n_um, rtol=1e-12, atol=1e-13)
+
+        # 2. FMM2d exact scale invariance in SI meters + kappa -> 0+ limit
+        bnd = EMpy.modesolvers.FMM.Boundary(
+            xleft="Electric Wall",
+            yleft="Magnetic Wall",
+            xright="Electric Wall",
+            yright="Magnetic Wall",
+        )
+        ux_um = numpy.array([0.0, 1.0, 1.5, 2.5])
+        uy2_um = numpy.array([0.0, 1.0, 1.22, 2.22])
+        rix_ll = numpy.array(
+            [[1.45, 1.45, 1.45], [1.45, 3.45, 1.45], [1.45, 1.45, 1.45]]
+        )
+        fmm_um = EMpy.modesolvers.FMM.FMM2d(ux_um, uy2_um, rix_ll, bnd).solve(
+            1.55, 2, 2
+        )
+        fmm_m = EMpy.modesolvers.FMM.FMM2d(
+            ux_um * 1e-6, uy2_um * 1e-6, rix_ll, bnd
+        ).solve(1.55e-6, 2, 2)
+        numpy.testing.assert_allclose(
+            [m.neff for m in fmm_m.modes],
+            [m.neff for m in fmm_um.modes],
+            rtol=1e-12,
+            atol=1e-13,
+        )
+        for m in fmm_m.modes:
+            m.normalize()
+
+        kap_errs = []
+        for kap in (1e-3, 1e-6, 0.0):
+            rk = numpy.array(
+                [
+                    [1.45, 1.45, 1.45],
+                    [1.45, complex(3.45, -kap), 1.45],
+                    [1.45, 1.45, 1.45],
+                ]
+            )
+            sk = EMpy.modesolvers.FMM.FMM2d(ux_um * 1e-6, uy2_um * 1e-6, rk, bnd).solve(
+                1.55e-6, 2, 1
+            )
+            kap_errs.append(abs(sk.modes[0].neff - fmm_m.modes[0].neff))
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[2], 1e-12)
+
+        # 3. Bidirectional FDMode <-> FMMMode2d overlap and SimpleJoint in SI meters (+ 5-comp aniso dn -> 0)
+        xfd = numpy.unique(
+            numpy.r_[
+                numpy.linspace(0.0, 1.0e-6, 21),
+                numpy.linspace(1.0e-6, 1.5e-6, 16),
+                numpy.linspace(1.5e-6, 2.5e-6, 21),
+            ]
+        )
+        yfd = numpy.unique(
+            numpy.r_[
+                numpy.linspace(0.0, 1.0e-6, 21),
+                numpy.linspace(1.0e-6, 1.22e-6, 11),
+                numpy.linspace(1.22e-6, 2.22e-6, 21),
+            ]
+        )
+        ph = EMpy.utils.deg2rad(27.0)
+
+        def _eps_vfd_si(dn=0.0):
+            def _f(x_, y_):
+                core = (
+                    (x_[:, None] > 1.0e-6)
+                    & (x_[:, None] < 1.5e-6)
+                    & (y_[None, :] > 1.0e-6)
+                    & (y_[None, :] < 1.22e-6)
+                )
+                nO = numpy.where(core, 3.45, 1.45)
+                nE = numpy.where(core, 3.45 + dn, 1.45 + dn)
+                exx = nE**2 * numpy.cos(ph) ** 2 + nO**2 * numpy.sin(ph) ** 2
+                eyy = nE**2 * numpy.sin(ph) ** 2 + nO**2 * numpy.cos(ph) ** 2
+                exy = (nE**2 - nO**2) * numpy.sin(ph) * numpy.cos(ph)
+                return numpy.stack([exx, exy, exy, eyy, nO**2], axis=-1)
+
+            return _f
+
+        vfd_iso = EMpy.modesolvers.FD.VFDModeSolver(
+            1.55e-6,
+            xfd,
+            yfd,
+            lambda x_, y_: _eps_vfd_si(0.0)(x_, y_)[:, :, 0],
+            "0000",
+        ).solve(2, 1e-10)
+        ov_fd_to_fmm = abs(vfd_iso.modes[0].overlap(fmm_m.modes[0]))
+        ov_fmm_to_fd = abs(fmm_m.modes[0].overlap(vfd_iso.modes[0]))
+        self.assertGreater(ov_fd_to_fmm, 0.90)
+        self.assertGreater(ov_fmm_to_fd, 0.90)
+        sj_cross = EMpy.modesolvers.geometries.SimpleJoint(
+            vfd_iso, fmm_m, method="passive"
+        )
+        self.assertTrue(
+            numpy.all(numpy.linalg.svd(sj_cross.S, compute_uv=False) <= 1.0)
+        )
+
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            vfd_a = EMpy.modesolvers.FD.VFDModeSolver(
+                1.55e-6, xfd, yfd, _eps_vfd_si(dn), "0000"
+            ).solve(2, 1e-10)
+            dn_errs.append(
+                abs(abs(vfd_a.modes[0].overlap(fmm_m.modes[0])) - ov_fd_to_fmm)
+            )
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-9)
+
 
 class GeometriesTest(TestCase):
 
@@ -1641,9 +1762,105 @@ class GeometriesTest(TestCase):
             sj_sq = EMpy.modesolvers.geometries.SimpleJoint(s_sq, s_sq, method=meth)
             numpy.testing.assert_allclose(sj_sq.S[:2, :2], 0.0, atol=1e-12)
             numpy.testing.assert_allclose(sj_sq.S[2:, 2:], 0.0, atol=1e-12)
-            numpy.testing.assert_allclose(
-                sj_sq.S[:2, 2:], numpy.eye(2), atol=1e-12
+            numpy.testing.assert_allclose(sj_sq.S[:2, 2:], numpy.eye(2), atol=1e-12)
+            numpy.testing.assert_allclose(sj_sq.S[2:, :2], numpy.eye(2), atol=1e-12)
+
+    def test_generic_device_subcutoff_and_long_lossy_cascade(self):
+        """Verify GenericDevice Redheffer star-product stability with sub-cutoff and long lossy waveguides."""
+        wl = 1.55e-6
+        x = numpy.linspace(0.0, 0.65e-6, 17)
+        y = numpy.linspace(0.0, 0.25e-6, 15)
+        ph = EMpy.utils.deg2rad(29.0)
+
+        def _hom_solver(n_base, kap=0.0, dn=0.0, anisotropic=False):
+            nO = complex(n_base, -kap) if kap > 0 else n_base
+            nE = complex(n_base + dn, -kap) if kap > 0 else (n_base + dn)
+
+            def _eps(xx, yy):
+                if not anisotropic:
+                    return numpy.full((len(xx), len(yy)), nO**2)
+                exx = nE**2 * numpy.cos(ph) ** 2 + nO**2 * numpy.sin(ph) ** 2
+                eyy = nE**2 * numpy.sin(ph) ** 2 + nO**2 * numpy.cos(ph) ** 2
+                exy = (nE**2 - nO**2) * numpy.sin(ph) * numpy.cos(ph)
+                shape = (len(xx), len(yy))
+                return numpy.stack(
+                    [
+                        numpy.full(shape, exx),
+                        numpy.full(shape, exy),
+                        numpy.full(shape, exy),
+                        numpy.full(shape, eyy),
+                        numpy.full(shape, nO**2),
+                    ],
+                    axis=-1,
+                )
+
+            return EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, _eps, "SSAA").solve(
+                2, 1e-12
             )
-            numpy.testing.assert_allclose(
-                sj_sq.S[2:, :2], numpy.eye(2), atol=1e-12
+
+        s1 = _hom_solver(1.6)
+        s2 = _hom_solver(1.9)
+        self.assertGreater(s1.modes[0].neff.real, 0.0)
+        self.assertLess(s1.modes[1].neff.imag, -1.0)
+        self.assertLess(s2.modes[1].neff.imag, -1.0)
+
+        # At L = 200 um, exp(+1j * beta_subcutoff * L) overflows float64, but Redheffer cascade stays exact
+        length = 200e-6
+        gd = EMpy.modesolvers.geometries.GenericDevice(
+            [
+                EMpy.modesolvers.geometries.SimpleJoint(s1, s2),
+                EMpy.modesolvers.geometries.SWG(s2, length),
+                EMpy.modesolvers.geometries.SimpleJoint(s2, s1),
+            ],
+            inputLHS=numpy.array([1.0, 0.4]),
+            inputRHS=numpy.array([-0.25j, 0.1]),
+        )
+        self.assertTrue(numpy.all(numpy.isfinite(gd.S)))
+        self.assertTrue(
+            all(
+                numpy.all(numpy.isfinite(d.outputLHS))
+                and numpy.all(numpy.isfinite(d.outputRHS))
+                for d in gd.devlist
             )
+        )
+        self.assertLessEqual(
+            float(numpy.linalg.svd(gd.S, compute_uv=False)[0]), 1.0 + 1e-12
+        )
+
+        ne1, ne2 = s1.modes[0].neff, s2.modes[0].neff
+        r0 = (ne1 - ne2) / (ne1 + ne2)
+        p0 = numpy.exp(-1j * (2.0 * numpy.pi / wl * ne2) * length)
+        s21_0_exact = (1.0 - r0**2) * p0 / (1.0 - (r0 * p0) ** 2)
+        self.assertAlmostEqual(gd.S[2, 0], s21_0_exact, places=12)
+
+        # Degenerate limits on the L = 200 um sub-cutoff cascade: aniso dn -> 0 and lossy kap -> 0+
+        dn_errs = []
+        for dn in (1e-4, 1e-8, 0.0):
+            s1_a = _hom_solver(1.6, dn=dn, anisotropic=True)
+            s2_a = _hom_solver(1.9, dn=dn, anisotropic=True)
+            gd_a = EMpy.modesolvers.geometries.GenericDevice(
+                [
+                    EMpy.modesolvers.geometries.SimpleJoint(s1_a, s2_a),
+                    EMpy.modesolvers.geometries.SWG(s2_a, length),
+                    EMpy.modesolvers.geometries.SimpleJoint(s2_a, s1_a),
+                ]
+            )
+            dn_errs.append(abs(abs(gd_a.S[2, 0]) - abs(gd.S[2, 0])))
+        self.assertLess(dn_errs[1], dn_errs[0])
+        self.assertLess(dn_errs[2], 1e-10)
+
+        kap_errs = []
+        for kap in (1e-3, 1e-6, 0.0):
+            s2_k = _hom_solver(1.9, kap=kap)
+            gd_k = EMpy.modesolvers.geometries.GenericDevice(
+                [
+                    EMpy.modesolvers.geometries.SimpleJoint(s1, s2_k),
+                    EMpy.modesolvers.geometries.SWG(s2_k, length),
+                    EMpy.modesolvers.geometries.SimpleJoint(s2_k, s1),
+                ]
+            )
+            if kap > 0:
+                self.assertLess(abs(gd_k.S[0, 0]) ** 2 + abs(gd_k.S[2, 0]) ** 2, 1.0)
+            kap_errs.append(abs(gd_k.S[2, 0] - gd.S[2, 0]))
+        self.assertLess(kap_errs[1], kap_errs[0])
+        self.assertLess(kap_errs[2], 1e-10)

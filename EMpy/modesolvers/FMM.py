@@ -1497,22 +1497,40 @@ def scalarprod(modo1, modo2):
         else:
             k = numpy.emath.sqrt(0.5 * (k1**2 + k2**2))
             kd = k * di
-            s2kd = sinxsux(2.0 * kd)
-            skd = sinxsux(kd)
-            icc = 0.5 * di * (1.0 + s2kd)
-            isc = 0.5 * (di**2) * (skd**2)
-            if abs(kd) < 1e-2:
-                kd2 = kd**2
-                iss = (di**3) * (
-                    1.0 / 3.0 - kd2 / 15.0 + 2.0 * (kd2**2) / 315.0 - (kd2**3) / 2835.0
+            if abs(numpy.imag(kd)) > 1.0:
+                if numpy.imag(kd) > 0:
+                    k = -k
+                    kd = -kd
+                p = numpy.exp(-1j * kd)
+                p2 = p * p
+                one_m_p2_sq = (1.0 - p2) ** 2
+                i_diag = -(1j * (1.0 - p2 * p2) + 4.0 * kd * p2) / (
+                    2.0 * k * one_m_p2_sq
                 )
+                i_cross = p * (kd * (1.0 + p2) + 1j * (1.0 - p2)) / (k * one_m_p2_sq)
+                res = (sl1[idy] * sl2[idy] + sr1[idy] * sr2[idy]) * i_diag + (
+                    sl1[idy] * sr2[idy] + sr1[idy] * sl2[idy]
+                ) * i_cross
             else:
-                iss = 0.5 * di * (1.0 - s2kd) / (k**2)
-            res = (
-                sl1[idy] * sl2[idy] * icc
-                + (sl1[idy] * al2[idy] + al1[idy] * sl2[idy]) * isc
-                + al1[idy] * al2[idy] * iss
-            )
+                s2kd = sinxsux(2.0 * kd)
+                skd = sinxsux(kd)
+                icc = 0.5 * di * (1.0 + s2kd)
+                isc = 0.5 * (di**2) * (skd**2)
+                if abs(kd) < 1e-2:
+                    kd2 = kd**2
+                    iss = (di**3) * (
+                        1.0 / 3.0
+                        - kd2 / 15.0
+                        + 2.0 * (kd2**2) / 315.0
+                        - (kd2**3) / 2835.0
+                    )
+                else:
+                    iss = 0.5 * di * (1.0 - s2kd) / (k**2)
+                res = (
+                    sl1[idy] * sl2[idy] * icc
+                    + (sl1[idy] * al2[idy] + al1[idy] * sl2[idy]) * isc
+                    + al1[idy] * al2[idy] * iss
+                )
             scprod[idy] = (
                 numpy.real(res) if numpy.issubdtype(dtype, numpy.floating) else res
             )
@@ -1535,7 +1553,11 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
     k0 = 2 * numpy.pi / wl
     betay = ny * k0
     Nstepskz = 1543
-    searchinterval = max(50.0 / Nstepskz, numpy.abs(numpy.min(numpy.imag(2.0 * betay))))
+    max_re_betay = float(numpy.max(numpy.real(betay)))
+    searchinterval = max(
+        max((25.0 / numpy.pi) * k0, 2.0 * max_re_betay) / Nstepskz,
+        float(numpy.abs(numpy.min(numpy.imag(2.0 * betay)))),
+    )
     imsearchinterval = 10 * k0
     # ypointsperregion = 5000
 
@@ -1608,16 +1630,23 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
     for m in range(0, len(kz1)):
         if mk == nmodi:
             break
-        if TETM == "TM":
-            z0, valf = fzzeroabs2(
-                lambda kz: FMMshootingTM(kz, FMMpars)[0], kz1[m], kz2[m]
-            )
-            z0 = numpy.atleast_1d(z0)
-        else:
-            z0, valf = fzzeroabs2(
-                lambda kz: FMMshooting(kz, FMMpars)[0], kz1[m], kz2[m]
-            )
-            z0 = numpy.atleast_1d(z0)
+        shoot_fn = (
+            (lambda kz: FMMshootingTM(kz, FMMpars)[0])
+            if TETM == "TM"
+            else (lambda kz: FMMshooting(kz, FMMpars)[0])
+        )
+        scale_0 = max(
+            float(numpy.max(numpy.abs(shoot_fn(0.5 * (kz1[m] + kz2[m]))))), 1e-30
+        )
+        z0, valf = fzzeroabs2(lambda kz: shoot_fn(kz) / scale_0, kz1[m], kz2[m])
+        eps_box = 1e-7 * k0
+        scale_1 = max(float(numpy.max(numpy.abs(shoot_fn(z0 + eps_box)))), 1e-30)
+        z0, valf = fzzeroabs2(
+            lambda kz: shoot_fn(kz) / scale_1,
+            z0 - eps_box + 1j * eps_box,
+            z0 + eps_box - 1j * eps_box,
+        )
+        z0 = numpy.atleast_1d(z0)
 
         if len(z0) > 0:
             if TETM == "TM":
@@ -1796,19 +1825,20 @@ def ortonormalita(slices):
 
 def method_of_component(kz_, slices, Rot, uscelto=None, icomp=None):
     kz = numpy.atleast_1d(kz_)
+    k0 = 2.0 * numpy.pi / slices[0].wl
     abscomp = numpy.zeros(len(kz))
     #    tmp = 500 # OKKIO: perche' 500?
     tmp = (
         100 * len(slices[0].modie) * (len(slices) - 1)
     )  # OKKIO: dimension of Mvec * 50. enough?
     normu = numpy.zeros(tmp, dtype=complex)
+    rng = numpy.random.default_rng(0)
     for m in range(len(kz)):
-        M = Mvec(kz[m], slices, Rot)
+        M = Mvec(kz[m], slices, Rot) / k0
         urn = numpy.zeros((M.shape[0], tmp), dtype=complex)
         if (uscelto is None) and (icomp is None):
             for k in range(tmp):
-                numpy.random.seed()
-                ur = numpy.random.rand(M.shape[0])
+                ur = rng.random(M.shape[0])
                 urn[:, k] = ur / numpy.linalg.norm(ur)
                 normu[k] = numpy.linalg.norm(numpy.dot(M, urn[:, k]))
             iurn = numpy.argmin(normu)
@@ -2323,22 +2353,26 @@ def FMM1d_x_component(slices, nmodi, verbosity=0):
     Message("Matching 1dmodes on slices interfaces.", 1).show(verbosity)
 
     TolnullEig = 1e-1
-    searchinterval = 6e-3
+    dn_search = 1.5e-3
 
     # Ux = slices[0].Ux
     lambda0 = slices[0].wl
     k0 = 2.0 * numpy.pi / lambda0
+    searchinterval = dn_search * k0
 
     Rot = genera_rotazione(slices)
 
-    maxrekz = -1e6
-    minrekz = 1e6
+    maxrekz = -numpy.inf
+    minrekz = numpy.inf
+    max_im_keff = 0.0
 
     for slice in slices:
-        maxrekz0 = numpy.max(
-            numpy.real([m.keff for m in slice.modih] + [m.keff for m in slice.modie])
+        keffs_slice = [m.keff for m in slice.modih] + [m.keff for m in slice.modie]
+        maxrekz0 = float(numpy.max(numpy.real(keffs_slice)))
+        minrekz0 = float(numpy.min(numpy.real(k0 * slice.refractiveindex)))
+        max_im_keff = max(
+            max_im_keff, float(numpy.max(numpy.abs(numpy.imag(keffs_slice))))
         )
-        minrekz0 = numpy.min(numpy.real(k0 * slice.refractiveindex))
         if maxrekz < maxrekz0:
             maxrekz = maxrekz0
         if minrekz > minrekz0:
@@ -2362,9 +2396,10 @@ def FMM1d_x_component(slices, nmodi, verbosity=0):
     abscomp, uscelto, icomp = method_of_component(maxrekz, slices, Rot)
     matchingre = method_of_component(rekz, slices, Rot, uscelto, icomp)[0]
     nre = rekz / k0
-    zerire = findzerosnew(nre, numpy.abs(matchingre), searchinterval)[0]
-    kz1 = k0 * zerire - searchinterval / 2.0 + 1j * searchinterval
-    kz2 = k0 * zerire + searchinterval / 2.0 - 1j * searchinterval
+    zerire = findzerosnew(nre, numpy.abs(matchingre), 4.0 * dn_search)[0]
+    kz_im_half = max(searchinterval, 2.0 * max_im_keff)
+    kz1 = k0 * zerire - searchinterval / 2.0 + 1j * kz_im_half
+    kz2 = k0 * zerire + searchinterval / 2.0 - 1j * kz_im_half
     Message("Found %d possible zeros." % len(zerire), 1).show(verbosity)
     Message("Possible zeros:\n%s" % zerire, 3).show(verbosity)
     Message("Refining zeros.", 1).show(verbosity)

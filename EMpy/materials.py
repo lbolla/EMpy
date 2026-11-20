@@ -142,7 +142,7 @@ class RefractiveIndex:
         ks = numpy.array(sorted(n0_known.keys()), dtype=float)
         vs = numpy.array([n0_known[k] for k in ks])
         if ks.size == 1:
-            return numpy.full(wls_flat.shape, vs[0])
+            return numpy.full(wls_arr.shape, vs[0])
 
         def _interp_extrap(yq):
             res = numpy.interp(wls_flat, ks, yq)
@@ -154,12 +154,10 @@ class RefractiveIndex:
             if numpy.any(right):
                 slope_r = (yq[-1] - yq[-2]) / (ks[-1] - ks[-2])
                 res[right] = yq[-1] + slope_r * (wls_flat[right] - ks[-1])
-            return res
+            return res.reshape(wls_arr.shape)
 
         if numpy.iscomplexobj(vs):
-            return _interp_extrap(numpy.real(vs)) + 1j * _interp_extrap(
-                numpy.imag(vs)
-            )
+            return _interp_extrap(numpy.real(vs)) + 1j * _interp_extrap(numpy.imag(vs))
         return _interp_extrap(vs.astype(float))
 
     def __call__(self, wls):

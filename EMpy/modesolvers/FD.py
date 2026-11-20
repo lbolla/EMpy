@@ -2268,21 +2268,31 @@ class FDMode(Mode):
         x1 = EMpy.utils.centered1d(numpy.real(self.x))
         y1 = EMpy.utils.centered1d(numpy.real(self.y))
 
-        x2 = EMpy.utils.centered1d(numpy.real(m.x))
-        y2 = EMpy.utils.centered1d(numpy.real(m.y))
-
-        x_eval = x2 if x is None else numpy.real(x)
-        y_eval = y2 if y is None else numpy.real(y)
+        if isinstance(m, FDMode):
+            x2 = EMpy.utils.centered1d(numpy.real(m.x))
+            y2 = EMpy.utils.centered1d(numpy.real(m.y))
+            x_eval = x2 if x is None else numpy.real(x)
+            y_eval = y2 if y is None else numpy.real(y)
+            Hx2_c = EMpy.utils.interp2(
+                x_eval, y_eval, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hx))
+            )
+            Hy2_c = EMpy.utils.interp2(
+                x_eval, y_eval, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hy))
+            )
+        else:
+            x_eval = x1 if x is None else numpy.real(x)
+            y_eval = y1 if y is None else numpy.real(y)
+            if hasattr(m, "fields"):
+                _, _, _, cBx2, cBy2, _ = m.fields(x_eval, y_eval)
+                Hx2_c = numpy.conj(cBx2.T)
+                Hy2_c = numpy.conj(cBy2.T)
+            else:
+                Hx2_c = numpy.conj(m.get_field("Hx", x_eval, y_eval))
+                Hy2_c = numpy.conj(m.get_field("Hy", x_eval, y_eval))
 
         # Interpolates m1 and centered m2 fields onto (x, y) grid:
         Ex1 = EMpy.utils.interp2(x_eval, y_eval, x1, y1, self.Ex)
         Ey1 = EMpy.utils.interp2(x_eval, y_eval, x1, y1, self.Ey)
-        Hx2_c = EMpy.utils.interp2(
-            x_eval, y_eval, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hx))
-        )
-        Hy2_c = EMpy.utils.interp2(
-            x_eval, y_eval, x2, y2, EMpy.utils.centered2d(numpy.conj(m.Hy))
-        )
 
         intensity = (Ex1 * Hy2_c - Ey1 * Hx2_c) / 2.0
 

@@ -253,9 +253,7 @@ class IsotropicRCWA(RCWA):
             k1 = k * n1 * dirk1
 
             if np.absolute(K[2] / k) > 1e-10:
-                raise ValueError(
-                    "First Order Helmholtz Operator not implemented, yet!"
-                )
+                raise ValueError("First Order Helmholtz Operator not implemented, yet!")
 
             # Precompute wavelength-only Toeplitz permittivity blocks per internal layer
             # and apply any Helmholtz singularity shift uniformly to the incident Bloch
@@ -793,7 +791,9 @@ class AnisotropicRCWA(RCWA):
                         denom_sum = KEz_d + KOz_d
                         m32 = -(Kx_d * Ky_d * nE**2) / (nO**2 * KEz_d) - (
                             Kx_d * Ky_d * dn2
-                        ) / (nO**2 * denom_sum) * ((Ky_d**2) / (KEz_d * KOz_d) - 1.0)
+                        ) / (nO**2 * denom_sum) * (
+                            (Ky_d**2) / (KEz_d * KOz_d) - 1.0
+                        )
                         m42 = (
                             (Kx_d**2 * nE**2) / (nO**2 * KEz_d)
                             + KEz_d
@@ -918,10 +918,18 @@ class AnisotropicRCWA(RCWA):
                 HR_tot_x, HR_tot_y = np.split(np.dot(MR_red[2 * nood :, :], r_red), 2)
                 HT_tot_x, HT_tot_y = np.split(np.dot(MT_red[2 * nood :, :], t_curr), 2)
 
-                zero_kt = (np.abs(kx.real) <= 1e-15 * k) & (abs(ky.real) <= 1e-15 * k)
-                phi_i = np.where(zero_kt, delta, np.arctan2(ky.real, kx.real))
-                sx_hat = -np.sin(phi_i)
-                sy_hat = np.cos(phi_i)
+                zero_kt = (np.abs(kx) <= 1e-15 * k) & (np.abs(ky) <= 1e-15 * k)
+                kt = np.sqrt(kx**2 + ky**2 + 0j)
+                flip_kt = (kt.real - kt.imag < 0) | (
+                    (kt.real - kt.imag == 0) & (kt.real < 0)
+                )
+                kt = np.where(flip_kt, -kt, kt)
+                kt = np.where((~zero_kt) & (np.abs(kt) < 1e-13 * k), 1e-13 * k + 0j, kt)
+                kt_safe = np.where(zero_kt, 1.0 + 0j, kt)
+                fc = np.where(zero_kt, np.cos(delta) + 0j, kx / kt_safe)
+                fs = np.where(zero_kt, np.sin(delta) + 0j, ky / kt_safe)
+                sx_hat = -fs
+                sy_hat = fc
 
                 if iso_sup:
                     ROz_tot = -np.dot(CRO_1, (np.dot(ARO, r_x) + np.dot(BRO, r_y)))
@@ -1025,11 +1033,9 @@ class AnisotropicRCWA(RCWA):
 
             # ordinary and extraordinary incident wavevector magnitudes in region 1
             abskO1 = k * nO1
-            abskE1 = (
-                k
-                * nO1
-                * nE1
-                / np.sqrt(nO1**2 + (nE1**2 - nO1**2) * np.dot(c1, dirk1) ** 2)
+            abskE1 = k * _passive_sqrt(
+                (nO1**2 * nE1**2)
+                / (nO1**2 + (nE1**2 - nO1**2) * np.dot(c1, dirk1) ** 2)
             )
 
             c_cross_s = np.cross(c1, dirk1)
@@ -1061,10 +1067,8 @@ class AnisotropicRCWA(RCWA):
                 EO_inc = aO * dO_hat.astype(complex)
                 HO_inc = np.cross(kO1_inc / k, EO_inc)
 
-                dE_k = np.cross(kE1_inc, np.cross(c1, kE1_inc))
-                dE_k_hat = dE_k / np.linalg.norm(dE_k)
                 EE_inc = aE * np.array(
-                    [(nO1 / nE1) ** 2 * dE_k_hat[0], dE_k_hat[1], dE_k_hat[2]],
+                    [(nO1 / nE1) ** 2 * dE_hat[0], dE_hat[1], dE_hat[2]],
                     dtype=complex,
                 )
                 HE_inc = np.cross(kE1_inc / k, EE_inc)

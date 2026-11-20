@@ -753,14 +753,18 @@ class UtilsTest(TestCase):
         )
         m_ani_l = EMpy.materials.AnisotropicMaterial(
             "al",
-            EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps0 * n_lossy**2 * numpy.eye(3)),
+            EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * n_lossy**2 * numpy.eye(3)
+            ),
         )
         m_ref_i = EMpy.materials.IsotropicMaterial(
             "ri", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
         )
         m_ref_a = EMpy.materials.AnisotropicMaterial(
             "ra",
-            EMpy.materials.EpsilonTensor(epsilon_tensor_const=eps0 * 1.45**2 * numpy.eye(3)),
+            EMpy.materials.EpsilonTensor(
+                epsilon_tensor_const=eps0 * 1.45**2 * numpy.eye(3)
+            ),
         )
 
         c_lyr_i = U.Layer(m_iso_l, d).capacitance(area=area, wl=wl)
@@ -822,3 +826,9 @@ class UtilsTest(TestCase):
             kap_errs.append(abs(c_k - c_iso_ll))
         self.assertLess(kap_errs[1], kap_errs[0])
         self.assertLess(kap_errs[2], 1e-18)
+
+        # LiquidCrystalCell anchoring-thickness validation
+        lc_v = EMpy.materials.LiquidCrystal("lc_v", nO=1.5, nE=1.6)
+        for bad_anc in (-0.1e-6, 0.5e-6, 0.6e-6):
+            with self.assertRaises(ValueError):
+                U.LiquidCrystalCell(lc_v, 0.0, 1.0e-6, bad_anc, nlayers=5)

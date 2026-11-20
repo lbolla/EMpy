@@ -32,12 +32,41 @@ def T2S(T):
     t12 = T[:dim, dim:]
     t21 = T[dim:, :dim]
     S = numpy.zeros_like(T)
-    t22_1 = numpy.linalg.inv(t22)
+    try:
+        t22_1 = numpy.linalg.inv(t22)
+    except numpy.linalg.LinAlgError:
+        t22_1 = numpy.linalg.pinv(t22)
     S[:dim, :dim] = -numpy.dot(t22_1, t21)
     S[dim:, dim:] = numpy.dot(t12, t22_1)
     S[:dim, dim:] = t22_1
     S[dim:, :dim] = t11 - numpy.dot(numpy.dot(t12, t22_1), t21)
     return S
+
+
+def _redheffer_star(SA, SB):
+    """Cascade two 2N x 2N scattering matrices via the Redheffer star product."""
+    dim = SA.shape[0] // 2
+    ident = numpy.eye(dim, dtype=complex)
+    a11, a12 = SA[:dim, :dim], SA[:dim, dim:]
+    a21, a22 = SA[dim:, :dim], SA[dim:, dim:]
+    b11, b12 = SB[:dim, :dim], SB[:dim, dim:]
+    b21, b22 = SB[dim:, :dim], SB[dim:, dim:]
+
+    # Solve (I - B11 A22) X = [B11 A21, B12] and (I - A22 B11) Y = [A21, A22 B12]
+    rhs_v = numpy.hstack([b11 @ a21, b12])
+    sol_v = numpy.linalg.solve(ident - b11 @ a22, rhs_v)
+    v_from_u0, v_from_vnext = sol_v[:, :dim], sol_v[:, dim:]
+
+    rhs_u = numpy.hstack([a21, a22 @ b12])
+    sol_u = numpy.linalg.solve(ident - a22 @ b11, rhs_u)
+    u_from_u0, u_from_vnext = sol_u[:, :dim], sol_u[:, dim:]
+
+    s11 = a11 + a12 @ v_from_u0
+    s12 = a12 @ v_from_vnext
+    s21 = b21 @ u_from_u0
+    s22 = b22 + b21 @ u_from_vnext
+    S = numpy.block([[s11, s12], [s21, s22]])
+    return S, (u_from_u0, u_from_vnext, v_from_u0, v_from_vnext)
 
 
 class SWG:
@@ -68,11 +97,18 @@ class SWG:
         neffs = numpy.array([m.neff for m in self.solver.modes])
         betas = 2 * numpy.pi / self.solver.wl * neffs
         neigs = self.solver.nmodes
+        fwd = numpy.exp(-1j * betas * self.length)
+        S = numpy.zeros((2 * neigs, 2 * neigs), dtype=complex)
+        S[:neigs, neigs:] = numpy.diag(fwd)
+        S[neigs:, :neigs] = numpy.diag(fwd)
+        self.S = S
+
+        with numpy.errstate(over="ignore"):
+            bwd = numpy.exp(1j * betas * self.length)
         T = numpy.zeros((2 * neigs, 2 * neigs), dtype=complex)
-        T[:neigs, :neigs] = numpy.diag(numpy.exp(-1j * betas * self.length))
-        T[neigs:, neigs:] = numpy.diag(numpy.exp(1j * betas * self.length))
+        T[:neigs, :neigs] = numpy.diag(fwd)
+        T[neigs:, neigs:] = numpy.diag(bwd)
         self.T = T
-        self.S = T2S(self.T)
 
     def _marginal_intensity(self, sumx=1, nxy=100, nz=100, z0=0):
         """Compute 1D-integrated bidirectional modal optical intensity for visualization.
@@ -411,6 +447,12 @@ class GenericDevice:
         self.build_matrix()
         self.compute_output(inputLHS, inputRHS)
 
+    @staticmethod
+    def _device_s(d):
+        if hasattr(d, "S"):
+            return numpy.asarray(d.S, dtype=complex)
+        return T2S(numpy.asarray(d.T, dtype=complex))
+
     def compute_output(self, inputLHS=None, inputRHS=None):
         if inputLHS is None:
             self.inputLHS = numpy.zeros_like(self.devlist[0].inputLHS)
@@ -421,31 +463,43 @@ class GenericDevice:
             self.inputRHS = numpy.zeros_like(self.devlist[0].inputRHS)
         else:
             self.inputRHS = inputRHS
-        input = numpy.r_[self.inputLHS, self.inputRHS]
+        u0 = numpy.asarray(self.inputLHS, dtype=complex)
+        v_next = numpy.asarray(self.inputRHS, dtype=complex)
+        input = numpy.r_[u0, v_next]
         output = numpy.dot(self.S, input)
-        self.outputLHS = output[: len(self.inputLHS)]
-        self.outputRHS = output[len(self.inputLHS) :]
-        # compute for each device
-        inputLHS = self.inputLHS
-        outputLHS = self.outputLHS
-        dim = len(inputLHS)
-        for d in self.devlist:
-            d.inputLHS = inputLHS
-            d.outputLHS = outputLHS
-            LHS = numpy.r_[inputLHS, outputLHS]
-            RHS = numpy.dot(d.T, LHS)
-            d.outputRHS = RHS[:dim]
-            d.inputRHS = RHS[dim:]
-            inputLHS = d.outputRHS
-            outputLHS = d.inputRHS
+        dim = len(self.inputLHS)
+        self.outputLHS = output[:dim]
+        self.outputRHS = output[dim:]
+
+        # Backward Redheffer sweep for internal interface waves (avoids growing T-matrix exponentials)
+        for d, s_d, (u_u0, u_vn, v_u0, v_vn) in zip(
+            reversed(self.devlist),
+            reversed(self._dev_s_list),
+            reversed(self._star_factors),
+        ):
+            u_k = u_u0 @ u0 + u_vn @ v_next
+            v_k = v_u0 @ u0 + v_vn @ v_next
+            d.inputLHS = u_k
+            d.outputLHS = v_k
+            d.inputRHS = v_next
+            d.outputRHS = s_d[dim:, :dim] @ u_k + s_d[dim:, dim:] @ v_next
+            v_next = v_k
 
     def build_matrix(self):
-        dim = self.devlist[0].T.shape[0] // 2
-        T = numpy.eye(2 * dim, dtype=complex)
+        s0 = self._device_s(self.devlist[0])
+        dim = s0.shape[0] // 2
+        ident = numpy.eye(dim, dtype=complex)
+        zeros = numpy.zeros((dim, dim), dtype=complex)
+        S_prefix = numpy.block([[zeros, ident], [ident, zeros]])
+        self._dev_s_list = []
+        self._star_factors = []
         for d in self.devlist:
-            T = numpy.dot(d.T, T)
-        self.T = T
-        self.S = T2S(self.T)
+            s_d = self._device_s(d)
+            S_prefix, factors = _redheffer_star(S_prefix, s_d)
+            self._dev_s_list.append(s_d)
+            self._star_factors.append(factors)
+        self.S = S_prefix
+        self.T = S2T(self.S)
 
     def plot(self, sumx=1, nxy=100, nz=100, z0=0):
         z = z0
