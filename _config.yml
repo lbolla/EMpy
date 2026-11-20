@@ -1,4 +1,19 @@
 theme: jekyll-theme-slate
 title: EMpy
-description: Electromagnetic Python
-show_downloads: true
+description: ElectroMagnetic Python — Computational Electromagnetics & Photonics Suite
+show_downloads: false
+exclude:
+  - "__pycache__"
+  - "*.pyc"
+  - "*.egg-info"
+  - EMpy
+  - tests
+  - scripts
+  - build
+  - dist
+  - .venv
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - Makefile
+

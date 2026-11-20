@@ -3,3 +3,14 @@ _site/
 .jekyll-cache/
 .jekyll-metadata
 vendor/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.pytest_cache/
+EMpy/_version.py
+Gemfile
+Gemfile.lock

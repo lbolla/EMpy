@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: 'en-US' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" type="text/css" media="screen" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+      onload="renderMathInElement(document.getElementById('main_content'));"></script>
+    <title>{% if page.title %}{{ page.title }} · {{ site.title }}{% else %}{{ site.title }} — {{ site.description }}{% endif %}</title>
+    <style>
+      .inner {
+        max-width: 920px;
+      }
+      #site_nav_wrap {
+        background: #1b1b1b;
+        border-top: 1px solid #333;
+        border-bottom: 1px solid #0d0d0d;
+      }
+      #site_nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 18px;
+        padding: 10px 10px;
+      }
+      #site_nav .nav-links,
+      #site_nav .nav-ext {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        align-items: center;
+      }
+      #site_nav a {
+        color: #d8d8d8;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14.5px;
+        padding: 4px 10px;
+        border-radius: 4px;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      #site_nav a:hover {
+        color: #ffffff;
+        background: #2f2f2f;
+      }
+      #site_nav a.active {
+        color: #ffffff;
+        background: #007edf;
+      }
+      #site_nav .nav-ext a {
+        font-weight: 500;
+        font-size: 13.5px;
+        color: #9ecbff;
+      }
+      #main_content img {
+        max-width: 100%;
+        height: auto;
+        box-sizing: border-box;
+      }
+      #main_content table {
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+      }
+      .callout-box {
+        background: #ffffff;
+        border-left: 4px solid #007edf;
+        padding: 14px 18px;
+        margin: 18px 0;
+        border-radius: 0 4px 4px 0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+      <header class="inner">
+        {% if site.github.is_project_page %}
+          <a id="forkme_banner" href="{{ site.github.repository_url }}">View on GitHub</a>
+        {% endif %}
+        <h1 id="project_title"><a href="{{ '/' | relative_url }}" style="color: inherit; text-decoration: none;">{{ site.title | default: site.github.repository_name }}</a></h1>
+        <h2 id="project_tagline">{{ site.description | default: site.github.project_tagline }}</h2>
+      </header>
+    </div>
+
+    <!-- TOP NAVIGATION -->
+    <div id="site_nav_wrap" class="outer">
+      <nav id="site_nav" class="inner" aria-label="Main navigation">
+        <div class="nav-links">
+          <a href="{{ '/' | relative_url }}" {% if page.url == '/' or page.url == '/index.html' %}class="active"{% endif %}>Home</a>
+          <a href="{{ '/methodology/' | relative_url }}" {% if page.url contains '/methodology' %}class="active"{% endif %}>Methodology &amp; References</a>
+          <a href="{{ '/examples/' | relative_url }}" {% if page.url contains '/examples' %}class="active"{% endif %}>Examples Gallery</a>
+        </div>
+        <div class="nav-ext">
+          <a href="https://pypi.org/project/ElectroMagneticPython/">PyPI (v3.0.0)</a>
+          <a href="https://github.com/lbolla/EMpy/blob/master/CHANGELOG.md">Changelog</a>
+          <a href="https://github.com/lbolla/EMpy/releases/tag/3.0.0">Release Notes</a>
+        </div>
+      </nav>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        {{ content }}
+      </section>
+    </div>
+
+    <!-- FOOTER -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        {% if site.github.is_project_page %}
+        <p class="copyright">{{ site.title | default: site.github.repository_name }} maintained by <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a></p>
+        {% endif %}
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a> · MIT License</p>
+      </footer>
+    </div>
+  </body>
+</html>
