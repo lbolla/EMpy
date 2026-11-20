@@ -88,6 +88,16 @@ See the [Examples Gallery]({{ '/examples/' | relative_url }}) for 22 complete, s
 
 ---
 
+## Commercial Support, Consulting & Sponsorship
+
+`EMpy` is free and open-source under the MIT License. If your organization uses `EMpy` in R&D or production, commercial services are available from the author ([code@lbolla.info](mailto:code@lbolla.info)):
+
+- **Custom Modeling & Optimization:** Grating and metasurface design (`AnisotropicRCWA`), liquid-crystal and birefringent stack modeling (`LiquidCrystalCell`, `AnisotropicTransferMatrix`), waveguide mode/circuit simulation (`FD`, `FMM`, `devices`), and fitting models to experimental data.
+- **Integration & Feature Development:** Embedding `EMpy` into internal Python/CI pipelines, porting legacy MATLAB scripts, or developing custom solver features and material models.
+- **Support Retainers & Sponsorships:** Priority bug fixes, upgrade support, and engineering office hours—or sponsor ongoing maintenance via [GitHub Sponsors](https://github.com/sponsors/lbolla).
+
+---
+
 ## Citation
 
 If you find `EMpy` useful in your research or engineering work, please consider citing it:
@@ -106,7 +116,8 @@ Simulations were performed using EMpy (version 3.0.0; https://github.com/lbolla/
 
 ## Contact & Contributing
 
-- **Author & Maintainer:** Lorenzo Bolla ([lbolla.info](https://lbolla.info) · [@lbolla](https://github.com/lbolla))
+- **Author & Maintainer:** Lorenzo Bolla ([lbolla.info](https://lbolla.info) · [@lbolla](https://github.com/lbolla) · [code@lbolla.info](mailto:code@lbolla.info))
+- **Sponsor Ongoing Development:** [github.com/sponsors/lbolla](https://github.com/sponsors/lbolla)
 - **Source Repository:** [github.com/lbolla/EMpy](https://github.com/lbolla/EMpy)
 - **Bug Reports, Questions & Pull Requests:** [github.com/lbolla/EMpy/issues](https://github.com/lbolla/EMpy/issues)
 - **PyPI Package:** [pypi.org/project/ElectroMagneticPython](https://pypi.org/project/ElectroMagneticPython/)
