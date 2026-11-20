@@ -477,7 +477,7 @@ class UtilsTest(TestCase):
 
         wl = 1.55e-6
         lc_file_path = str(
-            Path(__file__).resolve().parent.parent / "examples" / "lc_data.dat"
+            Path(__file__).resolve().parent.parent / "examples" / "data" / "lc_data.dat"
         )
         lc = EMpy.materials.LiquidCrystal(
             "E7",
@@ -490,7 +490,7 @@ class UtilsTest(TestCase):
             K33=17e-12,
         )
 
-        # 1. At V = 0, BVP planar alignment must match examples/lc_data.dat (86.5 deg from z for 3.5 deg pretilt)
+        # 1. At V = 0, BVP planar alignment must match examples/data/lc_data.dat (86.5 deg from z for 3.5 deg pretilt)
         c_file = U.LiquidCrystalCell(
             lc,
             voltage=0.0,

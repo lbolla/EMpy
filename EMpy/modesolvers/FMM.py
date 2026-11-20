@@ -1831,12 +1831,12 @@ def method_of_component(kz_, slices, Rot, uscelto=None, icomp=None):
     tmp = (
         100 * len(slices[0].modie) * (len(slices) - 1)
     )  # OKKIO: dimension of Mvec * 50. enough?
-    normu = numpy.zeros(tmp, dtype=complex)
     rng = numpy.random.default_rng(0)
     for m in range(len(kz)):
         M = Mvec(kz[m], slices, Rot) / k0
-        urn = numpy.zeros((M.shape[0], tmp), dtype=complex)
         if (uscelto is None) and (icomp is None):
+            urn = numpy.zeros((M.shape[0], tmp), dtype=complex)
+            normu = numpy.zeros(tmp, dtype=complex)
             for k in range(tmp):
                 ur = rng.random(M.shape[0])
                 urn[:, k] = ur / numpy.linalg.norm(ur)
@@ -1866,6 +1866,26 @@ def creaTeThSeSh(kz, slices):
     Thright = numpy.zeros_like(Th)
     Teright = numpy.zeros_like(Th)
 
+    def _kx_cot_csc(kx, width):
+        u = numpy.asarray(kx * width, dtype=complex)
+        small = numpy.abs(u) < 1e-6
+        large_im = numpy.abs(u.imag) > 100.0
+        u_safe = numpy.where(small | large_im, 1.0 + 0.0j, u)
+        cot_term = kx / numpy.tan(u_safe)
+        csc_term = kx / numpy.sin(u_safe)
+        s_im = numpy.where(u.imag >= 0, 1.0, -1.0)
+        cot_term = numpy.where(
+            small,
+            (1.0 - u**2 / 3.0) / width,
+            numpy.where(large_im, -1j * s_im * kx, cot_term),
+        )
+        csc_term = numpy.where(
+            small,
+            (1.0 + u**2 / 6.0) / width,
+            numpy.where(large_im, 0.0 + 0.0j, csc_term),
+        )
+        return cot_term, csc_term
+
     for idx in range(Nslices):
         ke = numpy.array([m.keff.item() for m in slices[idx].modie])
         kh = numpy.array([m.keff.item() for m in slices[idx].modih])
@@ -1873,10 +1893,12 @@ def creaTeThSeSh(kz, slices):
         kxh = numpy.emath.sqrt(kh**2 - kz**2)
         kxe = numpy.emath.sqrt(ke**2 - kz**2)
 
-        Th[:, idx] = (k0 / kh) ** 2 * kxh / numpy.tan(kxh * d[idx])
-        Sh[:, idx] = (k0 / kh) ** 2 * kxh / numpy.sin(kxh * d[idx])
-        Te[:, idx] = (k0 / ke) ** 2 * kxe / numpy.tan(kxe * d[idx])
-        Se[:, idx] = (k0 / ke) ** 2 * kxe / numpy.sin(kxe * d[idx])
+        cot_h, csc_h = _kx_cot_csc(kxh, d[idx])
+        cot_e, csc_e = _kx_cot_csc(kxe, d[idx])
+        Th[:, idx] = (k0 / kh) ** 2 * cot_h
+        Sh[:, idx] = (k0 / kh) ** 2 * csc_h
+        Te[:, idx] = (k0 / ke) ** 2 * cot_e
+        Se[:, idx] = (k0 / ke) ** 2 * csc_e
 
     ke = numpy.array([m.keff.item() for m in slices[0].modie])
     kh = numpy.array([m.keff.item() for m in slices[0].modih])

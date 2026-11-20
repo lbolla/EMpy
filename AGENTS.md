@@ -48,6 +48,6 @@ Whenever implementing, refactoring, auditing, or testing code that handles **ani
 ## 3. Documentation, Examples & `gh-pages` Maintenance
 
 1. **Keep `README.md`, `examples/`, and `gh-pages` in Sync**
-   - Whenever making significant changes to implemented algorithms, public APIs, testing strategies, dependencies, or example scripts/plots, update `README.md`, verify the `examples/ex_*.py` scripts, and update the `gh-pages` branch (`index.html` and `images/*.png` for https://lbolla.github.io/EMpy/) accordingly.
+   - Whenever making significant changes to implemented algorithms, public APIs, testing strategies, dependencies, or example scripts/plots, update `README.md`, verify the `examples/**/ex_*.py` scripts (always including literature references in each example's module docstring), and update the `gh-pages` branch (`index.md` and `images/*.png` for https://lbolla.github.io/EMpy/) accordingly.
 2. **GitHub & PyPI Markdown Compatibility**
    - Keep Markdown files (`README.md`, `AGENTS.md`) cleanly renderable on both GitHub and PyPI: prefer plain Unicode symbols (`Δn → 0`, `κ → 0⁺`, `Re(k_z) ≥ 0`, `Sᴴ S = I`, `‖S‖₂ ≤ 1`) and inline backticks over `$...$` MathJax blocks, and never use unsupported GitHub MathJax macros (`\operatorname`, `\boldsymbol`) or place `$...$` inside bold/italic/parenthesized spans.

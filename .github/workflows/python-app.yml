@@ -44,16 +44,16 @@ jobs:
 
     - name: Smoke test examples
       if: matrix.python-version == '3.12'
-      working-directory: examples
       env:
         MPLBACKEND: Agg
       run: |
         uv run python -c '
-        import glob, os, runpy, sys
+        import glob, runpy
         import matplotlib.pyplot as plt
         plt.show = lambda *a, **k: None
-        sys.path.insert(0, os.getcwd())
-        for path in sorted(glob.glob("ex_*.py")):
+        paths = sorted(glob.glob("examples/**/ex_*.py", recursive=True))
+        assert len(paths) == 22, f"Expected 22 examples, found {len(paths)}"
+        for path in paths:
             runpy.run_path(path, run_name="__main__")
             plt.close("all")
         '

@@ -4,7 +4,7 @@
 
 `EMpy - ElectroMagnetic Python` is a Python suite of numerical algorithms widely used in electromagnetism, photonics, and integrated optics: transfer matrix methods, rigorous coupled-wave analysis (RCWA), finite-difference and film-mode-matching waveguide mode solvers, coupled-resonator photonic circuits, liquid-crystal optics, and vector diffraction/scattering integrals.
 
-Run the scripts in `examples/` to see how `EMpy` works in practice, and visit https://lbolla.github.io/EMpy/ for additional documentation.
+Run the domain-organized scripts in `examples/` (see `examples/README.md` for the full catalog of 22 literature benchmarks and cross-solver comparisons) to see how `EMpy` works in practice, and visit https://lbolla.github.io/EMpy/ for additional documentation.
 
 ## Implemented Algorithms
 
@@ -16,8 +16,8 @@ Run the scripts in `examples/` to see how `EMpy` works in practice, and visit ht
   - `AnisotropicRCWA`: 3D vector coupled-wave solver for arbitrarily Euler-rotated anisotropic gratings with isotropic or uniaxial end layers, Li's inverse-rule Fourier factorization for discontinuous permittivity tensors, and ETM recursion for thick high-order stacks.
 - **Waveguide Mode Solvers & Junctions (`EMpy.modesolvers`):**
   - `FD` (`SVFDModeSolver`, `VFDModeSolver`): Semivectorial and full-vectorial 2D finite-difference mode solvers on non-uniform staggered grids, supporting symmetry walls, 5-component anisotropic permittivity tensors, complex-coordinate-stretching PML boundaries (`stretchmesh`), and shift-invert ARPACK eigensolvers.
-  - `FMM` (`FMM1d`, `FMM2d`): 1D slab and 2D channel waveguide Film Mode Matching solvers expanding fields in slice eigenmodes with analytical sub-cell Poynting overlaps.
-  - `geometries` & `interface` (`SWG`, `SimpleJoint`, `GenericDevice`): Mode-matching S-matrix and T-matrix cascades at waveguide discontinuities (offering both passive conjugated-Poynting mode matching and Lorentz-reciprocal unconjugated-reaction mode matching), plus staggered-grid FDTD mode-overlap helpers (`scripts/FDTD.py`).
+  - `FMM` (`FMM1d`, `FMM2d`): Scale-invariant 1D slab and 2D channel waveguide Film Mode Matching solvers (supporting both SI meters and microns) expanding fields in slice eigenmodes with overflow-free evanescent inner products and analytical sub-cell Poynting overlaps.
+  - `geometries` & `interface` (`SWG`, `SimpleJoint`, `GenericDevice`): Mode-matching S-matrix junctions (offering both passive conjugated-Poynting mode matching and Lorentz-reciprocal unconjugated-reaction mode matching, including cross-solver `FDMode` ↔ `FMMMode2d` overlaps), stabilized multi-element Redheffer star-product S-matrix cascades (`GenericDevice`) for sub-cutoff and long lossy waveguides, and staggered-grid FDTD mode-overlap helpers (`scripts/FDTD.py`).
 - **Photonic Devices, Scattering, Materials & Liquid Crystals (`EMpy.devices`, `EMpy.scattering`, `EMpy.materials`, `EMpy.utils`):**
   - `devices`: Transfer- and chain-matrix models for directional couplers (`Coupler`), delay lines (`Line`), Mach–Zehnder interferometers (`MZ`), single and N-coupled ring resonators (`APRR`, `SRR`, `NRR`), tunable multi-coupler ring filters (`T_TCRR`, `T_CRTCRR`, `T_CTCRR`), dispersive/lossy Fabry–Pérot cavities (`Etalon`), and silicon strip waveguide dispersion (`SWG`).
   - `scattering`: 3D Kottler–Stratton–Chu vector surface-current radiation and scattering integral (`currentsScatteringKottler`).
@@ -36,7 +36,7 @@ Run the scripts in `examples/` to see how `EMpy` works in practice, and visit ht
    - *Anisotropic → Isotropic (`Δn → 0`):* Every anisotropic solver (`AnisotropicMaterial`, `LiquidCrystalCell`, `AnisotropicTransferMatrix`, `AnisotropicRCWA`, 5-component `VFDModeSolver`) is tested against the corresponding isotropic solver both via explicit isotropic tensors (`ε = ε₀ n² I₃` bypassing `isIsotropic()` shortcuts) and along weak-birefringence sequences (`Δn ∈ {1e-4, 1e-8, 0}`) with arbitrary 3D Euler rotations, optic-axis / binormal degeneracies, normal-incidence azimuthal limits (`α → 0⁺, δ ≠ 0`), and `n = 0` / homogeneous grating limits.
    - *Lossy → Lossless (`κ → 0⁺`):* Lossy code paths are tested both at complex zero-loss dtype (`n = n_r + 0.0j`) and along continuous `κ → 0⁺` sequences against strictly real lossless paths across propagating, sub-cutoff, PML, and TIR regimes.
 4. **Independent Cross-Solver & Analytical Benchmarks:**
-   - Verified against Fresnel/Brewster/Airy equations, Kretschmann SPR dips, Jones waveplate calculus, Gooch–Tarry twisted-nematic transmission, Rytov subwavelength effective-medium theory, 1D slab dispersion relations, 2D Gauss–Legendre quadrature, and pointwise Maxwell curl/divergence equations, as well as CI runs across Python 3.10–3.14, `lowest-direct` dependency bounds, and all `examples/ex_*.py` scripts.
+   - Verified against Fresnel/Brewster/Airy equations, Kretschmann SPR dips, Jones waveplate calculus, Gooch–Tarry twisted-nematic transmission, Rytov subwavelength effective-medium theory, 1D slab dispersion relations, 2D Gauss–Legendre quadrature, and pointwise Maxwell curl/divergence equations, as well as CI runs across Python 3.10–3.14, `lowest-direct` dependency bounds, and all `examples/**/ex_*.py` scripts.
 
 ## Installation
 
@@ -60,7 +60,7 @@ Install the development environment:
 make develop
 ```
 
-Run tests and linters (`flake8`, `pyflakes`, `mypy`):
+Run tests and linters (`black --check`, `flake8`, `pyflakes`, `mypy`):
 
 ```bash
 make test
@@ -73,10 +73,10 @@ Format code with `black`:
 make black
 ```
 
-Run an example script:
+Run an example script (see `examples/README.md` for all categories):
 
 ```bash
-uv run examples/ex_APRR.py
+uv run examples/devices/ex_ring_resonators_aprr_srr_nrr.py
 ```
 
 Upgrade locked dependencies:
