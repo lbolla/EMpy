@@ -1,6 +1,5 @@
 """Single ring resonator example."""
 
-
 from matplotlib import pyplot as plt
 import numpy
 

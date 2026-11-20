@@ -1,6 +1,5 @@
 """Rigorous Coupled Wave Analysis example."""
 
-
 from matplotlib import pyplot as plt
 import numpy
 

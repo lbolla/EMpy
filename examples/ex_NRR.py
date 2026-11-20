@@ -1,6 +1,5 @@
 """N-Ring resonators example."""
 
-
 from matplotlib import pyplot as plt
 import numpy
 

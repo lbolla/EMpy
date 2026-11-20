@@ -38,6 +38,7 @@ except ImportError:
     # Fallback for development environments or edge cases
     try:
         from importlib.metadata import version, PackageNotFoundError
+
         __version__ = version("electromagneticpython")
     except PackageNotFoundError:
         __version__ = "0.0.0.dev0"
