@@ -101,14 +101,14 @@ def main():
     s2_norm = np.where(mask, s2 / np.maximum(s0, 1e-30), 0.0)
 
     print(
-        f"Strongest TM0-TE1 hybridization at w_rib = {w_hybrid*1e9:.1f} nm: "
+        f"Strongest TM0-TE1 hybridization at w_rib = {w_hybrid * 1e9:.1f} nm: "
         f"Mode 1 neff = {m_hyb.neff.real:.5f} (TEfrac = {m_hyb.TEfrac():.3f}), "
         f"Mode 2 neff = {hybrid_solver.modes[2].neff.real:.5f} "
         f"(TEfrac = {hybrid_solver.modes[2].TEfrac():.3f})"
     )
     print(
-        f"Power-weighted <S1/S0> = {np.sum(s1)/np.sum(s0):+.3f}, "
-        f"<|S2|/S0> = {np.sum(np.abs(s2))/np.sum(s0):.3f}"
+        f"Power-weighted <S1/S0> = {np.sum(s1) / np.sum(s0):+.3f}, "
+        f"<|S2|/S0> = {np.sum(np.abs(s2)) / np.sum(s0):.3f}"
     )
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.8, 4.5))
@@ -173,7 +173,7 @@ def main():
     )
     fig.colorbar(im, ax=ax2, label="Diagonal Stokes S₂ / S₀ (±45° Hybridization)")
     ax2.set_aspect("equal")
-    ax2.set_title(f"Hybrid Mode Stokes S₂/S₀ (w = {w_hybrid*1e9:.0f} nm)")
+    ax2.set_title(f"Hybrid Mode Stokes S₂/S₀ (w = {w_hybrid * 1e9:.0f} nm)")
     ax2.set_xlabel("x (µm)")
     ax2.set_ylabel("y (µm)")
 

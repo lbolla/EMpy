@@ -112,15 +112,16 @@ def main():
         r_laser.append(float(sol.Rs[wl_idx]))
 
     print(
-        f"Simulated {len(etch_depths)} RIE steps up to {etch_depths[-1]*1e9:.0f} nm "
-        f"at lambda = {wl_lasermon*1e9:.1f} nm (R range: {min(r_laser)*100:.1f}% .. {max(r_laser)*100:.1f}%)"
+        f"Simulated {len(etch_depths)} RIE steps up to {etch_depths[-1] * 1e9:.0f} nm "
+        f"at lambda = {wl_lasermon * 1e9:.1f} nm "
+        f"(R range: {min(r_laser) * 100:.1f}% .. {max(r_laser) * 100:.1f}%)"
     )
 
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(9, 5.5))
     depths_nm = np.array(etch_depths) * 1e9
 
     ax1.plot(depths_nm, refr_idx, color="seagreen")
-    ax1.set_title(f"In-Situ Laser Etch Monitor at λ = {wl_lasermon*1e9:.1f} nm")
+    ax1.set_title(f"In-Situ Laser Etch Monitor at λ = {wl_lasermon * 1e9:.1f} nm")
     ax1.set_ylabel("Top-Layer Re(n)")
     ax1.grid(True, alpha=0.3)
 

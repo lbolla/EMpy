@@ -156,7 +156,7 @@ def main():
 
     print(
         f"Rayleigh cut-off wavelengths (m=+1 air, m=+1 sub, m=-1 sub): "
-        f"{wl_r_air_m1*1e6:.4f} um, {wl_r_sub_m1*1e6:.4f} um, {wl_r_sub_p1*1e6:.4f} um"
+        f"{wl_r_air_m1 * 1e6:.4f} um, {wl_r_sub_m1 * 1e6:.4f} um, {wl_r_sub_p1 * 1e6:.4f} um"
     )
     print(
         f"max |kz_E(nE=nO) - kz_O| = {np.max(np.abs(kz_e_check - kz_sub_p1)):.2e}; "

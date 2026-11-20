@@ -115,7 +115,7 @@ def main():
     ov_te = abs(m_vfd_te.overlap(m_fmm_te))
     ov_tm = abs(m_vfd_tm.overlap(m_fmm_tm))
 
-    print(f"450 nm x 220 nm SOI strip waveguide at {wl*1e6:.2f} um:")
+    print(f"450 nm x 220 nm SOI strip waveguide at {wl * 1e6:.2f} um:")
     print(
         f"  TE0: VFD neff = {m_vfd_te.neff.real:.5f} (TEfrac={m_vfd_te.TEfrac():.3f}), "
         f"FMM2d neff = {m_fmm_te.neff.real:.5f} (TEfrac={m_fmm_te.TEfrac():.3f}), "

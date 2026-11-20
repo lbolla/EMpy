@@ -86,7 +86,7 @@ def main():
     )
     print(
         f"High-finesse coated etalon (R={r_coat}): finesse = {float(np.mean(et0.FINESSE)):.2f}, "
-        f"FWHM = {float(np.mean(et0.FWHM))*1e-9:.2f} GHz"
+        f"FWHM = {float(np.mean(et0.FWHM)) * 1e-9:.2f} GHz"
     )
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.8, 4.4))

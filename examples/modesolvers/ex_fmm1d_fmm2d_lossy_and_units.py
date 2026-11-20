@@ -150,8 +150,8 @@ def main():
     print(
         f"FMM2d SI meters vs. microns max |neff(m) - neff(um)| = {unit_diff:.2e}; "
         f"effective confinement slope d(alpha_mode)/d(alpha_core): "
-        f"TE0 = {alpha_te0_dbcm[-1]/alpha_core_dbcm[-1]:.3f}, "
-        f"TM0 = {alpha_tm0_dbcm[-1]/alpha_core_dbcm[-1]:.3f}"
+        f"TE0 = {alpha_te0_dbcm[-1] / alpha_core_dbcm[-1]:.3f}, "
+        f"TM0 = {alpha_tm0_dbcm[-1] / alpha_core_dbcm[-1]:.3f}"
     )
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.6, 4.4))

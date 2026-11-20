@@ -133,7 +133,7 @@ def main():
     print(f"AnisotropicRCWA max |sum(DE1 + DE3) - 1| = {energy_err:.2e}")
     for idx, pk in enumerate(peaks[:3]):
         print(
-            f"  GMR peak {idx+1}: wl = {pk.x:.3f} nm, R_0 = {pk.y:.4f}, "
+            f"  GMR peak {idx + 1}: wl = {pk.x:.3f} nm, R_0 = {pk.y:.4f}, "
             f"FWHM = {pk.FWHM:.3f} nm"
         )
 

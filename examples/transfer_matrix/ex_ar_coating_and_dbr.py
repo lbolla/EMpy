@@ -70,12 +70,12 @@ def main():
 
     idx0 = int(np.argmin(np.abs(wls - wl0)))
     print(
-        f"AR coating at {wl0*1e6:.2f} um (10 deg): Rs = {sol_ar.Rs[idx0]:.5f}, "
+        f"AR coating at {wl0 * 1e6:.2f} um (10 deg): Rs = {sol_ar.Rs[idx0]:.5f}, "
         f"Rp = {sol_ar.Rp[idx0]:.5f} (0-deg theory R = {r0_theory:.5f})"
     )
     print(
-        f"8-pair TiO2/SiO2 DBR peak R({wl0*1e6:.2f} um) = {sol_dbr.Rs[idx0]:.6f}, "
-        f"Macleod stopband width = {dwl_macleod*1e9:.1f} nm"
+        f"8-pair TiO2/SiO2 DBR peak R({wl0 * 1e6:.2f} um) = {sol_dbr.Rs[idx0]:.6f}, "
+        f"Macleod stopband width = {dwl_macleod * 1e9:.1f} nm"
     )
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.3))

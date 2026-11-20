@@ -121,7 +121,7 @@ def main():
     mainlobe_mask = np.abs(thetas) <= EMpy.utils.deg2rad(35.0)
     ff_err = float(np.max(np.abs(pat_e_norm[mainlobe_mask] - pat_airy[mainlobe_mask])))
     print(
-        f"Circular aperture (2a = {2*a_rad/wl0:.1f} wl0, {n_q} patches): "
+        f"Circular aperture (2a = {2 * a_rad / wl0:.1f} wl0, {n_q} patches): "
         f"mainlobe/sidelobe max |Kottler - Airy| = {ff_err:.3e}"
     )
     print(

@@ -99,7 +99,7 @@ def main():
 
     idx_mid = int(np.argmin(np.abs(wls_chol - n_avg * pitch)))
     print(
-        f"Cholesteric Bragg band: [{wl_band_lo*1e6:.3f}, {wl_band_hi*1e6:.3f}] um | "
+        f"Cholesteric Bragg band: [{wl_band_lo * 1e6:.3f}, {wl_band_hi * 1e6:.3f}] um | "
         f"Linear-input R_tot(center) = {sol_chol.R_tot[0, idx_mid]:.4f} (~0.50 selective CP mirror)"
     )
 

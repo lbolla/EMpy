@@ -169,8 +169,8 @@ def main():
 
     min_im_neff = min(m.neff.imag for m in sol_air_0.modes)
     print(
-        f"MMI beat length L_pi = {l_pi*1e6:.2f} um -> 1x2 image at z_MMI = {l_1x2*1e6:.2f} um, "
-        f"1x1 mirror image at z_MMI = {l_1x1*1e6:.2f} um"
+        f"MMI beat length L_pi = {l_pi * 1e6:.2f} um -> 1x2 image at z_MMI = {l_1x2 * 1e6:.2f} um, "
+        f"1x1 mirror image at z_MMI = {l_1x1 * 1e6:.2f} um"
     )
     print(
         f"Sub-cutoff mode min Im(neff) = {min_im_neff:.3f}: GenericDevice S-matrix norm = "

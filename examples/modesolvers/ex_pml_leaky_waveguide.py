@@ -137,7 +137,7 @@ def main():
     print("W-type leaky waveguide tunneling radiation loss (VFD+PML vs. exact 1D):")
     for tb, l_th, l_fd in zip(barrier_widths, loss_theory_dbcm, loss_vfd_dbcm):
         print(
-            f"  barrier t_b = {tb*1e6:.2f} um: analytical = {l_th:8.3f} dB/cm, "
+            f"  barrier t_b = {tb * 1e6:.2f} um: analytical = {l_th:8.3f} dB/cm, "
             f"VFD+stretchmesh PML = {l_fd:8.3f} dB/cm"
         )
     print(f"Max relative leakage-loss discrepancy: {rel_err:.2%}")
@@ -187,7 +187,7 @@ def main():
         label="Barrier (n=1.40)",
     )
     ax2.axvspan(-(a_half + tb_plot) * 1e6, -a_half * 1e6, color="skyblue", alpha=0.25)
-    ax2.set_title(f"Leaky Mode Profile & PML Absorption (t_b = {tb_plot*1e6:.2f} µm)")
+    ax2.set_title(f"Leaky Mode Profile & PML Absorption (t_b = {tb_plot * 1e6:.2f} µm)")
     ax2.set_xlabel("x (µm)")
     ax2.set_ylabel("Normalized Electric Field")
     ax2.grid(True, alpha=0.3)
