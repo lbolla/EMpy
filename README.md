@@ -6,6 +6,15 @@
 
 Run the domain-organized scripts in `examples/` (see `examples/README.md` for the full catalog of 22 literature benchmarks and cross-solver comparisons) to see how `EMpy` works in practice, and visit https://lbolla.github.io/EMpy/ for additional documentation.
 
+## What's New in 3.0
+
+`EMpy 3.0` is a comprehensive numerical and electrodynamic upgrade across the entire library (see [CHANGELOG.md](https://github.com/lbolla/EMpy/blob/master/CHANGELOG.md) for full details):
+
+- **Unified Passive Electrodynamic Conventions:** Consistent `exp(+iωt - ik·r)` harmonic phase, passive complex refractive index `n = n_r - iκ` (`κ ≥ 0`), passive branch-cut selection across total internal reflection (TIR), plasmonic, and lossy media, and complex-symmetric linear algebra throughout.
+- **Stabilized Full-Wave & Multilayer Solvers:** Rewritten 4 × 4 Yeh–Berreman `AnisotropicTransferMatrix` (biaxial binormals, weak-birefringence `Δn → 0` continuity, cross-mode Poynting flux), ETM-stabilized `AnisotropicRCWA` with Li's inverse-rule factorization, scale-invariant `FMM1d`/`FMM2d` (SI meters & microns), and Redheffer star-product S-matrix cascades (`GenericDevice`, passive & Lorentz-reciprocal `SimpleJoint`).
+- **Out-of-the-Box Liquid Crystals & Modern Stack:** `LiquidCrystalCell` now solves coupled 1D Oseen–Frank elastic + electrostatic BVPs natively via `scipy.integrate.solve_bvp` (no legacy `scikits.bvp1lg` dependency required), targeting Python 3.10–3.14, NumPy 2.x, and SciPy 1.13+.
+- **22 Literature Benchmarks & Rigorous Verification:** Reorganized 7-domain `examples/` suite with literature citations and an 85-test physics/invariant verification suite (`Δn → 0`, `κ → 0⁺`, unitarity, passivity, reciprocity).
+
 ## Implemented Algorithms
 
 - **Transfer Matrix Method (`EMpy.transfer_matrix`):**

@@ -11,7 +11,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Lorenzo Bolla", email = "code@lbolla.info" }]
-urls = { Homepage = "http://lbolla.github.io/EMpy/", Repository = "https://github.com/lbolla/EMpy" }
+urls = { Homepage = "https://lbolla.github.io/EMpy/", Documentation = "https://lbolla.github.io/EMpy/", Repository = "https://github.com/lbolla/EMpy", Changelog = "https://github.com/lbolla/EMpy/blob/master/CHANGELOG.md", Issues = "https://github.com/lbolla/EMpy/issues" }
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",

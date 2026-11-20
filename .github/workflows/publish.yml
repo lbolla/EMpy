@@ -12,8 +12,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          python3 -c '
+          from pathlib import Path
+          import re
+          text = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          m = re.search(r"(?ms)^## \[[^\]]+\][^\n]*\n(.*?)(?=^## \[|\Z)", text)
+          notes = m.group(1).strip() if m else text.strip()
+          Path("release_notes.md").write_text(notes + "\n", encoding="utf-8")
+          '
       - name: Release on GitHub
         uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          generate_release_notes: true
   publish:
     runs-on: ubuntu-latest
     environment:
