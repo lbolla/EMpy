@@ -1090,7 +1090,9 @@ def FMMshootingTM(kz_, FMMpars):
             al[idx1] = ar[idx1] * coskd[idx1] + sr[idx1] * sinkdk[idx1]
 
             # ******************* requirement of continuity
-            if idx1 > n2:
+            # n2 is 1-based, so the last right-to-left layer is idx1 == n2 - 1;
+            # propagate across every interface strictly to the right of it.
+            if idx1 > n2 - 1:
                 sr[idx1 - 1] = sl[idx1]
                 ar[idx1 - 1] = al[idx1] / eps[idx1] * eps[idx1 - 1]
             # *******************
@@ -1192,7 +1194,9 @@ def FMMshooting(kz_, FMMpars):
             al[idx1] = ar[idx1] * coskd[idx1] + sr[idx1] * sinkdk[idx1]
 
             # ******************* requirement of continuity
-            if idx1 > n2:
+            # n2 is 1-based, so the last right-to-left layer is idx1 == n2 - 1;
+            # propagate across every interface strictly to the right of it.
+            if idx1 > n2 - 1:
                 sr[idx1 - 1] = sl[idx1]
                 ar[idx1 - 1] = al[idx1]
             # *******************

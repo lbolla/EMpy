@@ -1032,6 +1032,72 @@ class FMMModeSolverTest(TestCase):
         self.assertLess(dn_errs[1], dn_errs[0])
         self.assertLess(dn_errs[2], 1e-9)
 
+    def test_fmm_shooting_multilayer_right_branch(self):
+        """Verify FMMshooting/FMMshootingTM propagate continuity when >= 2 layers lie right of peak index."""
+        wl = 1.55
+        # Splitting the right cladding of a 3-layer slab into 2 layers (4 total) must leave all modes invariant
+        # and satisfy the exact finite-box transcendental equation k_c * tan(k_c * a) = gamma * coth(gamma * D)
+        a, D = 0.15, 1.0
+        Uy3 = numpy.array([0.0, D, D + 2.0 * a, 2.0 * D + 2.0 * a])
+        ny3 = numpy.array([1.444, 3.476, 1.444])
+        Uy4 = numpy.array([0.0, D, D + 2.0 * a, D + 2.0 * a + 0.4, 2.0 * D + 2.0 * a])
+        ny4 = numpy.array([1.444, 3.476, 1.444, 1.444])
+        k0 = 2.0 * numpy.pi / wl
+        for pol in ("TE", "TM"):
+            m3 = EMpy.modesolvers.FMM.FMM1d_y(Uy3, ny3, wl, 4, "AA", pol)
+            m4 = EMpy.modesolvers.FMM.FMM1d_y(Uy4, ny4, wl, 4, "AA", pol)
+            numpy.testing.assert_allclose(
+                [m.keff for m in m4], [m.keff for m in m3], rtol=1e-12, atol=1e-12
+            )
+            kz0 = float(m4[0].keff[0].real)
+            kc = numpy.sqrt((k0 * 3.476) ** 2 - kz0**2)
+            gam = numpy.sqrt(kz0**2 - (k0 * 1.444) ** 2)
+            if pol == "TE":
+                lhs = kc * numpy.tan(kc * a)
+                rhs = gam / numpy.tanh(gam * D)
+            else:
+                lhs = (kc / 3.476**2) * numpy.tan(kc * a)
+                rhs = (gam / 1.444**2) / numpy.tanh(gam * D)
+            self.assertAlmostEqual(lhs / rhs, 1.0, places=12)
+
+        # Genuine 4-layer slab (air / Si / SiN / SiO2) checked against exact 2x2 Abeles transfer matrix
+        Uy_4mat = numpy.array([0.0, 0.8, 1.1, 1.5, 2.5])
+        ny_4mat = numpy.array([1.0, 3.476, 2.0, 1.444])
+        d_4mat = numpy.diff(Uy_4mat)
+        for pol in ("TE", "TM"):
+            modes_4 = EMpy.modesolvers.FMM.FMM1d_y(Uy_4mat, ny_4mat, wl, 4, "AA", pol)
+            for mode in modes_4:
+                kz = mode.keff[0]
+                M = numpy.eye(2, dtype=complex)
+                for dj, nj in zip(d_4mat, ny_4mat, strict=True):
+                    kj = numpy.emath.sqrt((k0 * nj) ** 2 - kz**2)
+                    c = numpy.cos(kj * dj)
+                    s_over_k = numpy.sinc(kj * dj / numpy.pi) * dj
+                    s_times_k = numpy.sin(kj * dj) * kj
+                    if pol == "TE":
+                        Mj = numpy.array(
+                            [[c, s_over_k], [-s_times_k, c]], dtype=complex
+                        )
+                    else:
+                        ej = nj**2
+                        Mj = numpy.array(
+                            [[c, ej * s_over_k], [-s_times_k / ej, c]], dtype=complex
+                        )
+                    M = Mj @ M
+                self.assertLess(abs(M[0, 1]) / numpy.linalg.norm(M), 1e-8)
+
+        # Asymmetric lossy 3-layer slab with peak index at layer 0 must match its mirror image (peak at layer 2)
+        Uy_a = numpy.array([0.0, 0.4, 1.0, 2.0])
+        ny_a = numpy.array([3.476 - 1e-3j, 2.0 - 5e-4j, 1.444])
+        Uy_b = numpy.array([0.0, 1.0, 1.6, 2.0])
+        ny_b = ny_a[::-1]
+        for pol in ("TE", "TM"):
+            ma = EMpy.modesolvers.FMM.FMM1d_y(Uy_a, ny_a, wl, 4, "AS", pol)
+            mb = EMpy.modesolvers.FMM.FMM1d_y(Uy_b, ny_b, wl, 4, "SA", pol)
+            numpy.testing.assert_allclose(
+                [m.keff for m in ma], [m.keff for m in mb], rtol=1e-12, atol=1e-12
+            )
+
 
 class GeometriesTest(TestCase):
 
