@@ -551,6 +551,81 @@ class VFDModeSolverTest(TestCase):
             atol=1e-10,
         )
 
+    def test_fd_analytic_pec_waveguide_and_uniaxial_slab(self):
+        """Verify VFDModeSolver and SVFDModeSolver against closed-form homogeneous waveguide & uniaxial slab dispersion."""
+        wl = 1.55
+        a, b = 2.0, 1.4
+        x = numpy.linspace(0.0, a, 41)
+        y = numpy.linspace(0.0, b, 29)
+
+        # 1. Homogeneous dielectric box with Dirichlet ("0000") BCs:
+        #    ghost-cell Dirichlet walls sit one step outside the vertex grid, so
+        #    a_eff = a + 2*dx, b_eff = b + 2*dy, with exact neff = sqrt(n^2 - (wl/2a_eff)^2 - (wl/2b_eff)^2).
+        dx = x[1] - x[0]
+        dy = y[1] - y[0]
+        a_eff = a + 2.0 * dx
+        b_eff = b + 2.0 * dy
+        for n_mat in (1.5, 1.5 - 0.02j):
+            neff_exact = numpy.sqrt(
+                complex(n_mat) ** 2
+                - (wl / (2.0 * a_eff)) ** 2
+                - (wl / (2.0 * b_eff)) ** 2
+            )
+            eps_const = lambda xc, yc, e=n_mat**2: numpy.full(  # noqa: E731
+                (len(xc), len(yc)), e
+            )
+            vfd = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, eps_const, "0000").solve(
+                1, 1e-10
+            )
+            self.assertAlmostEqual(vfd.modes[0].neff, neff_exact, places=3)
+            # SVFDModeSolver solves on cell centers (len-1), so ghost walls sit at a+dx, b+dy
+            neff_exact_sv = numpy.sqrt(
+                complex(n_mat) ** 2
+                - (wl / (2.0 * (a + dx))) ** 2
+                - (wl / (2.0 * (b + dy))) ** 2
+            )
+            for method in ("Ex", "Ey", "scalar"):
+                svfd = EMpy.modesolvers.FD.SVFDModeSolver(
+                    wl, x, y, eps_const, "0000", method=method
+                ).solve(1, 1e-10)
+                self.assertAlmostEqual(svfd.neff[0], neff_exact_sv, places=3)
+
+        # 2. Uniaxial anisotropic dielectric slab (uniform in y, Dirichlet on x, 'A' on N/S so Hy is symmetric, k_y = 0):
+        #    Core has diag(nE^2, nO^2, nO^2), cladding has nC^2.
+        #    TM0 (Hy-polarized, Ex/Ez electric field) obeys exact uniaxial dispersion:
+        #    (kappa_TM / nO^2) * tan(kappa_TM * h_half) == (gamma_TM / nC^2) * coth(gamma_TM * D_eff)
+        #    where kappa_TM = sqrt(k0^2 * nO^2 - (nO^2 / nE^2) * beta^2).
+        k0 = 2.0 * numpy.pi / wl
+        h_half, D = 0.25, 1.25
+        nO, nE, nC = 2.2, 2.8, 1.45
+        x_slab = numpy.linspace(-(h_half + D), h_half + D, 121)
+        y_slab = numpy.linspace(0.0, 0.2, 5)
+        D_eff = D + (x_slab[1] - x_slab[0])
+
+        def _eps_uniaxial_slab(xc, yc):
+            core = numpy.abs(xc[:, None]) <= h_half
+            exx = numpy.where(core, nE**2, nC**2) * numpy.ones((1, len(yc)))
+            eyy = numpy.where(core, nO**2, nC**2) * numpy.ones((1, len(yc)))
+            ezz = eyy.copy()
+            z0 = numpy.zeros_like(exx)
+            return numpy.stack([exx, z0, z0, eyy, ezz], axis=-1)
+
+        # "AA00": antisymmetric Hx / symmetric Hy on N/S (allows k_y = 0 for Hy-polarized TM0), Dirichlet on E/W
+        vfd_uni = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, x_slab, y_slab, _eps_uniaxial_slab, "AA00"
+        ).solve(2, 1e-10)
+        tm_mode = max(
+            vfd_uni.modes,
+            key=lambda m: float(numpy.max(numpy.abs(m.Hy)))
+            / max(float(numpy.max(numpy.abs(m.Hx))), 1e-30),
+        )
+        beta = k0 * float(tm_mode.neff.real)
+        kappa_tm = numpy.sqrt((k0 * nO) ** 2 - (nO**2 / nE**2) * beta**2)
+        gamma_tm = numpy.sqrt(beta**2 - (k0 * nC) ** 2)
+        lhs = (kappa_tm / nO**2) * numpy.tan(kappa_tm * h_half)
+        rhs = (gamma_tm / nC**2) / numpy.tanh(gamma_tm * D_eff)
+        self.assertAlmostEqual(lhs / rhs, 1.0, places=2)
+
 
 class FMMModeSolverTest(TestCase):
 

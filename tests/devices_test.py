@@ -498,3 +498,69 @@ class TunableRingTest(TestCase):
         _, tau_ct, _ = EMpy.utils.group_delay_and_dispersion(wls_span, ct_tuned.DROP)
         self.assertTrue(numpy.all(tau_crt > 0.0))
         self.assertTrue(numpy.all(tau_ct > 0.0))
+
+
+class AnalyticDevicesTest(TestCase):
+
+    def test_aprr_mz_srr_exact_analytic_relations(self):
+        """Verify APRR, MZ, and SRR against exact closed-form Yariv/Schwelb formulas."""
+        # 1. APRR: Yariv critical coupling (|THRU|=0 at t = a_rt) & exact resonant group delay
+        n_r = 2.4
+        l_ring = 50.0e-6
+        m_order = 78  # even order so half-ring phase exp(-i*m*pi) = +1
+        wl_res = n_r * l_ring / m_order
+        a_rt = 0.85
+        kappa = -wl_res * numpy.log(a_rt) / (2.0 * numpy.pi * l_ring)
+        t_crit = a_rt
+        k_crit = numpy.sqrt(1.0 - t_crit**2)
+        aprr_crit = EMpy.devices.APRR(
+            EMpy.devices.Coupler(wl_res, k_crit, 1.0),
+            complex(n_r, -kappa),
+            l_ring,
+        ).solve()
+        self.assertLess(abs(aprr_crit.THRU), 1e-12)
+
+        # Lossless APRR on-resonance group delay: tau_g = ((1 + t) / (1 - t)) * (n_r * L / c)
+        t_ll = 0.8
+        k_ll = numpy.sqrt(1.0 - t_ll**2)
+        wls_gd = numpy.linspace(wl_res - 2e-11, wl_res + 2e-11, 201)
+        aprr_ll = EMpy.devices.APRR(
+            EMpy.devices.Coupler(wls_gd, k_ll, 1.0),
+            numpy.full_like(wls_gd, n_r),
+            l_ring,
+        ).solve()
+        _, tau_ps, _ = EMpy.utils.group_delay_and_dispersion(wls_gd, aprr_ll.THRU)
+        tau_rt_ps = (n_r * l_ring / EMpy.constants.c) * 1e12
+        tau_exact_ps = ((1.0 + t_ll) / (1.0 - t_ll)) * tau_rt_ps
+        self.assertAlmostEqual(float(tau_ps[len(tau_ps) // 2]), tau_exact_ps, places=4)
+
+        # 2. MZ with balanced 3 dB couplers: |THRU|^2 = sin^2(dphi/2), |DROP|^2 = cos^2(dphi/2)
+        wls_mz = numpy.linspace(1.53e-6, 1.57e-6, 51)
+        c3db = EMpy.devices.Coupler(wls_mz, numpy.sqrt(0.5), 1.0)
+        l1_mz, l2_mz = 100.0e-6, 130.0e-6
+        neff_mz = numpy.full_like(wls_mz, 2.45)
+        line_mz = EMpy.devices.Line(wls_mz, neff_mz, l1_mz, neff_mz, l2_mz)
+        mz = EMpy.devices.MZ(c3db, line_mz, c3db).solve()
+        dphi = 2.0 * numpy.pi * neff_mz / wls_mz * (l2_mz - l1_mz)
+        numpy.testing.assert_allclose(
+            numpy.abs(mz.THRU) ** 2, numpy.sin(0.5 * dphi) ** 2, atol=1e-13
+        )
+        numpy.testing.assert_allclose(
+            numpy.abs(mz.DROP) ** 2, numpy.cos(0.5 * dphi) ** 2, atol=1e-13
+        )
+
+        # 3. SRR: Yariv critical coupling (|THRU|=0 at t1 = t2 * a_rt) & exact resonant DROP
+        k2 = numpy.sqrt(0.1)
+        t2 = numpy.sqrt(1.0 - k2**2)
+        t1_crit = t2 * a_rt
+        k1_crit = numpy.sqrt(1.0 - t1_crit**2)
+        srr_crit = EMpy.devices.SRR(
+            EMpy.devices.Coupler(wl_res, k1_crit, 1.0),
+            EMpy.devices.Coupler(wl_res, k2, 1.0),
+            complex(n_r, -kappa),
+            0.5 * l_ring,
+            0.5 * l_ring,
+        ).solve()
+        self.assertLess(abs(srr_crit.THRU), 1e-13)
+        drop_exact = -k1_crit * k2 * numpy.sqrt(a_rt) / (1.0 - t1_crit * t2 * a_rt)
+        self.assertAlmostEqual(abs(srr_crit.DROP - drop_exact), 0.0, places=13)

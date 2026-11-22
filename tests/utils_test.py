@@ -832,3 +832,22 @@ class UtilsTest(TestCase):
         for bad_anc in (-0.1e-6, 0.5e-6, 0.6e-6):
             with self.assertRaises(ValueError):
                 U.LiquidCrystalCell(lc_v, 0.0, 1.0e-6, bad_anc, nlayers=5)
+
+    def test_blackbody_stefan_boltzmann_and_wien(self):
+        """Verify blackbody(f, T) against exact Stefan-Boltzmann integral and Wien peak law."""
+        C = EMpy.constants
+        U = EMpy.utils
+        T = 5778.0
+        # Exact frequency integral: int_0^inf B_nu(nu, T) dnu = 2 * pi^4 * k^4 * T^4 / (15 * c^2 * h^3)
+        f_max = 30.0 * C.k * T / C.h
+        f = numpy.linspace(1e-6 * f_max, f_max, 20001)
+        B = U.blackbody(f, T)
+        integral_num = float(numpy.trapezoid(B, f))
+        integral_exact = 2.0 * numpy.pi**4 * C.k**4 * T**4 / (15.0 * C.c**2 * C.h**3)
+        self.assertAlmostEqual(integral_num / integral_exact, 1.0, places=6)
+
+        # Wien frequency displacement law: h * f_peak / (k * T) = 3 + W_0(-3 * exp(-3))
+        x_wien = 2.8214393721220787
+        f_peak_num = float(f[numpy.argmax(B)])
+        f_peak_exact = x_wien * C.k * T / C.h
+        self.assertAlmostEqual(f_peak_num / f_peak_exact, 1.0, places=3)

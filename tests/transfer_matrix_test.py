@@ -813,3 +813,78 @@ class TransferMatrixTest(TestCase):
         self.assertLess(t_mags[1], t_mags[0])
         self.assertLess(t_mags[1], 1e-4)
         self.assertLess(t_mags[2], 1e-12)
+
+    def test_anisotropic_uniaxial_exact_fresnel_lekner(self):
+        """Verify AnisotropicTransferMatrix against closed-form Lekner/Yeh uniaxial Fresnel formulas."""
+        eps0 = EMpy.constants.eps0
+        wl = 1.55e-6
+        n1 = 1.45
+        m1 = EMpy.materials.IsotropicMaterial(
+            "m1", n0=EMpy.materials.RefractiveIndex(n0_const=n1)
+        )
+        # In AnisotropicTransferMatrix, kx = k0 * sin(theta_inc_x) (air-equivalent angle),
+        # so inside incident medium n1, n1 * sin(theta_1) = sin(theta_inc_x) and
+        # qz_1 = n1 * cos(theta_1) = sqrt(n1^2 - sin(theta_inc_x)^2).
+        theta_air = EMpy.utils.deg2rad(38.0)
+        kx_norm = np.sin(theta_air)
+        qz1 = np.sqrt(n1**2 - kx_norm**2)
+        cos_t = qz1 / n1
+
+        def _passive_sqrt(val):
+            r = np.sqrt(complex(val))
+            return -r if (r.real - r.imag < 0) else r
+
+        for nO, nE in [(1.60, 1.85), (1.60 - 0.12j, 1.85 - 0.08j)]:
+            # 1. Optic axis normal to interface (c || z): diag(nO^2, nO^2, nE^2)
+            m_z = EMpy.materials.AnisotropicMaterial(
+                "uni_z",
+                EMpy.materials.EpsilonTensor(eps0 * np.diag([nO**2, nO**2, nE**2])),
+            )
+            tmm_z = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                EMpy.utils.Multilayer(
+                    [EMpy.utils.Layer(m1, np.inf), EMpy.utils.Layer(m_z, np.inf)]
+                ),
+                theta_air,
+                0.0,
+            ).solve([wl])
+            qz_o = _passive_sqrt(nO**2 - kx_norm**2)
+            qz_e = _passive_sqrt(nE**2 - kx_norm**2)
+            rss_z = (n1 * cos_t - qz_o) / (n1 * cos_t + qz_o)
+            rpp_z = (nO * nE * cos_t - n1 * qz_e) / (nO * nE * cos_t + n1 * qz_e)
+            self.assertAlmostEqual(float(tmm_z.R[0, 0, 0]), abs(rss_z) ** 2, places=12)
+            self.assertAlmostEqual(float(tmm_z.R[1, 1, 0]), abs(rpp_z) ** 2, places=12)
+            self.assertAlmostEqual(float(tmm_z.R[0, 1, 0]), 0.0, places=12)
+            self.assertAlmostEqual(float(tmm_z.R[1, 0, 0]), 0.0, places=12)
+
+            # 2. Optic axis in interface & plane of incidence (c || x): diag(nE^2, nO^2, nO^2)
+            m_x = EMpy.materials.AnisotropicMaterial(
+                "uni_x",
+                EMpy.materials.EpsilonTensor(eps0 * np.diag([nE**2, nO**2, nO**2])),
+            )
+            tmm_x = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                EMpy.utils.Multilayer(
+                    [EMpy.utils.Layer(m1, np.inf), EMpy.utils.Layer(m_x, np.inf)]
+                ),
+                theta_air,
+                0.0,
+            ).solve([wl])
+            rpp_x = (nO * nE * cos_t - n1 * qz_o) / (nO * nE * cos_t + n1 * qz_o)
+            self.assertAlmostEqual(float(tmm_x.R[0, 0, 0]), abs(rss_z) ** 2, places=12)
+            self.assertAlmostEqual(float(tmm_x.R[1, 1, 0]), abs(rpp_x) ** 2, places=12)
+
+            # 3. Optic axis perpendicular to plane of incidence (c || y): diag(nO^2, nE^2, nO^2)
+            m_y = EMpy.materials.AnisotropicMaterial(
+                "uni_y",
+                EMpy.materials.EpsilonTensor(eps0 * np.diag([nO**2, nE**2, nO**2])),
+            )
+            tmm_y = EMpy.transfer_matrix.AnisotropicTransferMatrix(
+                EMpy.utils.Multilayer(
+                    [EMpy.utils.Layer(m1, np.inf), EMpy.utils.Layer(m_y, np.inf)]
+                ),
+                theta_air,
+                0.0,
+            ).solve([wl])
+            rss_y = (n1 * cos_t - qz_e) / (n1 * cos_t + qz_e)
+            rpp_y = (nO**2 * cos_t - n1 * qz_o) / (nO**2 * cos_t + n1 * qz_o)
+            self.assertAlmostEqual(float(tmm_y.R[0, 0, 0]), abs(rss_y) ** 2, places=12)
+            self.assertAlmostEqual(float(tmm_y.R[1, 1, 0]), abs(rpp_y) ** 2, places=12)

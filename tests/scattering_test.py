@@ -145,6 +145,91 @@ class ScatteringTest(unittest.TestCase):
             numpy.linalg.norm(f_ev_r.E[:, 1]), numpy.linalg.norm(f_ev_r.E[:, 0])
         )
 
+    def test_kottler_exact_hertzian_electric_and_magnetic_dipole(self):
+        """Verify currentsScatteringKottler against exact closed-form Hertzian E/M dipole fields."""
+        import EMpy.constants as C
 
-if __name__ == "__main__":
-    unittest.main()
+        f = 1.0e9
+        omega = 2.0 * numpy.pi * f
+        Q = numpy.array([[0.0], [0.0], [0.0]])
+        dS = numpy.array([0.05])
+        # Near-field (~0.1 wl), mid-field (~1 wl), and far-field (~20 wl) points
+        P = numpy.array(
+            [
+                [0.02, 0.21, 3.5],
+                [-0.015, 0.18, -2.4],
+                [0.025, -0.14, 4.1],
+            ]
+        )
+        p_vec = numpy.array([0.3 - 0.1j, -0.2 + 0.4j, 0.7 + 0.2j])  # J * dS
+        m_vec = numpy.array([-0.15 + 0.25j, 0.35 - 0.1j, 0.2 - 0.3j])  # M * dS
+        J = (p_vec / dS[0])[:, None]
+        M = (m_vec / dS[0])[:, None]
+        zeros = numpy.zeros_like(J)
+
+        for epsr in (2.25, 2.25 - 0.4j):
+            n = numpy.sqrt(complex(epsr))
+            if n.real - n.imag < 0:
+                n = -n
+            k = omega * n / C.c
+            eps = C.eps0 * epsr
+            eta = C.eta0 / n
+
+            R = numpy.linalg.norm(P, axis=0)
+            rhat = P / R[None, :]
+            g = numpy.exp(-1j * k * R) / (4.0 * numpy.pi * R)
+            ikR = 1j * k * R
+
+            # Exact Hertzian electric dipole (J * dS = p_vec) under exp(+iwt - ikR):
+            # E_J = (1 / (j*w*eps)) * g * [(k^2 - (1 + jkR)/R^2)*p + (-k^2 + 3*(1 + jkR)/R^2)*(rhat.p)*rhat]
+            # Wait: check exact sign:
+            # E_J = -j*w*mu0 * g * [ (1 - j/(kR) - 1/(kR)^2)*p + (-1 + 3j/(kR) + 3/(kR)^2)*(rhat.p)*rhat ]
+            # H_J = (j*k) * (1 + 1/(j*k*R)) * g * (p x rhat)
+            p_dot_r = numpy.sum(rhat * p_vec[:, None], axis=0)
+            E_J_exact = (
+                -1j
+                * omega
+                * C.mu0
+                * g[None, :]
+                * (
+                    (1.0 + 1.0 / ikR + 1.0 / ikR**2)[None, :] * p_vec[:, None]
+                    + (-1.0 - 3.0 / ikR - 3.0 / ikR**2)[None, :]
+                    * p_dot_r[None, :]
+                    * rhat
+                )
+            )
+            H_J_exact = (
+                (1j * k)
+                * (1.0 + 1.0 / ikR)[None, :]
+                * g[None, :]
+                * numpy.cross(p_vec[:, None], rhat, axis=0)
+            )
+
+            fld_J = S.currentsScatteringKottler(P, J, zeros, Q, dS, f=f, epsr=epsr)
+            numpy.testing.assert_allclose(fld_J.E, E_J_exact, rtol=1e-12, atol=1e-14)
+            numpy.testing.assert_allclose(fld_J.H, H_J_exact, rtol=1e-12, atol=1e-14)
+
+            # Exact Hertzian magnetic dipole (M * dS = m_vec) by duality (J -> M, E -> H, H -> -E, mu -> eps):
+            m_dot_r = numpy.sum(rhat * m_vec[:, None], axis=0)
+            H_M_exact = (
+                -1j
+                * omega
+                * eps
+                * g[None, :]
+                * (
+                    (1.0 + 1.0 / ikR + 1.0 / ikR**2)[None, :] * m_vec[:, None]
+                    + (-1.0 - 3.0 / ikR - 3.0 / ikR**2)[None, :]
+                    * m_dot_r[None, :]
+                    * rhat
+                )
+            )
+            E_M_exact = (
+                -(1j * k)
+                * (1.0 + 1.0 / ikR)[None, :]
+                * g[None, :]
+                * numpy.cross(m_vec[:, None], rhat, axis=0)
+            )
+            fld_M = S.currentsScatteringKottler(P, zeros, M, Q, dS, f=f, epsr=epsr)
+            numpy.testing.assert_allclose(fld_M.E, E_M_exact, rtol=1e-12, atol=1e-14)
+            numpy.testing.assert_allclose(fld_M.H, H_M_exact, rtol=1e-12, atol=1e-14)
+            _ = eta
