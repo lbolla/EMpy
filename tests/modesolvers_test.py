@@ -456,6 +456,101 @@ class VFDModeSolverTest(TestCase):
         self.assertLess(dn_errs[1], dn_errs[0])
         self.assertLess(dn_errs[2], 1e-9)
 
+    def test_vfd_nonuniform_anisotropic_xy_symmetry(self):
+        """Verify exact x <-> y symmetry of VFDModeSolver on non-uniform anisotropic meshes."""
+        wl = 1.55
+        # Non-uniform asymmetric grids
+        x = numpy.array([0.0, 0.12, 0.29, 0.55, 0.90, 1.40, 2.00])
+        y = numpy.array([0.0, 0.18, 0.42, 0.72, 1.15, 1.75])
+        nx, ny = len(x) - 1, len(y) - 1
+
+        rng = numpy.random.default_rng(42)
+        base_r = rng.uniform(2.0, 4.0, size=(nx, ny))
+        base_i = -rng.uniform(0.0, 0.15, size=(nx, ny))
+        exx = base_r + 1j * base_i
+        eyy = rng.uniform(2.0, 4.0, size=(nx, ny)) - 1j * rng.uniform(
+            0.0, 0.15, size=(nx, ny)
+        )
+        exy = rng.uniform(-0.6, 0.6, size=(nx, ny)) - 1j * rng.uniform(
+            0.0, 0.05, size=(nx, ny)
+        )
+        eyx = rng.uniform(-0.6, 0.6, size=(nx, ny)) - 1j * rng.uniform(
+            0.0, 0.05, size=(nx, ny)
+        )
+        ezz = rng.uniform(2.0, 4.0, size=(nx, ny)) - 1j * rng.uniform(
+            0.0, 0.15, size=(nx, ny)
+        )
+
+        eps1 = numpy.stack([exx, exy, eyx, eyy, ezz], axis=-1)
+        # Swap x <-> y: (exx, exy, eyx, eyy, ezz) -> (eyy.T, eyx.T, exy.T, exx.T, ezz.T)
+        eps2 = numpy.stack([eyy.T, eyx.T, exy.T, exx.T, ezz.T], axis=-1)
+
+        s1 = EMpy.modesolvers.FD.VFDModeSolver(wl, x, y, lambda xc, yc: eps1, "0000")
+        s2 = EMpy.modesolvers.FD.VFDModeSolver(wl, y, x, lambda xc, yc: eps2, "0000")
+        A1 = s1.build_matrix().toarray()
+        A2 = s2.build_matrix().toarray()
+
+        # Permutation swapping (Hx, Hy) and transposing vertex indices (i, j) -> (j, i)
+        mx, my = len(x), len(y)
+        npts = mx * my
+        perm = numpy.empty(2 * npts, dtype=int)
+        for i in range(mx):
+            for j in range(my):
+                idx1 = i * my + j
+                idx2 = j * mx + i
+                perm[idx2] = npts + idx1
+                perm[npts + idx2] = idx1
+        A1_rot = A1[numpy.ix_(perm, perm)]
+        numpy.testing.assert_allclose(A2, A1_rot, rtol=1e-12, atol=1e-12)
+
+        # Eigenvalue 90-degree rotational invariance on a non-uniform tilted uniaxial waveguide
+        t = numpy.linspace(-1.0, 1.0, 21)
+        g = 1.5 * numpy.sinh(1.2 * t) / numpy.sinh(1.2)
+        phi = numpy.deg2rad(28.0)
+        n_o, n_e = 2.4 - 1e-3j, 2.7 - 2e-3j
+        n_cl = 1.45
+
+        def _make_eps(rot):
+            def _fn(xc, yc):
+                if not rot:
+                    core = (numpy.abs(xc[:, None]) <= 0.35) & (
+                        numpy.abs(yc[None, :]) <= 0.22
+                    )
+                    ang = phi
+                else:
+                    core = (numpy.abs(xc[:, None]) <= 0.22) & (
+                        numpy.abs(yc[None, :]) <= 0.35
+                    )
+                    ang = 0.5 * numpy.pi - phi
+                no = numpy.where(core, n_o, n_cl)
+                ne = numpy.where(core, n_e, n_cl)
+                c, s = numpy.cos(ang), numpy.sin(ang)
+                return numpy.stack(
+                    [
+                        ne**2 * c**2 + no**2 * s**2,
+                        (ne**2 - no**2) * s * c,
+                        (ne**2 - no**2) * s * c,
+                        ne**2 * s**2 + no**2 * c**2,
+                        no**2,
+                    ],
+                    axis=-1,
+                )
+
+            return _fn
+
+        m1 = EMpy.modesolvers.FD.VFDModeSolver(
+            wl, g, g, _make_eps(False), "0000"
+        ).solve(2, 1e-10)
+        m2 = EMpy.modesolvers.FD.VFDModeSolver(wl, g, g, _make_eps(True), "0000").solve(
+            2, 1e-10
+        )
+        numpy.testing.assert_allclose(
+            [m.neff for m in m1.modes],
+            [m.neff for m in m2.modes],
+            rtol=1e-10,
+            atol=1e-10,
+        )
+
 
 class FMMModeSolverTest(TestCase):
 

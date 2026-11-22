@@ -608,8 +608,8 @@ class VFDModeSolver(ModeSolver):
             n + s
         ) - (
             2 * exy3 * exx2 / ezz3 * e * s / ew23
-            + 2 * exy2 * exx3 / ezz2 * w * n / ew23
-            + 2 * exy4 * exx1 / ezz4 * e * s / ew14
+            + 2 * exy2 * exx3 / ezz2 * w * s / ew23
+            + 2 * exy4 * exx1 / ezz4 * e * n / ew14
             + 2 * exy1 * exx4 / ezz1 * w * n / ew14
             + 2 * exx3 * exx2 * (1.0 / ezz3 - 1.0 / ezz2) * s**2 / ew23
         ) / n / (
