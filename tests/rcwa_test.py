@@ -1711,3 +1711,105 @@ class IsotropicRCWATest(TestCase):
             np.testing.assert_allclose(iso_n.DE3, iso_ref.DE3, atol=1e-10)
             np.testing.assert_allclose(ani_n.DE1, iso_n.DE1, atol=1e-10)
             np.testing.assert_allclose(ani_n.DE3, iso_n.DE3, atol=1e-10)
+
+    def test_lossy_superstrate_oblique_internal_branch_selection(self):
+        """Verify passive internal-layer mode branch selection under oblique incidence from a lossy superstrate."""
+        wl = 1.55e-6
+        m1 = EMpy.materials.IsotropicMaterial(
+            "m1", n0=EMpy.materials.RefractiveIndex(n0_const=1.5 - 0.1j)
+        )
+        m2 = EMpy.materials.IsotropicMaterial(
+            "m2", n0=EMpy.materials.RefractiveIndex(n0_const=1.2)
+        )
+        m3 = EMpy.materials.IsotropicMaterial(
+            "m3", n0=EMpy.materials.RefractiveIndex(n0_const=1.2)
+        )
+        ml_layer = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m1, np.inf),
+                EMpy.utils.Layer(m2, 10.0 * wl),
+                EMpy.utils.Layer(m3, np.inf),
+            ]
+        )
+        ml_grat = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m1, np.inf),
+                EMpy.utils.BinaryGrating(m2, m2, 0.5, 1.2e-6, 10.0 * wl),
+                EMpy.utils.Layer(m3, np.inf),
+            ]
+        )
+
+        # Matched lossless internal layer + substrate (previously singular MTp1 / 1e15 blowup)
+        for alpha in (0.2, 0.7):
+            for psi in (0.0, np.pi / 2):
+                tmm = EMpy.transfer_matrix.IsotropicTransferMatrix(
+                    ml_layer, alpha
+                ).solve([wl])
+                R_ref = float(tmm.Rp[0] if psi == 0.0 else tmm.Rs[0])
+                T_ref = float(tmm.Tp[0] if psi == 0.0 else tmm.Ts[0])
+                iso = EMpy.RCWA.IsotropicRCWA(
+                    ml_grat, alpha=alpha, delta=0.0, psi=psi, phi=np.pi / 2, n=5
+                ).solve([wl])
+                ani = EMpy.RCWA.AnisotropicRCWA(
+                    ml_grat, alpha=alpha, delta=0.0, psi=psi, phi=np.pi / 2, n=5
+                ).solve([wl])
+                np.testing.assert_allclose(iso.DE1.sum(), R_ref, rtol=1e-9, atol=1e-12)
+                np.testing.assert_allclose(iso.DE3.sum(), T_ref, rtol=1e-9, atol=1e-12)
+                np.testing.assert_allclose(ani.DE1.sum(), R_ref, rtol=1e-8, atol=1e-12)
+                np.testing.assert_allclose(ani.DE3.sum(), T_ref, rtol=1e-8, atol=1e-12)
+
+        # TIR lossless internal layer from a lossy superstrate
+        m1_tir = EMpy.materials.IsotropicMaterial(
+            "m1_tir", n0=EMpy.materials.RefractiveIndex(n0_const=1.8 - 0.1j)
+        )
+        m2_tir = EMpy.materials.IsotropicMaterial(
+            "m2_tir", n0=EMpy.materials.RefractiveIndex(n0_const=1.0)
+        )
+        m3_tir = EMpy.materials.IsotropicMaterial(
+            "m3_tir", n0=EMpy.materials.RefractiveIndex(n0_const=1.5)
+        )
+        ml_tir = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m1_tir, np.inf),
+                EMpy.utils.Layer(m2_tir, 0.5 * wl),
+                EMpy.utils.Layer(m3_tir, np.inf),
+            ]
+        )
+        ml_tir_g = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m1_tir, np.inf),
+                EMpy.utils.BinaryGrating(m2_tir, m2_tir, 0.5, 1.2e-6, 0.5 * wl),
+                EMpy.utils.Layer(m3_tir, np.inf),
+            ]
+        )
+        tmm_tir = EMpy.transfer_matrix.IsotropicTransferMatrix(ml_tir, 1.0).solve([wl])
+        iso_tir = EMpy.RCWA.IsotropicRCWA(
+            ml_tir_g, alpha=1.0, delta=0.0, psi=0.0, phi=np.pi / 2, n=3
+        ).solve([wl])
+        ani_tir = EMpy.RCWA.AnisotropicRCWA(
+            ml_tir_g, alpha=1.0, delta=0.0, psi=0.0, phi=np.pi / 2, n=3
+        ).solve([wl])
+        np.testing.assert_allclose(iso_tir.DE1.sum(), tmm_tir.Rp[0], rtol=1e-12)
+        np.testing.assert_allclose(iso_tir.DE3.sum(), tmm_tir.Tp[0], rtol=1e-12)
+        np.testing.assert_allclose(ani_tir.DE1.sum(), tmm_tir.Rp[0], rtol=1e-12)
+        np.testing.assert_allclose(ani_tir.DE3.sum(), tmm_tir.Tp[0], rtol=1e-12)
+
+        # Modulated conical grating under lossy superstrate: IsotropicRCWA == AnisotropicRCWA
+        m2b = EMpy.materials.IsotropicMaterial(
+            "m2b", n0=EMpy.materials.RefractiveIndex(n0_const=2.2)
+        )
+        ml_mod = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m1, np.inf),
+                EMpy.utils.BinaryGrating(m2, m2b, 0.4, 1.2e-6, 0.5 * wl),
+                EMpy.utils.Layer(m3, np.inf),
+            ]
+        )
+        iso_mod = EMpy.RCWA.IsotropicRCWA(
+            ml_mod, alpha=0.5, delta=0.4, psi=0.7, phi=np.pi / 2, n=4
+        ).solve([wl])
+        ani_mod = EMpy.RCWA.AnisotropicRCWA(
+            ml_mod, alpha=0.5, delta=0.4, psi=0.7, phi=np.pi / 2, n=4
+        ).solve([wl])
+        np.testing.assert_allclose(iso_mod.DE1, ani_mod.DE1, rtol=1e-12, atol=1e-12)
+        np.testing.assert_allclose(iso_mod.DE3, ani_mod.DE3, rtol=1e-12, atol=1e-12)

@@ -343,10 +343,25 @@ class IsotropicRCWA(RCWA):
                         - E11
                     )
 
+                    # Eigenvalues of H_U_reduced / H_S_reduced are q^2 = -k_z^2 / k^2,
+                    # with forward modes exp(-i k_z z) = exp(-k q z) => q = +i k_z / k.
+                    # Under exp(+iwt - ik.r), the passive branch Re(k_z) - Im(k_z) >= 0
+                    # (continuous across propagating, TIR, plasmonic, and lossy-superstrate
+                    # regimes, where oblique Im(k_x) < 0 puts k_z in Quadrant I and q in
+                    # Quadrant II) maps to Re(q) + Im(q) >= 0; bare np.sqrt returns Re(q) >= 0
+                    # and would pick the backward root -q in Quadrant IV.
                     q1, W1 = eig(H_U_reduced)
-                    q1 = np.sqrt(q1)
+                    q1 = np.sqrt(q1 + 0j)
+                    flip_q1 = (q1.real + q1.imag < 0) | (
+                        (q1.real + q1.imag == 0) & (q1.imag < 0)
+                    )
+                    q1 = np.where(flip_q1, -q1, q1)
                     q2, W2 = eig(H_S_reduced)
-                    q2 = np.sqrt(q2)
+                    q2 = np.sqrt(q2 + 0j)
+                    flip_q2 = (q2.real + q2.imag < 0) | (
+                        (q2.real + q2.imag == 0) & (q2.imag < 0)
+                    )
+                    q2 = np.where(flip_q2, -q2, q2)
 
                     # boundary conditions
 
@@ -873,11 +888,16 @@ class AnisotropicRCWA(RCWA):
                     def _mode_sort_key(idx):
                         qr = float(q[idx].real)
                         qi = float(q[idx].imag)
-                        if qr < -re_tol:
-                            cat = 2
-                        elif qr > re_tol:
-                            cat = -2
-                        else:
+                        # State-matrix modes evolve as exp(+k q z) = exp(-i k_z z), so
+                        # q = -i k_z / k. For lossless propagating modes (|Re(q)| <= re_tol),
+                        # normal Poynting flux S_z classifies forward vs. backward waves
+                        # (preserving energy-velocity direction in tilted anisotropic media).
+                        # Otherwise, classify by the passive branch Re(k_z) - Im(k_z) >= 0,
+                        # i.e. -(qr + qi) >= 0, rather than Re(q) < 0 alone: under oblique
+                        # incidence from a lossy superstrate (Im(k_x) < 0), forward waves in
+                        # a lossless internal layer have Re(k_z) > Im(k_z) > 0, giving
+                        # qr = +Im(k_z)/k > 0 and qi = -Re(k_z)/k < 0 (Quadrant IV).
+                        if abs(qr) <= re_tol:
                             sz_rel = float(sz[idx]) / max(float(w_norm2[idx]), 1e-30)
                             if sz_rel > 1e-10:
                                 cat = 1
@@ -885,6 +905,22 @@ class AnisotropicRCWA(RCWA):
                                 cat = -1
                             else:
                                 cat = 0
+                        else:
+                            passive = -(qr + qi)
+                            if passive > re_tol:
+                                cat = 2
+                            elif passive < -re_tol:
+                                cat = -2
+                            else:
+                                sz_rel = float(sz[idx]) / max(
+                                    float(w_norm2[idx]), 1e-30
+                                )
+                                if sz_rel > 1e-10:
+                                    cat = 1
+                                elif sz_rel < -1e-10:
+                                    cat = -1
+                                else:
+                                    cat = 0
                         return (cat, -qi, -qr)
 
                     order = sorted(range(4 * nood), key=_mode_sort_key, reverse=True)
