@@ -32,7 +32,16 @@ class NRRTest(TestCase):
 
         self.assertEqual(NRR.THRU.shape, (N,))
         self.assertEqual(NRR.DROP.shape, (N,))
-        self.assertAlmostEqual(numpy.absolute(NRR.THRU).min(), 0.3868920546379094)
+        # Closed-form lossless CROW recursion: r_m = (t_m - r_{m+1} * z) / (1 - t_m * r_{m+1} * z)
+        t_vals = [numpy.sqrt(1.0 - k.K**2) for k in Ks]
+        z_rt = numpy.exp(-1j * (2.0 * numpy.pi * SWG.neff / wls) * (2.0 * numpy.pi * R))
+        thru_analytic = t_vals[-1].astype(complex)
+        for t_m in reversed(t_vals[:-1]):
+            thru_analytic = (t_m - thru_analytic * z_rt) / (
+                1.0 - t_m * thru_analytic * z_rt
+            )
+        numpy.testing.assert_allclose(NRR.THRU, thru_analytic, rtol=1e-12, atol=1e-12)
+        self.assertAlmostEqual(numpy.absolute(NRR.THRU).min(), 0.10440851213414967)
         numpy.testing.assert_allclose(
             numpy.abs(NRR.THRU) ** 2 + numpy.abs(NRR.DROP) ** 2, 1.0, atol=1e-12
         )
@@ -113,13 +122,96 @@ class NRRTest(TestCase):
         self.assertTrue(numpy.all(tau_drop > 0.0))
 
         errs = []
-        for kap in (1e-2, 1e-5):
+        for kap in (1e-2, 1e-4, 1e-6):
             nrr3_k = _solve_nrr3(kap)
             pwr_k = numpy.abs(nrr3_k.THRU) ** 2 + numpy.abs(nrr3_k.DROP) ** 2
             self.assertTrue(numpy.all(pwr_k < 1.0))
             errs.append(float(numpy.max(numpy.abs(nrr3_k.DROP - nrr3_ll.DROP))))
         self.assertLess(errs[1], errs[0])
-        self.assertLess(errs[1], 1e-2)
+        self.assertLess(errs[2], errs[1])
+        self.assertLess(errs[2], 1e-2)
+
+    def test_nrr_matches_independent_crow_network(self):
+        """Verify N=2 and N=3 NRR match an independent linear-system CROW solver."""
+
+        def _solve_crow_direct(wls, k_vals, q_vals, neffs, l1s, l2s):
+            n_rings = len(neffs)
+            thru = numpy.zeros(len(wls), dtype=complex)
+            drop = numpy.zeros(len(wls), dtype=complex)
+            r_vals = [numpy.sqrt(1.0 - k**2) for k in k_vals]
+            # Unknowns per ring m: b2_m (index 2*m) and b1_{m+1} (index 2*m + 1)
+            for iwl, wl in enumerate(wls):
+                p1 = [
+                    numpy.exp(-1j * 2.0 * numpy.pi * n[iwl] / wl * l1)
+                    for n, l1 in zip(neffs, l1s, strict=True)
+                ]
+                p2 = [
+                    numpy.exp(-1j * 2.0 * numpy.pi * n[iwl] / wl * l2)
+                    for n, l2 in zip(neffs, l2s, strict=True)
+                ]
+                A = numpy.eye(2 * n_rings, dtype=complex)
+                rhs = numpy.zeros(2 * n_rings, dtype=complex)
+                # Coupler 0: b2_0 = q0 * (j*k0*1 + r0*p1_0*b1_1)
+                A[0, 1] = -q_vals[0] * r_vals[0] * p1[0]
+                rhs[0] = q_vals[0] * 1j * k_vals[0]
+                # Interior couplers m = 1 .. n_rings - 1
+                for m in range(1, n_rings):
+                    # b1_m = q_m * (r_m * p2_{m-1} * b2_{m-1} + j*k_m * p1_m * b1_{m+1})
+                    A[2 * m - 1, 2 * m - 2] = -q_vals[m] * r_vals[m] * p2[m - 1]
+                    A[2 * m - 1, 2 * m + 1] = -q_vals[m] * 1j * k_vals[m] * p1[m]
+                    # b2_m = q_m * (j*k_m * p2_{m-1} * b2_{m-1} + r_m * p1_m * b1_{m+1})
+                    A[2 * m, 2 * m - 2] = -q_vals[m] * 1j * k_vals[m] * p2[m - 1]
+                    A[2 * m, 2 * m + 1] = -q_vals[m] * r_vals[m] * p1[m]
+                # Drop coupler n_rings: b1_{n_rings} = q_N * r_N * p2_{N-1} * b2_{N-1}
+                A[2 * n_rings - 1, 2 * n_rings - 2] = (
+                    -q_vals[n_rings] * r_vals[n_rings] * p2[n_rings - 1]
+                )
+                sol = numpy.linalg.solve(A, rhs)
+                thru[iwl] = q_vals[0] * (r_vals[0] + 1j * k_vals[0] * p1[0] * sol[1])
+                drop[iwl] = (
+                    q_vals[n_rings]
+                    * 1j
+                    * k_vals[n_rings]
+                    * p2[n_rings - 1]
+                    * sol[2 * n_rings - 2]
+                )
+            return thru, drop
+
+        wls = numpy.linspace(1.545e-6, 1.555e-6, 25)
+        for k_vals, q_vals, n_vals, l1s, l2s in [
+            (
+                [numpy.sqrt(0.3), numpy.sqrt(0.05), numpy.sqrt(0.4)],
+                [0.98, 0.96, 0.99],
+                [2.42 - 1e-3j, 2.47 - 2e-3j],
+                [10.0e-6, 13.0e-6],
+                [14.0e-6, 11.0e-6],
+            ),
+            (
+                [
+                    numpy.sqrt(0.25),
+                    numpy.sqrt(0.06),
+                    numpy.sqrt(0.08),
+                    numpy.sqrt(0.30),
+                ],
+                [1.0, 0.99, 0.98, 0.97],
+                [2.42 - 5e-4j, 2.45 - 1e-3j, 2.43 - 8e-4j],
+                [10.0e-6, 13.0e-6, 11.5e-6],
+                [14.0e-6, 11.0e-6, 15.5e-6],
+            ),
+        ]:
+            ks = [
+                EMpy.devices.Coupler(
+                    wls, numpy.full_like(wls, k), numpy.full_like(wls, q)
+                )
+                for k, q in zip(k_vals, q_vals, strict=True)
+            ]
+            neffs = [n * numpy.ones_like(wls) for n in n_vals]
+            nrr = EMpy.devices.NRR(ks, neffs, l1s, l2s).solve()
+            thru_ref, drop_ref = _solve_crow_direct(
+                wls, k_vals, q_vals, neffs, l1s, l2s
+            )
+            numpy.testing.assert_allclose(nrr.THRU, thru_ref, rtol=1e-13, atol=1e-14)
+            numpy.testing.assert_allclose(nrr.DROP, drop_ref, rtol=1e-13, atol=1e-14)
 
 
 class SWGTest(TestCase):

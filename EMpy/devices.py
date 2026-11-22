@@ -963,12 +963,12 @@ class NRR(Device):
         return self.CM(wl).to_transfer()
 
     def CM(self, wl=None):
-        """Return the L{TransferMatrix} of the NRR.
+        """Return the L{ChainMatrix} of the NRR.
 
         Notes
         =====
 
-        First build its L{TransferMatrix}, then convert it to L{ChainMatrix}.
+        Compose the L{ChainMatrix} of each ring section with the final coupler.
 
         @return: L{ChainMatrix}.
         @rtype: L{ChainMatrix}
@@ -977,20 +977,21 @@ class NRR(Device):
 
         if wl is None:
             wl = self.wl
-        Hs = []
+        CMs = []
         for K, neff, l1, l2 in zip(
             self.Ks[:-1], self.neffs, self.l1s, self.l2s, strict=True
         ):
-            Hs.append(
+            CMs.append(
                 composeTMlist(
                     [
                         Line(self.wl, neff, 0.0, neff, l1).TM(wl),
                         K.TM(wl),
                         Line(self.wl, neff, 0.0, neff, l2).TM(wl),
                     ]
-                )
+                ).to_chain()
             )
-        return composeCM(composeTMlist(Hs), self.Ks[-1].CM(wl))
+        CMs.append(self.Ks[-1].CM(wl))
+        return composeCMlist(CMs)
 
 
 class T_TCRR(Device):
