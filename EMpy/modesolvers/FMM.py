@@ -237,12 +237,13 @@ class FMMMode1dy(FMMMode1d):
         for iU in range(len(self.U) - 1):
             k = self.k[iU]
             sl = self.sl[iU]
+            sr = self.sr[iU]
             al = self.al[iU]
             Ul = self.U[iU]
             Ur = self.U[iU + 1]
             idx = numpy.where((Ul <= y) & (y <= Ur))
             yy = y[idx] - Ul
-            f[idx] = sl * numpy.cos(k * yy) + al * sinxsux(k * yy) * yy
+            f[idx], _ = _eval_segment(k, sl, sr, al, Ur - Ul, yy)
         return f
 
     def plot(self, y):
@@ -355,28 +356,28 @@ class FMMMode2d(Mode):
                 psisueps = sueps(slice.modie[n]).eval(y)
                 psidotsueps = sueps(dot(slice.modie[n])).eval(y)
 
-                # Evaluate u(x) and du/dx from (k, sl, al) so du/dx is the exact
-                # derivative of u(x) inside the slice (preserving div(B) = 0 and
-                # curl(E) = -i*k0*cB even for truncated nmodislices, while avoiding
-                # 0/0 when sin(kx * dx) == 0).
+                # Evaluate u(x) and du/dx consistently: use left-endpoint (sl, al)
+                # for oscillatory/weakly-evanescent slices (|Im(k*dx)| <= 1, avoiding
+                # 0/0 when sin(k*dx) == 0), and symmetric two-endpoint (sl, sr) decaying
+                # exponentials for evanescent slices (|Im(k*dx)| > 1) to avoid
+                # O(exp(|Im(k*dx)|)) catastrophic cancellation.
+                dx_slice = slice.x2 - slice.x1
                 kfh = self.modih[n].k[mx]
                 kxh = numpy.emath.sqrt(kfh**2 - kz**2)
-                sl = self.modih[n].sl[mx] * (k0 / kfh) ** 2
-                al = self.modih[n].al[mx]
-
-                uh[n, idx] = sl * numpy.cos(kxh * x2) + al * x2 * sinxsux(kxh * x2)
-                udoth[n, idx] = -kxh * sl * numpy.sin(kxh * x2) + al * numpy.cos(
-                    kxh * x2
+                slh = self.modih[n].sl[mx] * (k0 / kfh) ** 2
+                srh = self.modih[n].sr[mx] * (k0 / kfh) ** 2
+                alh = self.modih[n].al[mx]
+                uh[n, idx], udoth[n, idx] = _eval_segment(
+                    kxh, slh, srh, alh, dx_slice, x2
                 )
 
                 kfe = self.modie[n].k[mx]
                 kxe = numpy.emath.sqrt(kfe**2 - kz**2)
-                sl = self.modie[n].sl[mx] * (k0 / kfe) ** 2
-                al = self.modie[n].al[mx]
-
-                ue[n, idx] = sl * numpy.cos(kxe * x2) + al * x2 * sinxsux(kxe * x2)
-                udote[n, idx] = -kxe * sl * numpy.sin(kxe * x2) + al * numpy.cos(
-                    kxe * x2
+                sle = self.modie[n].sl[mx] * (k0 / kfe) ** 2
+                sre = self.modie[n].sr[mx] * (k0 / kfe) ** 2
+                ale = self.modie[n].al[mx]
+                ue[n, idx], udote[n, idx] = _eval_segment(
+                    kxe, sle, sre, ale, dx_slice, x2
                 )
 
                 Exsh[:, n] = (kz / k0) * fi
@@ -728,7 +729,7 @@ class FMMMode2d(Mode):
         )
 
     def norm(self):
-        return numpy.emath.sqrt(numpy.real(self.overlap(self)))
+        return numpy.sqrt(numpy.abs(numpy.real(self.overlap(self))))
 
     def normalize(self):
         n = self.norm()
@@ -1392,21 +1393,52 @@ def _conj_mode1d(modo):
     return mc
 
 
+def _eval_segment(k, sl, sr, al, d, s):
+    """Evaluate Helmholtz segment u'' + k^2 u = 0 and u' at offset s in [0, d].
+
+    Uses left-endpoint (sl, al) when |Im(k * d)| <= 1 (exact at k = 0 and sin(k*d) = 0),
+    and symmetric two-endpoint (sl, sr) decaying exponentials when |Im(k * d)| > 1 so
+    all exponentials stay bounded by 1 with no O(exp(|Im(k * d)|)) cancellation.
+    """
+    if d == 0.0:
+        return sl + 0.0 * s, al + 0.0 * s
+    if abs(numpy.imag(k * d)) > 1.0:
+        # Choose k_d with Im(k_d) < 0 so |exp(-1j * k_d * s)| <= 1 for s >= 0
+        k_d = k if numpy.imag(k) < 0 else -k
+        p = numpy.exp(-1j * k_d * d)
+        denom = 1.0 - p**2
+        eL = numpy.exp(-1j * k_d * s)
+        eR = numpy.exp(-1j * k_d * (d - s))
+        u = (sl * (eL - p * eR) + sr * (eR - p * eL)) / denom
+        du = -1j * k_d * (sl * (eL + p * eR) - sr * (eR + p * eL)) / denom
+        return u, du
+    u = sl * numpy.cos(k * s) + al * s * sinxsux(k * s)
+    du = -k * sl * numpy.sin(k * s) + al * numpy.cos(k * s)
+    return u, du
+
+
 def _slice_mode1dx(modo_x, mx, k0, kz):
     """Extract single-slice x-mode on [U[mx], U[mx + 1]] for longitudinal wavevector kz.
 
-    Computes right-endpoint (sr, ar) directly from (k, sl, al) so the Sturm-Liouville
-    Wronskian in scalarprod matches the exact slice function u(x) for any finite nmodislices.
+    Computes right-endpoint (sr, ar) from (k, sl, al) when |Im(k * dx)| <= 1, and
+    preserves bounded endpoints (sl, sr) from creacoeffx3 when |Im(k * dx)| > 1 so the
+    Sturm-Liouville Wronskian in scalarprod stays free of evanescent cancellation.
     """
     m = FMMMode1dx()
     kf = modo_x.k[mx]
     k = numpy.emath.sqrt(kf**2 - kz**2)
     sl = modo_x.sl[mx] * (k0 / kf) ** 2
-    al = modo_x.al[mx]
+    sr_stored = modo_x.sr[mx] * (k0 / kf) ** 2
+    al_stored = modo_x.al[mx]
     U_slice = numpy.asarray(modo_x.U[mx : mx + 2], dtype=float)
     dx = U_slice[1] - U_slice[0]
-    sr = sl * numpy.cos(k * dx) + al * dx * sinxsux(k * dx)
-    ar = -k * sl * numpy.sin(k * dx) + al * numpy.cos(k * dx)
+    if abs(numpy.imag(k * dx)) > 1.0:
+        sr = sr_stored
+        _, al = _eval_segment(k, sl, sr, al_stored, dx, 0.0)
+        _, ar = _eval_segment(k, sl, sr, al_stored, dx, dx)
+    else:
+        al = al_stored
+        sr, ar = _eval_segment(k, sl, sr_stored, al, dx, dx)
     m.k = numpy.atleast_1d(k)
     m.sl = numpy.atleast_1d(sl)
     m.al = numpy.atleast_1d(al)
@@ -1446,15 +1478,15 @@ def _refine_mode1d(modo, U_new):
         )
         k = modo.k[idx]
         sl = modo.sl[idx]
+        sr = modo.sr[idx]
         al = modo.al[idx]
+        d_seg = U_old[idx + 1] - U_old[idx]
         da = ua - U_old[idx]
         db = ub - U_old[idx]
 
         m.k[i] = k
-        m.sl[i] = sl * numpy.cos(k * da) + al * da * sinxsux(k * da)
-        m.al[i] = -k * sl * numpy.sin(k * da) + al * numpy.cos(k * da)
-        m.sr[i] = sl * numpy.cos(k * db) + al * db * sinxsux(k * db)
-        m.ar[i] = -k * sl * numpy.sin(k * db) + al * numpy.cos(k * db)
+        m.sl[i], m.al[i] = _eval_segment(k, sl, sr, al, d_seg, da)
+        m.sr[i], m.ar[i] = _eval_segment(k, sl, sr, al, d_seg, db)
 
     return m
 

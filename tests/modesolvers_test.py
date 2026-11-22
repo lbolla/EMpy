@@ -1224,6 +1224,100 @@ class FMMModeSolverTest(TestCase):
             s4.modes[0].neff, s3.modes[0].neff, rtol=1e-12, atol=1e-12
         )
 
+    def test_fmm_evanescent_wide_cladding_exact_fields_and_overlap(self):
+        """Verify two-endpoint evanescent evaluation against exact closed-form slab fields for |Im(k*d)| > 50..100."""
+        wl = 1.55
+        k0 = 2.0 * numpy.pi / wl
+
+        # 1. 1D wide-cladding slab (|Im(k*D)| ~ 60): exact sinh(gamma*s)/sinh(gamma*D) cladding field
+        D, a = 5.0, 0.25
+        Uy = numpy.array([0.0, D, D + 2.0 * a, 2.0 * D + 2.0 * a])
+        ny = numpy.array([1.444, 3.476, 1.444])
+        m1d = EMpy.modesolvers.FMM.FMM1d_y(Uy, ny, wl, 1, "AA", "TE")[0]
+        kz = float(m1d.keff[0].real)
+        gam = numpy.sqrt(kz**2 - (k0 * 1.444) ** 2)
+        kc = numpy.sqrt((k0 * 3.476) ** 2 - kz**2)
+        self.assertGreater(gam * D, 55.0)
+        self.assertEqual(abs(m1d.eval(0.0)[0]), 0.0)
+        self.assertEqual(abs(m1d.eval(Uy[-1])[0]), 0.0)
+        y_grid = numpy.linspace(0.0, Uy[-1], 401)
+        u_num = m1d.eval(y_grid)
+        u_peak = m1d.eval(D + a)[0]
+        u_exact = numpy.where(
+            y_grid < D,
+            u_peak
+            * numpy.cos(kc * a)
+            * numpy.exp(-gam * (D - y_grid))
+            * (1.0 - numpy.exp(-2.0 * gam * y_grid))
+            / (1.0 - numpy.exp(-2.0 * gam * D)),
+            numpy.where(
+                y_grid <= D + 2.0 * a,
+                u_peak * numpy.cos(kc * (y_grid - (D + a))),
+                u_peak
+                * numpy.cos(kc * a)
+                * numpy.exp(-gam * (y_grid - (D + 2.0 * a)))
+                * (1.0 - numpy.exp(-2.0 * gam * (Uy[-1] - y_grid)))
+                / (1.0 - numpy.exp(-2.0 * gam * D)),
+            ),
+        )
+        numpy.testing.assert_allclose(
+            u_num / u_peak, u_exact / u_peak, rtol=1e-12, atol=1e-13
+        )
+
+        # 2. 2D wide-cladding slab (Ux = [0, 6, 6.4, 12.4], n1d = 12 => max|Im(kx*d)| > 100):
+        #    exact closed-form Ey(x) profile and positive unit self-overlap after normalize()
+        b_ee = EMpy.modesolvers.FMM.Boundary(
+            xleft="Electric Wall",
+            xright="Electric Wall",
+            yleft="Electric Wall",
+            yright="Electric Wall",
+        )
+        Ux = numpy.array([0.0, 6.0, 6.4, 12.4])
+        Uy_u = numpy.array([0.0, 1.0])
+        s_slab = EMpy.modesolvers.FMM.FMM2d(
+            Ux, Uy_u, numpy.array([[1.444], [3.476], [1.444]]), b_ee
+        ).solve(wl, 12, 1)
+        ms = s_slab.modes[0]
+        ms.normalize()
+        self.assertAlmostEqual(float(ms.norm()), 1.0, places=12)
+        ov_ana = ms.overlap(ms)
+        self.assertAlmostEqual(float(numpy.real(ov_ana)), 1.0, places=11)
+
+        xg = numpy.concatenate(
+            [
+                numpy.linspace(0.0, 6.0, 101),
+                numpy.linspace(6.0, 6.4, 81)[1:],
+                numpy.linspace(6.4, 12.4, 101)[1:],
+            ]
+        )
+        yg = numpy.linspace(0.0, 1.0, 11)
+        ov_num = ms.overlap(ms, xg, yg)
+        self.assertAlmostEqual(float(numpy.real(ov_num)), 1.0, places=1)
+
+        _, Ey, _, _, _, _ = ms.fields(xg, yg)
+        Ey_1d = Ey[5, :]
+        kc2 = numpy.sqrt((k0 * 3.476) ** 2 - float(ms.keff.real) ** 2)
+        gam2 = numpy.sqrt(float(ms.keff.real) ** 2 - (k0 * 1.444) ** 2)
+        E0 = Ey_1d[numpy.argmin(numpy.abs(xg - 6.2))]
+        Ey_exact = numpy.where(
+            xg < 6.0,
+            E0
+            * numpy.cos(kc2 * 0.2)
+            * numpy.exp(-gam2 * (6.0 - xg))
+            * (1.0 - numpy.exp(-2.0 * gam2 * xg))
+            / (1.0 - numpy.exp(-2.0 * gam2 * 6.0)),
+            numpy.where(
+                xg <= 6.4,
+                E0 * numpy.cos(kc2 * (xg - 6.2)),
+                E0
+                * numpy.cos(kc2 * 0.2)
+                * numpy.exp(-gam2 * (xg - 6.4))
+                * (1.0 - numpy.exp(-2.0 * gam2 * (12.4 - xg)))
+                / (1.0 - numpy.exp(-2.0 * gam2 * 6.0)),
+            ),
+        )
+        numpy.testing.assert_allclose(Ey_1d / E0, Ey_exact / E0, rtol=1e-12, atol=1e-13)
+
 
 class GeometriesTest(TestCase):
 
