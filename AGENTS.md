@@ -23,6 +23,11 @@ Whenever implementing, refactoring, auditing, or testing code that handles **ani
      - **Lossless (`κ = 0`):** energy conservation and unitarity (`R + T = 1`, `sum(DE1 + DE3) = 1`, `Sᴴ S = I`, `|THRU|² + |DROP|² = 1`).
      - **Passive lossy (`κ > 0`):** strict passivity (`R + T ≤ 1`, `‖S‖₂ ≤ 1`, modal attenuation `|exp(-iβL)| < 1`) and Lorentz reciprocity (`S = Sᵀ` whenever `ε = εᵀ`) plus port-swap symmetry.
 
+3. **Verification Against Known Analytic Solutions**
+   - Always try to validate fixes, new features, and regression tests against closed-form or exact analytic benchmarks rather than relying solely on self-consistency, unitarity, or hard-coded numerical snapshots (which can mask topological or branch errors).
+   - Examples: Fresnel / Airy / Abeles 2×2 transfer-matrix relations for multilayers and gratings, finite-box transcendental slab dispersion equations (`κ tan(κa) = γ coth(γD)`), lossless Möbius CROW recursions (`r_m = (t_m - r_{m+1} z) / (1 - t_m r_{m+1} z)`), analytical Fréedericksz thresholds, and exact symmetries (`x ↔ y`, mirror, reciprocity).
+   - Document non-obvious sign, branch-cut, or algebraic choices with brief inline comments so future audits can trace the physical reasoning.
+
 ## 2. Numerical & Electrodynamic Pitfalls to Avoid
 
 1. **Complex-Symmetric vs. Hermitian Algebra & Complex Wavevectors**
