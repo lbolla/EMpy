@@ -508,7 +508,6 @@ class AnisotropicTransferMatrix(TransferMatrix):
             p = np.zeros((4, 3, nlayers), dtype=complex)
             q = np.zeros((4, 3, nlayers), dtype=complex)
             D = np.zeros((4, 4, nlayers), dtype=complex)
-            P = np.zeros((4, 4, nlayers), dtype=complex)
 
             for i in range(nlayers):
                 k[:, :, i], p[:, :, i], q[:, :, i] = find_roots(
@@ -541,38 +540,33 @@ class AnisotropicTransferMatrix(TransferMatrix):
                     ],
                 ]
 
-            for i in range(1, nlayers - 1):
-                P[:, :, i] = np.diag(np.exp(1j * k[:, 2, i] * d[i]))
+            # Bounded Enhanced Transmittance Matrix (ETM) cascade:
+            # Permute each layer's modes into forward [0, 2] and backward [1, 3]
+            # pairs so all internal propagation factors X_f = exp(-i k_z_f d) and
+            # X_b = exp(+i k_z_b d) stay bounded (|X| <= 1 in passive layers),
+            # avoiding catastrophic cancellation in 4x4 transfer-matrix minors on
+            # thick coupled anisotropic layers and overflow on thick metals.
+            idx_fb = [0, 2, 1, 3]
+            MT = D[:, [0, 2], -1]
+            step_T = []
+            for i in range(nlayers - 2, 0, -1):
+                D_ord = D[:, idx_fb, i]
+                x_f = np.exp(-1j * k[[0, 2], 2, i] * d[i])
+                x_b = np.exp(1j * k[[1, 3], 2, i] * d[i])
+                MTp = np.linalg.solve(D_ord, MT)
+                a_f = MTp[:2, :]
+                a_b = MTp[2:, :]
+                S_i = np.linalg.solve(a_f, np.diag(x_f))
+                step_T.append(S_i)
+                MT = D[:, [0, 2], i] + (D[:, [1, 3], i] * x_b[None, :]) @ (a_b @ S_i)
 
-            M = inv(D[:, :, 0])
-            for i in range(1, nlayers - 1):
-                M = np.dot(M, np.dot(D[:, :, i], np.dot(P[:, :, i], inv(D[:, :, i]))))
-            M = np.dot(M, D[:, :, -1])
-
-            deltaM = M[0, 0] * M[2, 2] - M[0, 2] * M[2, 0]
-
-            # reflectance matrix (from yeh_electromagnetic)
-            # r = [rss rsp; rps rpp]
-            r = (
-                np.array(
-                    [
-                        [
-                            M[1, 0] * M[2, 2] - M[1, 2] * M[2, 0],
-                            M[3, 0] * M[2, 2] - M[3, 2] * M[2, 0],
-                        ],
-                        [
-                            M[0, 0] * M[1, 2] - M[1, 0] * M[0, 2],
-                            M[0, 0] * M[3, 2] - M[3, 0] * M[0, 2],
-                        ],
-                    ],
-                    dtype=complex,
-                )
-                / deltaM
-            )
-
-            # transmittance matrix (from yeh_electromagnetic)
-            # t = [tss tsp; tps tpp]
-            t = np.array([[M[2, 2], -M[2, 0]], [-M[0, 2], M[0, 0]]]) / deltaM
+            # Match at the superstrate (z = 0): D_{f,0} + D_{b,0} R = MT T_0
+            sol = np.linalg.solve(np.c_[-D[:, [1, 3], 0], MT], D[:, [0, 2], 0])
+            r = sol[:2, :].T
+            t_curr = sol[2:, :]
+            for S_i in reversed(step_T):
+                t_curr = S_i @ t_curr
+            t = t_curr.T
 
             # Compute power reflectance and transmittance from z-Poynting flux:
             # Sz_j = 0.5 * Re(Ex_j * Hy_j^* - Ey_j * Hx_j^*)

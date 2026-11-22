@@ -888,3 +888,63 @@ class TransferMatrixTest(TestCase):
             rpp_y = (nO**2 * cos_t - n1 * qz_o) / (nO**2 * cos_t + n1 * qz_o)
             self.assertAlmostEqual(float(tmm_y.R[0, 0, 0]), abs(rss_y) ** 2, places=12)
             self.assertAlmostEqual(float(tmm_y.R[1, 1, 0]), abs(rpp_y) ** 2, places=12)
+
+    def test_anisotropic_thick_coupled_and_metal_etm_stability(self):
+        """Verify bounded ETM cascade in AnisotropicTransferMatrix on thick coupled anisotropic and metallic layers."""
+        wl = 1.55e-6
+        eps0 = EMpy.constants.eps0
+        m_air = EMpy.materials.IsotropicMaterial(
+            "air", n0=EMpy.materials.RefractiveIndex(n0_const=1.0)
+        )
+
+        # 1. Thick lossless rotated uniaxial layer with coupled propagating + evanescent modes
+        #    (nO = 0.6 < kx/k0 = 0.75 < nE = 0.95): must conserve energy R_tot + T_tot == 1 up to 50*wl
+        eps_u = eps0 * EMpy.utils.euler_rotate(
+            np.diag([0.6**2, 0.6**2, 0.95**2]),
+            EMpy.utils.deg2rad(60.0),
+            EMpy.utils.deg2rad(20.0),
+            EMpy.utils.deg2rad(10.0),
+        )
+        m_u = EMpy.materials.AnisotropicMaterial(
+            "uni_coupled", EMpy.materials.EpsilonTensor(eps_u)
+        )
+        th = np.arcsin(0.75)
+        for mult in (1.0, 15.0, 50.0):
+            ml = EMpy.utils.Multilayer(
+                [
+                    EMpy.utils.Layer(m_air, np.inf),
+                    EMpy.utils.Layer(m_u, mult * wl),
+                    EMpy.utils.Layer(m_air, np.inf),
+                ]
+            )
+            res = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml, th, 0.0).solve(
+                [wl]
+            )
+            self.assertAlmostEqual(
+                float(res.R_tot[0, 0] + res.T_tot[0, 0]), 1.0, places=12
+            )
+            self.assertAlmostEqual(
+                float(res.R_tot[1, 0] + res.T_tot[1, 0]), 1.0, places=12
+            )
+
+        # 2. Thick metallic layer (n = 0.5 - 10j, d = 100 um) constructed as AnisotropicMaterial:
+        #    must converge to exact single-interface Fresnel reflectance with T == 0 and no NaN
+        n_met = 0.5 - 10.0j
+        m_met = EMpy.materials.AnisotropicMaterial(
+            "met", EMpy.materials.EpsilonTensor(eps0 * n_met**2 * np.eye(3))
+        )
+        r_fresnel = abs((1.0 - n_met) / (1.0 + n_met)) ** 2
+        ml_m = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m_air, np.inf),
+                EMpy.utils.Layer(m_met, 100.0e-6),
+                EMpy.utils.Layer(m_air, np.inf),
+            ]
+        )
+        res_m = EMpy.transfer_matrix.AnisotropicTransferMatrix(ml_m, 0.0, 0.0).solve(
+            [wl]
+        )
+        self.assertAlmostEqual(float(res_m.R[0, 0, 0]), r_fresnel, places=12)
+        self.assertAlmostEqual(float(res_m.R[1, 1, 0]), r_fresnel, places=12)
+        self.assertEqual(float(res_m.T[0, 0, 0]), 0.0)
+        self.assertEqual(float(res_m.T[1, 1, 0]), 0.0)
