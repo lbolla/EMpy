@@ -1996,21 +1996,25 @@ def Mvec(kz, slices, R):
         IDh = Dim1 + idxhID
         JDh = Dim1 + idxhJD
 
+        # Convert 1-based slice index idx to 0-based i (matching the idx=2 and
+        # idx=Nslices blocks below) before indexing Ree/Rhh/Te/Th/Se/Sh.
+        i = idx - 1
+
         M[numpy.ix_(IAe, JAe)] = numpy.dot(
-            Ree[:, :, idx - 1].T * Te[:, idx - 1], Ree[:, :, idx - 1]
-        ) + numpy.diag(Te[:, idx])
-        M[numpy.ix_(IBe, JBe)] = -Ree[:, :, idx - 1].T * Se[:, idx - 1]
-        M[numpy.ix_(ICe, JCe)] = -Se[:, numpy.newaxis, idx] * Ree[:, :, idx]
+            Ree[:, :, i - 1].T * Te[:, i - 1], Ree[:, :, i - 1]
+        ) + numpy.diag(Te[:, i])
+        M[numpy.ix_(IBe, JBe)] = -Ree[:, :, i - 1].T * Se[:, i - 1]
+        M[numpy.ix_(ICe, JCe)] = -Se[:, numpy.newaxis, i] * Ree[:, :, i]
         M[numpy.ix_(IDe, JDe)] = -kz * numpy.dot(
-            Ree[:, :, idx - 1].T, Rhem[:, :, idx - 1].T
+            Ree[:, :, i - 1].T, Rhem[:, :, i - 1].T
         )
 
         M[numpy.ix_(IAh, JAh)] = numpy.dot(
-            Rhhm[:, :, idx - 1] * Th[:, idx - 1], Rhh[:, :, idx - 1]
-        ) + numpy.diag(Th[:, idx])
-        M[numpy.ix_(IBh, JBh)] = -Rhhm[:, :, idx - 1] * Sh[:, idx - 1]
-        M[numpy.ix_(ICh, JCh)] = -Sh[:, numpy.newaxis, idx] * Rhh[:, :, idx]
-        M[numpy.ix_(IDh, JDh)] = kz * numpy.dot(Rhhm[:, :, idx - 1], Rhe[:, :, idx - 1])
+            Rhhm[:, :, i - 1] * Th[:, i - 1], Rhh[:, :, i - 1]
+        ) + numpy.diag(Th[:, i])
+        M[numpy.ix_(IBh, JBh)] = -Rhhm[:, :, i - 1] * Sh[:, i - 1]
+        M[numpy.ix_(ICh, JCh)] = -Sh[:, numpy.newaxis, i] * Rhh[:, :, i]
+        M[numpy.ix_(IDh, JDh)] = kz * numpy.dot(Rhhm[:, :, i - 1], Rhe[:, :, i - 1])
 
     idx = 2
 
@@ -2123,69 +2127,44 @@ def check_matching(kz, slices, modo, R):
     Ael = numpy.array([m.al for m in modo.modie])
 
     kz = modo.keff
+    Nslices = len(slices)
+    residuals = []
+    for i in range(Nslices - 1):
+        residuals.append(
+            numpy.linalg.norm(numpy.dot(R.Rhh[:, :, i], Shl[:, i + 1]) - Shr[:, i])
+        )
+        residuals.append(
+            numpy.linalg.norm(numpy.dot(R.Ree[:, :, i], Sel[:, i + 1]) - Ser[:, i])
+        )
+        residuals.append(
+            numpy.linalg.norm(
+                numpy.dot(R.Rhh[:, :, i], Ahl[:, i + 1])
+                - kz * numpy.dot(R.Rhe[:, :, i], Sel[:, i + 1])
+                - Ahr[:, i]
+            )
+        )
+        residuals.append(
+            numpy.linalg.norm(
+                numpy.dot(R.Reem[:, :, i].T, Ael[:, i + 1])
+                + kz * numpy.dot(R.Rhem[:, :, i].T, Shl[:, i + 1])
+                - Aer[:, i]
+            )
+        )
+    for i in range(Nslices):
+        residuals.append(
+            numpy.linalg.norm(-Te[:, i] * Sel[:, i] + Se[:, i] * Ser[:, i] - Ael[:, i])
+        )
+        residuals.append(
+            numpy.linalg.norm(-Th[:, i] * Shl[:, i] + Sh[:, i] * Shr[:, i] - Ahl[:, i])
+        )
+        residuals.append(
+            numpy.linalg.norm(-Sh[:, i] * Shl[:, i] + Th[:, i] * Shr[:, i] - Ahr[:, i])
+        )
+        residuals.append(
+            numpy.linalg.norm(-Se[:, i] * Sel[:, i] + Te[:, i] * Ser[:, i] - Aer[:, i])
+        )
 
-    n1 = numpy.linalg.norm(numpy.dot(R.Rhh[:, :, 1], Shl[:, 2]) - Shr[:, 1])
-    n2 = numpy.linalg.norm(numpy.dot(R.Rhh[:, :, 0], Shl[:, 1]) - Shr[:, 0])
-    n3 = numpy.linalg.norm(numpy.dot(R.Ree[:, :, 1], Sel[:, 2]) - Ser[:, 1])
-    n4 = numpy.linalg.norm(numpy.dot(R.Ree[:, :, 0], Sel[:, 1]) - Ser[:, 0])
-    n5 = numpy.linalg.norm(
-        numpy.dot(R.Rhh[:, :, 1], Ahl[:, 2])
-        - kz * numpy.dot(R.Rhe[:, :, 1], Sel[:, 2])
-        - Ahr[:, 1]
-    )
-    n6 = numpy.linalg.norm(
-        numpy.dot(R.Rhh[:, :, 0], Ahl[:, 1])
-        - kz * numpy.dot(R.Rhe[:, :, 0], Sel[:, 1])
-        - Ahr[:, 0]
-    )
-    n7 = numpy.linalg.norm(
-        numpy.dot(R.Reem[:, :, 1].T, Ael[:, 2])
-        + kz * numpy.dot(R.Rhem[:, :, 1].T, Shl[:, 2])
-        - Aer[:, 1]
-    )
-    n8 = numpy.linalg.norm(
-        numpy.dot(R.Reem[:, :, 0].T, Ael[:, 1])
-        + kz * numpy.dot(R.Rhem[:, :, 0].T, Shl[:, 1])
-        - Aer[:, 0]
-    )
-    n9 = numpy.linalg.norm(-Te[:, 0] * Sel[:, 0] + Se[:, 0] * Ser[:, 0] - Ael[:, 0])
-    n10 = numpy.linalg.norm(-Te[:, 1] * Sel[:, 1] + Se[:, 1] * Ser[:, 1] - Ael[:, 1])
-    n11 = numpy.linalg.norm(-Te[:, 2] * Sel[:, 2] + Se[:, 2] * Ser[:, 2] - Ael[:, 2])
-    n12 = numpy.linalg.norm(-Th[:, 0] * Shl[:, 0] + Sh[:, 0] * Shr[:, 0] - Ahl[:, 0])
-    n13 = numpy.linalg.norm(-Th[:, 1] * Shl[:, 1] + Sh[:, 1] * Shr[:, 1] - Ahl[:, 1])
-    n14 = numpy.linalg.norm(-Th[:, 2] * Shl[:, 2] + Sh[:, 2] * Shr[:, 2] - Ahl[:, 2])
-    n15 = numpy.linalg.norm(-Sh[:, 0] * Shl[:, 0] + Th[:, 0] * Shr[:, 0] - Ahr[:, 0])
-    n16 = numpy.linalg.norm(-Sh[:, 1] * Shl[:, 1] + Th[:, 1] * Shr[:, 1] - Ahr[:, 1])
-    n17 = numpy.linalg.norm(-Sh[:, 2] * Shl[:, 2] + Th[:, 2] * Shr[:, 2] - Ahr[:, 2])
-    n18 = numpy.linalg.norm(-Se[:, 0] * Sel[:, 0] + Te[:, 0] * Ser[:, 0] - Aer[:, 0])
-    n19 = numpy.linalg.norm(-Se[:, 1] * Sel[:, 1] + Te[:, 1] * Ser[:, 1] - Aer[:, 1])
-    n20 = numpy.linalg.norm(-Se[:, 2] * Sel[:, 2] + Te[:, 2] * Ser[:, 2] - Aer[:, 2])
-
-    Nv = numpy.array(
-        [
-            n1,
-            n2,
-            n3,
-            n4,
-            n5,
-            n6,
-            n7,
-            n8,
-            n9,
-            n10,
-            n11,
-            n12,
-            n13,
-            n14,
-            n15,
-            n16,
-            n17,
-            n18,
-            n19,
-            n20,
-        ]
-    )
-    N = numpy.linalg.norm(Nv)
+    N = numpy.linalg.norm(numpy.array(residuals))
     return N
 
 

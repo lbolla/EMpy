@@ -1098,6 +1098,57 @@ class FMMModeSolverTest(TestCase):
                 [m.keff for m in ma], [m.keff for m in mb], rtol=1e-12, atol=1e-12
             )
 
+    def test_fmm2d_multislice_mvec_and_exact_coupled_slab(self):
+        """Verify FMM2d Mvec and check_matching for Nslices >= 4 against exact Abeles dispersion."""
+        wl = 1.55
+        k0 = 2.0 * numpy.pi / wl
+        b_ee = EMpy.modesolvers.FMM.Boundary(
+            xleft="Electric Wall",
+            xright="Electric Wall",
+            yleft="Electric Wall",
+            yright="Electric Wall",
+        )
+
+        # 1. Genuine 5-slice coupled-slab (clad/core/gap/core/clad, uniform in y):
+        #    with Electric Walls on y, k_y = 0 Ey-polarized supermodes match exact 1D TE Abeles dispersion.
+        Uy_u = numpy.array([0.0, 1.0])
+        Ux_dc = numpy.array([0.0, 0.7, 1.0, 1.2, 1.5, 2.2])
+        nx_dc = [1.444, 3.476, 1.444, 3.476, 1.444]
+        s_dc = EMpy.modesolvers.FMM.FMM2d(
+            Ux_dc, Uy_u, numpy.array([[n] for n in nx_dc]), b_ee
+        ).solve(wl, 2, 2)
+        d_dc = numpy.diff(Ux_dc)
+        for mode in s_dc.modes:
+            kz = mode.keff
+            M = numpy.eye(2, dtype=complex)
+            for dj, nj in zip(d_dc, nx_dc, strict=True):
+                kj = numpy.emath.sqrt((k0 * nj) ** 2 - kz**2)
+                c = numpy.cos(kj * dj)
+                s_over_k = numpy.sinc(kj * dj / numpy.pi) * dj
+                s_times_k = numpy.sin(kj * dj) * kj
+                M = numpy.array([[c, s_over_k], [-s_times_k, c]], dtype=complex) @ M
+            self.assertLess(abs(M[0, 1]) / numpy.linalg.norm(M), 1e-10)
+
+        # 2. 4-slice 2D channel waveguide (split core) must match the 3-slice waveguide identically
+        Uy = numpy.array([0.0, 0.8, 1.02, 1.82])
+        ny_cl = [1.444, 1.444, 1.444]
+        ny_co = [1.444, 3.476, 1.444]
+        s3 = EMpy.modesolvers.FMM.FMM2d(
+            numpy.array([0.0, 0.8, 1.28, 2.08]),
+            Uy,
+            numpy.array([ny_cl, ny_co, ny_cl]),
+            b_ee,
+        ).solve(wl, 3, 1)
+        s4 = EMpy.modesolvers.FMM.FMM2d(
+            numpy.array([0.0, 0.8, 1.0, 1.28, 2.08]),
+            Uy,
+            numpy.array([ny_cl, ny_co, ny_co, ny_cl]),
+            b_ee,
+        ).solve(wl, 3, 1)
+        numpy.testing.assert_allclose(
+            s4.modes[0].neff, s3.modes[0].neff, rtol=1e-12, atol=1e-12
+        )
+
 
 class GeometriesTest(TestCase):
 
