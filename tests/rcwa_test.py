@@ -1646,3 +1646,68 @@ class IsotropicRCWATest(TestCase):
             )
         self.assertLess(dn_errs[1], dn_errs[0])
         self.assertLess(dn_errs[2], 1e-12)
+
+    def test_near_normal_kt_continuity_and_energy_conservation(self):
+        """Verify fc^2 + fs^2 = 1 and continuity for 1e-15 * k < |kt| < 1e-13 * k."""
+        air = EMpy.materials.Air
+        si = EMpy.materials.IsotropicMaterial(
+            "Si", n0=EMpy.materials.RefractiveIndex(n0_const=2.5)
+        )
+        sio2 = EMpy.materials.IsotropicMaterial(
+            "SiO2", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+        pitch = 1.8e-6
+        wl = 1.0e-6
+        ml = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                EMpy.utils.BinaryGrating(si, sio2, 0.45, pitch, 0.35e-6),
+                EMpy.utils.Layer(sio2, np.inf),
+            ]
+        )
+        delta, psi = 0.3, 0.6
+
+        # 1. Near-normal incidence alpha -> 0+ spanning 1e-15..1e-12
+        iso_0 = EMpy.RCWA.IsotropicRCWA(
+            ml, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=3
+        ).solve([wl])
+        ani_0 = EMpy.RCWA.AnisotropicRCWA(
+            ml, alpha=0.0, delta=delta, psi=psi, phi=np.pi / 2, n=3
+        ).solve([wl])
+        for alpha in (1e-14, 5e-14, 1e-13, 1e-12):
+            iso_a = EMpy.RCWA.IsotropicRCWA(
+                ml, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=3
+            ).solve([wl])
+            ani_a = EMpy.RCWA.AnisotropicRCWA(
+                ml, alpha=alpha, delta=delta, psi=psi, phi=np.pi / 2, n=3
+            ).solve([wl])
+            self.assertAlmostEqual(float((iso_a.DE1 + iso_a.DE3).sum()), 1.0, places=12)
+            self.assertAlmostEqual(float((ani_a.DE1 + ani_a.DE3).sum()), 1.0, places=12)
+            np.testing.assert_allclose(iso_a.DE1, iso_0.DE1, atol=1e-10)
+            np.testing.assert_allclose(iso_a.DE3, iso_0.DE3, atol=1e-10)
+            np.testing.assert_allclose(ani_a.DE1, ani_0.DE1, atol=1e-10)
+            np.testing.assert_allclose(ani_a.DE3, ani_0.DE3, atol=1e-10)
+            np.testing.assert_allclose(ani_a.DEO1 + ani_a.DEE1, ani_a.DE1, atol=1e-12)
+            np.testing.assert_allclose(ani_a.DEO3 + ani_a.DEE3, ani_a.DE3, atol=1e-12)
+            np.testing.assert_allclose(ani_a.DEO1, ani_0.DEO1, atol=1e-10)
+            np.testing.assert_allclose(ani_a.DEE1, ani_0.DEE1, atol=1e-10)
+
+        # 2. Near-normal exiting m=+1 diffraction order (kx_{+1} ~ 1e-14 * k)
+        alpha_exact = np.arcsin(wl / pitch)
+        iso_ref = EMpy.RCWA.IsotropicRCWA(
+            ml, alpha=alpha_exact, delta=0.0, psi=psi, phi=np.pi / 2, n=3
+        ).solve([wl])
+        for eps in (1e-14, 5e-14):
+            alpha_near = np.arcsin(wl / pitch + eps)
+            iso_n = EMpy.RCWA.IsotropicRCWA(
+                ml, alpha=alpha_near, delta=0.0, psi=psi, phi=np.pi / 2, n=3
+            ).solve([wl])
+            ani_n = EMpy.RCWA.AnisotropicRCWA(
+                ml, alpha=alpha_near, delta=0.0, psi=psi, phi=np.pi / 2, n=3
+            ).solve([wl])
+            self.assertAlmostEqual(float((iso_n.DE1 + iso_n.DE3).sum()), 1.0, places=12)
+            self.assertAlmostEqual(float((ani_n.DE1 + ani_n.DE3).sum()), 1.0, places=12)
+            np.testing.assert_allclose(iso_n.DE1, iso_ref.DE1, atol=1e-10)
+            np.testing.assert_allclose(iso_n.DE3, iso_ref.DE3, atol=1e-10)
+            np.testing.assert_allclose(ani_n.DE1, iso_n.DE1, atol=1e-10)
+            np.testing.assert_allclose(ani_n.DE3, iso_n.DE3, atol=1e-10)

@@ -301,13 +301,12 @@ class IsotropicRCWA(RCWA):
             # on the passive branch Re(kt) - Im(kt) >= 0 so k_t . (-fs, fc) == 0 holds
             # identically even for conical diffraction in a lossy superstrate; at normal
             # diffraction (kx == ky == 0), preserve delta for continuity as alpha -> 0+.
-            zero_kt = (np.abs(kx) <= 1e-15 * k) & (np.abs(ky) <= 1e-15 * k)
             kt = np.sqrt(kx**2 + ky**2 + 0j)
             flip_kt = (kt.real - kt.imag < 0) | (
                 (kt.real - kt.imag == 0) & (kt.real < 0)
             )
             kt = np.where(flip_kt, -kt, kt)
-            kt = np.where((~zero_kt) & (np.abs(kt) < 1e-13 * k), 1e-13 * k + 0j, kt)
+            zero_kt = np.abs(kt) <= 1e-13 * k
             kt_safe = np.where(zero_kt, 1.0 + 0j, kt)
             fc = np.where(zero_kt, np.cos(delta) + 0j, kx / kt_safe)
             fs = np.where(zero_kt, np.sin(delta) + 0j, ky / kt_safe)
@@ -918,13 +917,12 @@ class AnisotropicRCWA(RCWA):
                 HR_tot_x, HR_tot_y = np.split(np.dot(MR_red[2 * nood :, :], r_red), 2)
                 HT_tot_x, HT_tot_y = np.split(np.dot(MT_red[2 * nood :, :], t_curr), 2)
 
-                zero_kt = (np.abs(kx) <= 1e-15 * k) & (np.abs(ky) <= 1e-15 * k)
                 kt = np.sqrt(kx**2 + ky**2 + 0j)
                 flip_kt = (kt.real - kt.imag < 0) | (
                     (kt.real - kt.imag == 0) & (kt.real < 0)
                 )
                 kt = np.where(flip_kt, -kt, kt)
-                kt = np.where((~zero_kt) & (np.abs(kt) < 1e-13 * k), 1e-13 * k + 0j, kt)
+                zero_kt = np.abs(kt) <= 1e-13 * k
                 kt_safe = np.where(zero_kt, 1.0 + 0j, kt)
                 fc = np.where(zero_kt, np.cos(delta) + 0j, kx / kt_safe)
                 fs = np.where(zero_kt, np.sin(delta) + 0j, ky / kt_safe)
