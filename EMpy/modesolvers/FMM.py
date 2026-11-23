@@ -1011,7 +1011,14 @@ def analyticalsolution(nmodi, TETM, FMMpars):
         modo.ar = ar[mk, :].astype(complex)
         modo.k = kn[mk] * numpy.ones(Nregions)
         modo.U = Uy
-        modo.keff = numpy.emath.sqrt(betay[0] ** 2 - kn[mk] ** 2)
+        # Select passive branch Re(keff) - Im(keff) >= 0 (exp(+iwt - i*keff*z))
+        # so lossless cutoff modes lie on the negative imaginary axis (-i|keff|)
+        # continuously with the lossy kappa -> 0+ limit.
+        keff = numpy.emath.sqrt(betay[0] ** 2 - kn[mk] ** 2)
+        flip_keff = (keff.real - keff.imag < 0) | (
+            (keff.real - keff.imag == 0) & (keff.real < 0)
+        )
+        modo.keff = numpy.where(flip_keff, -keff, keff)
         modo.zero = 0.0
         modo.pars = FMMpars
         modi.append(modo)
@@ -1651,9 +1658,9 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
             imkz2 = numpy.linspace(imkza**2, imkzb**2, Nstepskz)
             imkz = numpy.emath.sqrt(imkz2)
             if TETM == "TM":
-                matchingim, modotmp = FMMshootingTM(1j * imkz, FMMpars)
+                matchingim, modotmp = FMMshootingTM(-1j * imkz, FMMpars)
             else:
-                matchingim, modotmp = FMMshooting(1j * imkz, FMMpars)
+                matchingim, modotmp = FMMshooting(-1j * imkz, FMMpars)
             # nim = imkz * wl / 2.0 / numpy.pi
             nim2 = imkz2 * (wl / 2.0 / numpy.pi) ** 2
             # zeriim, z1, z2 = findzerosnew(nim, numpy.abs(matchingim), searchinterval / k0)
@@ -1662,13 +1669,15 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
             )
             zeriim = numpy.emath.sqrt(zeriim2)
             Message("Found %d imag zeros." % len(zeriim), 2).show(verbosity)
+            # Scan the passive negative imaginary axis (-i * imkz) so lossy
+            # cutoff modes converge in Quadrant IV (Re >= 0, Im <= 0).
             kz1 = numpy.r_[
                 kz1,
-                1j * (zeriim * k0 - imsearchinterval / 2.0 + 1j * searchinterval / 2.0),
+                -1j * (zeriim * k0 - imsearchinterval / 2.0) - searchinterval / 2.0,
             ]
             kz2 = numpy.r_[
                 kz2,
-                1j * (zeriim * k0 + imsearchinterval / 2.0 - 1j * searchinterval / 2.0),
+                -1j * (zeriim * k0 + imsearchinterval / 2.0) + searchinterval / 2.0,
             ]
 
     mk = 0
@@ -1695,6 +1704,8 @@ def FMM1d_y(Uy, ny, wl, nmodi, boundaryRL, TETM, verbosity=0):
             z0 + eps_box - 1j * eps_box,
         )
         z0 = numpy.atleast_1d(z0)
+        flip_z0 = (z0.real - z0.imag < 0) | ((z0.real - z0.imag == 0) & (z0.real < 0))
+        z0 = numpy.where(flip_z0, -z0, z0)
 
         if len(z0) > 0:
             if TETM == "TM":

@@ -1392,6 +1392,54 @@ class FMMModeSolverTest(TestCase):
             m_tm.eval(y_g), u_tm_exact, rtol=1e-12, atol=1e-13
         )
 
+    def test_fmm1d_passive_cutoff_branch_and_lossy_limit(self):
+        """Verify analyticalsolution and FMM1d_y select passive cutoff branch Re(keff) - Im(keff) >= 0 continuously as kappa -> 0+."""
+        wl = 1.55
+        k0 = 2.0 * numpy.pi / wl
+        L = 1.0
+        Uy_u = numpy.array([0.0, L])
+
+        # 1. Uniform slice (analyticalsolution): exact closed-form keff = sqrt((k0*n)^2 - (m*pi/L)^2)
+        #    on passive branch Re(keff) - Im(keff) >= 0 with no sign jump at kappa -> 0+.
+        keff_ll = numpy.array(
+            [
+                m.keff[0]
+                for m in EMpy.modesolvers.FMM.FMM1d_y(
+                    Uy_u, numpy.array([1.5]), wl, 4, "AA", "TE"
+                )
+            ]
+        )
+        for m_idx in range(1, 5):
+            val = (k0 * 1.5) ** 2 - (m_idx * numpy.pi / L) ** 2
+            expected = numpy.sqrt(val) if val >= 0 else -1j * numpy.sqrt(-val)
+            self.assertAlmostEqual(keff_ll[m_idx - 1], expected, places=12)
+
+        errs = []
+        for kap in (1e-2, 1e-6, 1e-12):
+            keff_k = numpy.array(
+                [
+                    m.keff[0]
+                    for m in EMpy.modesolvers.FMM.FMM1d_y(
+                        Uy_u, numpy.array([1.5 - 1j * kap]), wl, 4, "AA", "TE"
+                    )
+                ]
+            )
+            self.assertTrue(numpy.all(keff_k.real - keff_k.imag >= -1e-12))
+            self.assertTrue(numpy.all(keff_k.imag <= 1e-12))
+            errs.append(float(numpy.max(numpy.abs(keff_k - keff_ll))))
+        self.assertLess(errs[1], errs[0])
+        self.assertLess(errs[2], errs[1])
+        self.assertLess(errs[2], 1e-9)
+
+        # 2. Non-uniform lossy slice (FMM1d_y): cutoff modes stay in passive Quadrant IV (Re >= 0, Im <= 0)
+        Uy_2 = numpy.array([0.0, 0.75, 1.5])
+        ny_2 = numpy.array([1.5 - 0.01j, 2.0 - 0.01j])
+        modes_2 = EMpy.modesolvers.FMM.FMM1d_y(Uy_2, ny_2, wl, 5, "AA", "TE")
+        keff_2 = numpy.array([m.keff[0] for m in modes_2])
+        self.assertTrue(numpy.all(keff_2.real >= -1e-12))
+        self.assertTrue(numpy.all(keff_2.imag <= 1e-12))
+        self.assertTrue(numpy.all(keff_2.real - keff_2.imag >= -1e-12))
+
 
 class GeometriesTest(TestCase):
 
