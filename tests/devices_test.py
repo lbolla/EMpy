@@ -499,6 +499,46 @@ class TunableRingTest(TestCase):
         self.assertTrue(numpy.all(tau_crt > 0.0))
         self.assertTrue(numpy.all(tau_ct > 0.0))
 
+        # Complex amplitude & relative phase of T_CTCRR must match ChainMatrix composition of MZ1, K[2], MZ2
+        wls_cm = numpy.linspace(1.545e-6, 1.555e-6, 11)
+        neff_cm = numpy.full(wls_cm.shape, 2.5 - 1e-3j, dtype=complex)
+        K_cm = numpy.array([0.3, 0.4, 0.5])
+        q_cm = 0.97
+        l_cm = numpy.array([20e-6, 23e-6, 27e-6, 31e-6])
+        ct_cm = EMpy.devices.T_CTCRR(neff_cm, K_cm, q_cm, l_cm).solve(wls_cm)
+
+        c0 = EMpy.devices.Coupler(
+            wls_cm, numpy.full_like(wls_cm, K_cm[0]), numpy.full_like(wls_cm, q_cm)
+        )
+        c1 = EMpy.devices.Coupler(
+            wls_cm, numpy.full_like(wls_cm, K_cm[1]), numpy.full_like(wls_cm, q_cm)
+        )
+        c2 = EMpy.devices.Coupler(
+            wls_cm, numpy.full_like(wls_cm, K_cm[2]), numpy.full_like(wls_cm, q_cm)
+        )
+        mz1 = EMpy.devices.MZ(
+            c0, EMpy.devices.Line(wls_cm, neff_cm, l_cm[2], neff_cm, l_cm[0]), c0
+        )
+        mz2 = EMpy.devices.MZ(
+            c1, EMpy.devices.Line(wls_cm, neff_cm, l_cm[1], neff_cm, l_cm[3]), c1
+        )
+        r1_arc = EMpy.devices.Line(wls_cm, neff_cm, 0.0, neff_cm, 0.5 * l_cm[0])
+        r2_arc = EMpy.devices.Line(wls_cm, neff_cm, 0.0, neff_cm, 0.5 * l_cm[1])
+        thru_ref = numpy.zeros(len(wls_cm), dtype=complex)
+        drop_ref = numpy.zeros(len(wls_cm), dtype=complex)
+        for iwl, wl in enumerate(wls_cm):
+            cm1 = EMpy.devices.composeTMlist(
+                [r1_arc.TM(wl), mz1.TM(wl), r1_arc.TM(wl)]
+            ).to_chain()
+            cm2 = EMpy.devices.composeTMlist(
+                [r2_arc.TM(wl), c2.TM(wl), r2_arc.TM(wl)]
+            ).to_chain()
+            H = EMpy.devices.composeCMlist([cm1, cm2, mz2.CM(wl)]).to_transfer()
+            thru_ref[iwl] = H.data[0, 0]
+            drop_ref[iwl] = H.data[1, 0]
+        numpy.testing.assert_allclose(ct_cm.THRU, thru_ref, rtol=1e-12, atol=1e-13)
+        numpy.testing.assert_allclose(ct_cm.DROP, drop_ref, rtol=1e-12, atol=1e-13)
+
 
 class AnalyticDevicesTest(TestCase):
 

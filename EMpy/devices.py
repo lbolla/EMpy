@@ -1236,8 +1236,9 @@ class T_CTCRR(Device):
             - q**3 * t1**2 * N1 * Kbar[2]
             - q**3 * t2**2 * N2 * (Kbar[2] - q**3 * t1**2 * N1)
         )
+        # Three cross-couplings (MZ1, K[2], MZ2) under Coupler [[t, jK], [jK, t]] give j^3 = -j.
         self.DROP = (
-            1j
+            -1j
             * q**5
             * K[0]
             * K[1]
