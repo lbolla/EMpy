@@ -112,6 +112,32 @@ class VFDModeSolverTest(TestCase):
                 places=12,
             )
 
+        # Geometric method 'G' across compression (0 < f < 1) and expansion (f > 1):
+        # must converge to the unique nonzero root of exp(b) - 1 - f*b = 0 with exact
+        # total length f * L_orig, positive cell widths, and constant geometric ratio exp(b / n).
+        for f_g in (0.3, 0.5, 0.7, 0.9, 0.999, 1.001, 1.5, 3.0):
+            xx_g, yy_g, _, _, dx_g, dy_g = EMpy.modesolvers.FD.stretchmesh(
+                x, y, n, f_g, method="GGGG"
+            )
+            self.assertTrue(numpy.all(dx_g.real > 0.0))
+            self.assertTrue(numpy.all(dy_g.real > 0.0))
+            numpy.testing.assert_allclose(dx_g.imag, 0.0, atol=1e-15)
+            numpy.testing.assert_allclose(
+                dx_g[:n], dx_g[-n:][::-1], rtol=1e-12, atol=1e-13
+            )
+            self.assertAlmostEqual(
+                float(xx_g[-1].real - xx_g[0].real),
+                (2.0 - 2 * 0.5) + 2 * f_g * 0.5,
+                places=12,
+            )
+            # Constant geometric progression ratio r = dx[i+1] / dx[i] across the East stretched boundary
+            ratios = dx_g[-n + 1 :].real / dx_g[-n:-1].real
+            numpy.testing.assert_allclose(ratios, ratios[0], rtol=1e-12, atol=1e-13)
+            if f_g < 1.0:
+                self.assertLess(ratios[0], 1.0)
+            else:
+                self.assertGreater(ratios[0], 1.0)
+
         # Complex PML coordinate stretching across 'U', 'L', 'P'
         f_pml = 1.0 - 2.0j
         for mch in ("U", "L", "P"):

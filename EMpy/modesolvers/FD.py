@@ -2495,7 +2495,26 @@ def stretchmesh(x, y, nlayers, factor, method="PPPP"):
             elif m == "P":
                 z[kv] = z[kv] + (f - 1) * (z[kv] - q1) ** 3 / (q2 - q1) ** 2
             elif m == "G":
-                b = scipy.optimize.newton(lambda s: numpy.exp(s) - 1 - f * s, f)
+                # Solve g(s) = exp(s) - 1 - f * s = 0 for the unique nonzero root b.
+                # For real f > 0 (f != 1), g is strictly convex with g(0) = 0 and global
+                # minimum g(ln f) < 0:
+                #   - 0 < f < 1: exact bracket (-1/f, ln f) since g(-1/f) = exp(-1/f) > 0.
+                #   - f > 1:     bracket (ln f, hi) with g(hi) > 0.
+                if numpy.imag(f) == 0 and numpy.real(f) > 0:
+                    f_r = float(numpy.real(f))
+                    g = lambda s: numpy.exp(s) - 1.0 - f_r * s  # noqa: E731
+                    s_min = float(numpy.log(f_r))
+                    if f_r < 1.0:
+                        b = scipy.optimize.brentq(g, -1.0 / f_r, s_min)
+                    else:
+                        hi = max(2.0 * s_min, 2.0)
+                        while g(hi) <= 0.0:
+                            hi *= 2.0
+                        b = scipy.optimize.brentq(g, s_min, hi)
+                else:
+                    b = scipy.optimize.newton(
+                        lambda s: numpy.exp(s) - 1 - f * s, 2.0 * (f - 1.0)
+                    )
                 a = (q2 - q1) / b
                 z[kv] = q1 + a * (numpy.exp((z[kv] - q1) / a) - 1)
             else:
