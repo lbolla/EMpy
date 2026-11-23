@@ -2251,7 +2251,10 @@ class FDMode(Mode):
     def norm(self):
         x = EMpy.utils.centered1d(numpy.real(self.x))
         y = EMpy.utils.centered1d(numpy.real(self.y))
-        return numpy.sqrt(EMpy.utils.trapz2(self.intensity(), x=x, y=y))
+        # Use magnitude |P| because intensity = 0.5*(Ex*Hy* - Ey*Hx*) scales as
+        # 1/|n|^2 under field rescaling; a real positive norm guarantees
+        # mode.normalize().norm() == 1 without injecting a spurious global phase.
+        return numpy.sqrt(numpy.abs(EMpy.utils.trapz2(self.intensity(), x=x, y=y)))
 
     def normalize(self):
         n = self.norm()

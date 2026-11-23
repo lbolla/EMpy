@@ -604,6 +604,12 @@ class VFDModeSolverTest(TestCase):
                 1, 1e-10
             )
             self.assertAlmostEqual(vfd.modes[0].neff, neff_exact, places=3)
+            # FDMode.norm() must be strictly real positive so normalize() yields norm() == 1
+            m0 = vfd.modes[0]
+            self.assertEqual(numpy.imag(m0.norm()), 0.0)
+            m0.normalize()
+            self.assertAlmostEqual(float(m0.norm()), 1.0, places=12)
+            self.assertAlmostEqual(abs(m0.overlap(m0)), 1.0, places=12)
             # SVFDModeSolver solves on cell centers (len-1), so ghost walls sit at a+dx, b+dy
             neff_exact_sv = numpy.sqrt(
                 complex(n_mat) ** 2
