@@ -120,3 +120,13 @@ class EpsilonTensorTest(TestCase):
         f2 = EMpy.scattering.Field()
         f1.E[0, 0] = 5.0
         self.assertEqual(f2.E[0, 0], 0.0)
+
+    def test_sio2_and_si_thermo_optic_coefficients(self):
+        wl = 1.55e-6
+        t0 = mat.SiO2.toc.T0
+        dn_dt_sio2 = float(
+            ((mat.SiO2.n(wl, t0 + 10.0) - mat.SiO2.n(wl, t0)) / 10.0).item()
+        )
+        self.assertAlmostEqual(dn_dt_sio2, 1.0e-5, places=10)
+        dn_dt_si = float(((mat.Si.n(wl, t0 + 10.0) - mat.Si.n(wl, t0)) / 10.0).item())
+        self.assertAlmostEqual(dn_dt_si, 1.86e-4, delta=1e-5)

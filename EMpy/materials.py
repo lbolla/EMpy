@@ -296,11 +296,11 @@ Si = IsotropicMaterial(
     toc=ThermalOpticCoefficient((-1.49e-10, 3.47e-7, 9.48e-5)),
 )
 
-# SiO2
+# SiO2 (fused silica dn/dT ~ 1.0e-5 K^-1 near 1.55 um, Leviton & Frey 2006)
 SiO2 = IsotropicMaterial(
     name="Silica",
     n0=RefractiveIndex(n0_const=1.446),
-    toc=ThermalOpticCoefficient((1.1e-4,)),
+    toc=ThermalOpticCoefficient((1.0e-5,)),
 )
 
 # BK7 glass (see http://en.wikipedia.org/wiki/Sellmeier_equation)
