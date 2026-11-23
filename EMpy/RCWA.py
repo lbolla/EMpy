@@ -155,6 +155,7 @@ class RCWA:
                     isinstance(m, BinaryGrating)
                     | isinstance(m, SymmetricDoubleGrating)
                     | isinstance(m, AsymmetricDoubleGrating)
+                    | hasattr(m, "pitch")
                 )
                 for m in self.multilayer
             ]
@@ -687,7 +688,20 @@ class AnisotropicRCWA(RCWA):
                     Ezx = _toep(EPS2[2, 0, :])
                     Ezy = _toep(EPS2[2, 1, :])
                     Ezz = _toep(EPS2[2, 2, :])
-                    Exx_1_1 = inv(_toep(EPS21[0, 0, :]))
+                    # EPS21[0, 0] is the Fourier series of (eps^-1)_xx, which equals
+                    # 1 / eps_xx only when x has no off-diagonal tensor coupling.
+                    # Fall back to Laurent _toep(EPS2[0, 0]) otherwise so the series
+                    # converges to the true permittivity tensor as n -> inf.
+                    x_decoupled = (
+                        np.all(EPS2[0, 1, :] == 0)
+                        and np.all(EPS2[0, 2, :] == 0)
+                        and np.all(EPS2[1, 0, :] == 0)
+                        and np.all(EPS2[2, 0, :] == 0)
+                    )
+                    if x_decoupled:
+                        Exx_1_1 = inv(_toep(EPS21[0, 0, :]))
+                    else:
+                        Exx_1_1 = _toep(EPS2[0, 0, :])
 
                 Ezz_1 = inv(Ezz)
                 layer_ops.append(

@@ -1813,3 +1813,60 @@ class IsotropicRCWATest(TestCase):
         ).solve([wl])
         np.testing.assert_allclose(iso_mod.DE1, ani_mod.DE1, rtol=1e-12, atol=1e-12)
         np.testing.assert_allclose(iso_mod.DE3, ani_mod.DE3, rtol=1e-12, atol=1e-12)
+
+    def test_anisotropic_rcwa_custom_grating_fallback_converges(self):
+        """Verify custom (non-built-in) anisotropic gratings with off-diagonal eps converge cleanly."""
+        eps0 = EMpy.constants.eps0
+        wl = 1.55e-6
+        pitch = 1.2e-6
+        thickness = 0.35e-6
+
+        air = EMpy.materials.Air
+        m1 = EMpy.materials.AnisotropicMaterial(
+            "rot_uni",
+            EMpy.materials.EpsilonTensor(
+                eps0
+                * EMpy.utils.euler_rotate(
+                    np.diag([1.6**2, 1.6**2, 2.3**2]), 0.6, 0.7, 0.4
+                )
+            ),
+        )
+        m2 = EMpy.materials.IsotropicMaterial(
+            "sio2", n0=EMpy.materials.RefractiveIndex(n0_const=1.45)
+        )
+        bg = EMpy.utils.BinaryGrating(m1, m2, 0.5, pitch, thickness)
+
+        class _CustomGrating(EMpy.utils.Layer):
+            def __init__(self, inner):
+                self._inner = inner
+                self.thickness = inner.thickness
+                self.pitch = inner.pitch
+                self.mat = inner.mat1
+
+            def getEPSFourierCoeffs(self, wl_, n_, anisotropic=False):
+                return self._inner.getEPSFourierCoeffs(wl_, n_, anisotropic=anisotropic)
+
+        ml_li = EMpy.utils.Multilayer(
+            [EMpy.utils.Layer(air, np.inf), bg, EMpy.utils.Layer(m2, np.inf)]
+        )
+        ml_custom = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(air, np.inf),
+                _CustomGrating(bg),
+                EMpy.utils.Layer(m2, np.inf),
+            ]
+        )
+
+        # Reference using built-in Li factorization at high order
+        ref = EMpy.RCWA.AnisotropicRCWA(
+            ml_li, alpha=0.35, delta=0.2, psi=0.5, phi=np.pi / 2, n=20
+        ).solve([wl])
+        errs = []
+        for order in (2, 10, 20):
+            r_c = EMpy.RCWA.AnisotropicRCWA(
+                ml_custom, alpha=0.35, delta=0.2, psi=0.5, phi=np.pi / 2, n=order
+            ).solve([wl])
+            self.assertAlmostEqual(float((r_c.DE1 + r_c.DE3).sum()), 1.0, places=12)
+            errs.append(abs(float(r_c.DE1[order, 0] - ref.DE1[20, 0])))
+        self.assertLess(errs[2], errs[0])
+        self.assertLess(errs[2], 1e-2)
