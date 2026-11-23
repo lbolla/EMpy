@@ -15,6 +15,23 @@
       .inner {
         max-width: 920px;
       }
+      #project_title a {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        color: inherit;
+        text-decoration: none;
+      }
+      #project_logo {
+        width: 42px;
+        height: 42px;
+        flex-shrink: 0;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+      }
       #site_nav_wrap {
         background: #1b1b1b;
         border-top: 1px solid #333;
@@ -85,7 +102,7 @@
         {% if site.github.is_project_page %}
           <a id="forkme_banner" href="{{ site.github.repository_url }}">View on GitHub</a>
         {% endif %}
-        <h1 id="project_title"><a href="{{ '/' | relative_url }}" style="color: inherit; text-decoration: none;">{{ site.title | default: site.github.repository_name }}</a></h1>
+        <h1 id="project_title"><a href="{{ '/' | relative_url }}"><img id="project_logo" src="{{ '/favicon.svg' | relative_url }}" alt="EMpy logo" width="42" height="42"><span>{{ site.title | default: site.github.repository_name }}</span></a></h1>
         <h2 id="project_tagline">{{ site.description | default: site.github.project_tagline }}</h2>
       </header>
     </div>
