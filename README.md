@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/lbolla/EMpy/actions/workflows/python-app.yml/badge.svg)](https://github.com/lbolla/EMpy/actions/workflows/python-app.yml) [![PyPI](https://badge.fury.io/py/ElectroMagneticPython.svg)](https://pypi.org/project/ElectroMagneticPython/)
 
-`EMpy - ElectroMagnetic Python` is a Python suite of numerical algorithms for electromagnetism, photonics, and integrated optics: isotropic and 4 × 4 anisotropic transfer matrices, planar/conical/anisotropic rigorous coupled-wave analysis (RCWA), finite-difference and film-mode-matching waveguide mode solvers, passive and Lorentz-reciprocal waveguide S-matrix cascades, coupled-resonator photonic circuits, liquid-crystal electro-optics, and 3D vector diffraction integrals.
+`EMpy - ElectroMagnetic Python` is a Python suite of numerical algorithms for electromagnetism, photonics, and integrated optics: isotropic and 4 × 4 anisotropic transfer matrix methods, planar/conical/anisotropic rigorous coupled-wave analysis (RCWA), finite-difference and film-mode-matching waveguide mode solvers, passive and Lorentz-reciprocal waveguide S-matrix cascades, optical ring resonators and coupled-resonator photonic circuits, liquid-crystal electro-optics, and 3D vector diffraction integrals.
 
 - **Homepage & Documentation:** https://lbolla.github.io/EMpy/
 - **Methodology & Literature References:** https://lbolla.github.io/EMpy/methodology/
@@ -21,7 +21,7 @@
 - **`EMpy.transfer_matrix`**: `IsotropicTransferMatrix` (2 × 2) and `AnisotropicTransferMatrix` (4 × 4 Yeh–Berreman) for dispersive, lossy, TIR/SPR, and 3D Euler-rotated biaxial multilayers.
 - **`EMpy.RCWA`**: `IsotropicRCWA` and `AnisotropicRCWA` for planar, conical, and 3D birefringent gratings with Lalanne/Li Fourier factorization and Enhanced Transmittance Matrix (ETM) stabilization.
 - **`EMpy.modesolvers`**: Semivectorial (`SVFDModeSolver`) and 5-component anisotropic full-vectorial (`VFDModeSolver`) finite-difference solvers with `stretchmesh` PMLs, `FMM1d`/`FMM2d` Film Mode Matching, and S-matrix junctions/cascades (`SimpleJoint`, `SWG`, `GenericDevice`).
-- **`EMpy.devices`**: Directional couplers, delay lines, thermo-optic `MZ` interferometers, `APRR`/`SRR`/`NRR` microring filters, tunable multi-coupler rings (`T_TCRR`, `T_CRTCRR`, `T_CTCRR`), and `Etalon`.
+- **`EMpy.devices`**: Optical ring resonators (`APRR`, `SRR`, `NRR` microring and CROW filters), tunable multi-coupler ring resonators (`T_TCRR`, `T_CRTCRR`, `T_CTCRR`), directional couplers, delay lines, thermo-optic `MZ` interferometers, and `Etalon`.
 - **`EMpy.materials`, `EMpy.scattering`, `EMpy.utils`**: Sellmeier/polynomial/tabulated/thermo-optic materials, `LiquidCrystalCell` electro-optic BVP solver, and 3D Kottler–Stratton–Chu vector surface-current scattering (`currentsScatteringKottler`).
 
 ## Installation

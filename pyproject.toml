@@ -6,11 +6,23 @@ build-backend = "setuptools.build_meta"
 name = "ElectroMagneticPython"
 dynamic = ["version"]
 requires-python = ">=3.10"
-description = "EMpy - ElectroMagnetic Python"
+description = "EMpy (ElectroMagnetic Python) — Computational electromagnetics and photonics suite for transfer matrices, RCWA gratings, waveguide mode solvers, optical ring resonators, liquid crystals, and vector diffraction."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Lorenzo Bolla", email = "code@lbolla.info" }]
+keywords = [
+  "electromagnetics",
+  "photonics",
+  "optics",
+  "ring-resonator",
+  "rcwa",
+  "transfer-matrix",
+  "mode-solver",
+  "waveguide",
+  "liquid-crystal",
+  "simulation",
+]
 urls = { Homepage = "https://lbolla.github.io/EMpy/", Documentation = "https://lbolla.github.io/EMpy/", Repository = "https://github.com/lbolla/EMpy", Changelog = "https://github.com/lbolla/EMpy/blob/master/CHANGELOG.md", Issues = "https://github.com/lbolla/EMpy/issues", Funding = "https://github.com/sponsors/lbolla" }
 classifiers = [
   "Development Status :: 5 - Production/Stable",
