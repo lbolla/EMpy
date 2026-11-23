@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Examples Gallery
+description: 22 self-contained Python photonics benchmarks in EMpy covering transfer matrices, liquid crystals, RCWA gratings, waveguide mode solvers, S-matrix circuits, optical ring resonators, and Kottler scattering.
 permalink: /examples/
 ---
 

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Home
+description: EMpy (ElectroMagnetic Python) — open-source Python suite for transfer matrix methods, RCWA gratings, waveguide mode solvers, optical ring resonators, liquid crystals, and 3D vector diffraction.
 ---
 
 [![CI](https://github.com/lbolla/EMpy/actions/workflows/python-app.yml/badge.svg)](https://github.com/lbolla/EMpy/actions/workflows/python-app.yml)

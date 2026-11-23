@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Methodology & References
+description: Electrodynamic conventions, numerical algorithms (4x4 Yeh-Berreman TMM, ETM RCWA, FMM, VFD, Redheffer S-matrix), verification strategy, and literature references for EMpy.
 permalink: /methodology/
 ---
 

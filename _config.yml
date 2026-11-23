@@ -1,7 +1,12 @@
 theme: jekyll-theme-slate
 title: EMpy
 description: ElectroMagnetic Python — Computational Electromagnetics & Photonics Suite
+url: https://lbolla.github.io
+baseurl: /EMpy
 show_downloads: false
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
 exclude:
   - "__pycache__"
   - "*.pyc"

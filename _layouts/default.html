@@ -10,7 +10,8 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
       onload="renderMathInElement(document.getElementById('main_content'));"></script>
-    <title>{% if page.title %}{{ page.title }} · {{ site.title }}{% else %}{{ site.title }} — {{ site.description }}{% endif %}</title>
+    <title>{% if page.url == '/' or page.url == '/index.html' %}{{ site.title }} — {{ site.description }}{% elsif page.title %}{{ page.title }} · {{ site.title }}{% else %}{{ site.title }} — {{ site.description }}{% endif %}</title>
+    {% seo title=false %}
     <style>
       .inner {
         max-width: 920px;
