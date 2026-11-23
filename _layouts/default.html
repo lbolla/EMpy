@@ -75,6 +75,40 @@
         font-size: 13.5px;
         color: #9ecbff;
       }
+      .nav-dropdown {
+        position: relative;
+        display: inline-block;
+      }
+      .nav-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 270px;
+        background: #222222;
+        border: 1px solid #3a3a3a;
+        border-radius: 6px;
+        padding: 6px 0;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+        z-index: 1000;
+      }
+      .nav-dropdown:hover .nav-dropdown-menu,
+      .nav-dropdown:focus-within .nav-dropdown-menu {
+        display: block;
+      }
+      #site_nav .nav-dropdown-menu a {
+        display: block;
+        padding: 7px 14px;
+        font-weight: 500;
+        font-size: 13.5px;
+        border-radius: 0;
+        white-space: nowrap;
+      }
+      .nav-dropdown-divider {
+        height: 1px;
+        background: #3a3a3a;
+        margin: 5px 0;
+      }
       #main_content img {
         max-width: 100%;
         height: auto;
@@ -114,7 +148,20 @@
         <div class="nav-links">
           <a href="{{ '/' | relative_url }}" {% if page.url == '/' or page.url == '/index.html' %}class="active"{% endif %}>Home</a>
           <a href="{{ '/methodology/' | relative_url }}" {% if page.url contains '/methodology' %}class="active"{% endif %}>Methodology &amp; References</a>
-          <a href="{{ '/examples/' | relative_url }}" {% if page.url contains '/examples' %}class="active"{% endif %}>Examples Gallery</a>
+          <div class="nav-dropdown">
+            <a href="{{ '/examples/' | relative_url }}" {% if page.url contains '/examples' or page.url contains '/ring-resonators' or page.url contains '/transfer-matrix' or page.url contains '/rcwa-gratings' or page.url contains '/waveguide-mode-solvers' or page.url contains '/waveguide-s-matrix' or page.url contains '/liquid-crystal' or page.url contains '/vector-diffraction' %}class="active"{% endif %} aria-haspopup="true">Examples &#9662;</a>
+            <div class="nav-dropdown-menu" role="menu">
+              <a href="{{ '/ring-resonators-photonic-circuits/' | relative_url }}" role="menuitem">Ring Resonators &amp; Filters</a>
+              <a href="{{ '/transfer-matrix-multilayers/' | relative_url }}" role="menuitem">Transfer Matrix &amp; SPR</a>
+              <a href="{{ '/rcwa-gratings/' | relative_url }}" role="menuitem">RCWA Gratings &amp; BICs</a>
+              <a href="{{ '/waveguide-mode-solvers/' | relative_url }}" role="menuitem">Waveguide Mode Solvers</a>
+              <a href="{{ '/waveguide-s-matrix-circuits/' | relative_url }}" role="menuitem">Waveguide S-Matrix Circuits</a>
+              <a href="{{ '/liquid-crystal-optics/' | relative_url }}" role="menuitem">Liquid Crystals</a>
+              <a href="{{ '/vector-diffraction-scattering/' | relative_url }}" role="menuitem">Vector Diffraction (Kottler)</a>
+              <div class="nav-dropdown-divider" role="separator"></div>
+              <a href="{{ '/examples/' | relative_url }}" role="menuitem">All 22 Benchmark Scripts</a>
+            </div>
+          </div>
         </div>
         <div class="nav-ext">
           <a href="https://pypi.org/project/ElectroMagneticPython/">PyPI (v3.0.1)</a>
