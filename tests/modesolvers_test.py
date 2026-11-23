@@ -1344,6 +1344,54 @@ class FMMModeSolverTest(TestCase):
         )
         numpy.testing.assert_allclose(Ey_1d / E0, Ey_exact / E0, rtol=1e-12, atol=1e-13)
 
+    def test_fmm_shooting_interface_node_analytic_continuity(self):
+        """Verify FMMshooting/FMMshootingTM match derivative continuously when a mode has a node at Uy[n1]."""
+        wl = 1.55
+        k0 = 2.0 * numpy.pi / wl
+        n1, n2 = 2.0, 3.0
+        kz = 1.5 * k0
+        k1 = numpy.sqrt((k0 * n1) ** 2 - kz**2)
+        k2 = numpy.sqrt((k0 * n2) ** 2 - kz**2)
+        d1 = numpy.pi / k1
+        d2 = numpy.pi / k2
+        Uy = numpy.array([0.0, d1, d1 + d2])
+        ny = numpy.array([n1, n2])
+        pars = {
+            "epsilon": ny**2,
+            "beta": ny * k0,
+            "boundary": "AA",
+            "Uy": Uy,
+        }
+
+        # TE: exact mode is sin(k1*y)/k1 on [0, d1] and -sin(k2*(y-d1))/k2 on [d1, d1+d2]
+        delta_te, m_te = EMpy.modesolvers.FMM.FMMshooting(kz, pars)
+        self.assertLess(abs(delta_te[0]), 1e-12)
+        self.assertAlmostEqual(m_te.sr[0], m_te.sl[1], places=12)
+        self.assertAlmostEqual(m_te.ar[0], m_te.al[1], places=12)
+        y_g = numpy.linspace(0.0, d1 + d2, 201)
+        u_te_exact = numpy.where(
+            y_g <= d1,
+            numpy.sin(k1 * y_g) / k1,
+            -numpy.sin(k2 * (y_g - d1)) / k2,
+        )
+        numpy.testing.assert_allclose(
+            m_te.eval(y_g), u_te_exact, rtol=1e-12, atol=1e-13
+        )
+
+        # TM: continuous u and u'/eps => right branch scales by eps2 / eps1
+        delta_tm, m_tm = EMpy.modesolvers.FMM.FMMshootingTM(kz, pars)
+        self.assertLess(abs(delta_tm[0]), 1e-12)
+        self.assertAlmostEqual(m_tm.sr[0], m_tm.sl[1], places=12)
+        self.assertAlmostEqual(m_tm.ar[0] / n1**2, m_tm.al[1] / n2**2, places=12)
+        u_tm_exact = numpy.where(
+            y_g <= d1,
+            numpy.sin(k1 * y_g) / k1,
+            -(n2**2 / n1**2) * numpy.sin(k2 * (y_g - d1)) / k2,
+        )
+        numpy.testing.assert_allclose(
+            m_tm.eval(y_g), u_tm_exact, rtol=1e-12, atol=1e-13
+        )
+
 
 class GeometriesTest(TestCase):
 

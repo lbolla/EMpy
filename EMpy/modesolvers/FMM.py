@@ -1107,8 +1107,14 @@ def FMMshootingTM(kz_, FMMpars):
             # normalize and save only if len(kz) == 1
             # otherwise, modo is ignored and only Delta is useful
 
-            # normalizza la propagazione sinistra e quella destra
-            alfa = sr[n1 - 1] / sl[n2 - 1]
+            # Match left and right shooting branches at interface Uy[n1].
+            # Use field ratio sr/sl unless the mode has a node (or near-node)
+            # at the interface, in which case match the continuous flux a/eps.
+            k_scale = max(float(numpy.max(numpy.abs(betay))), 1.0)
+            if abs(sl[n2 - 1]) * k_scale >= abs(al[n2 - 1]):
+                alfa = sr[n1 - 1] / sl[n2 - 1]
+            else:
+                alfa = (ar[n1 - 1] / eps[n1 - 1]) / (al[n2 - 1] / eps[n2 - 1])
             sl[n2 - 1 :] *= alfa
             sr[n2 - 1 :] *= alfa
             al[n2 - 1 :] *= alfa
@@ -1249,8 +1255,14 @@ def FMMshooting(kz_, FMMpars):
         # normalize and save only if len(kz) == 1
         # otherwise, modo is ignored and only Delta is useful
 
-        # normalizza la propagazione sinistra e quella destra
-        alfa = sr[n1 - 1] / sl[n2 - 1]
+        # Match left and right shooting branches at interface Uy[n1].
+        # Use field ratio sr/sl unless the mode has a node (or near-node)
+        # at the interface, in which case match the continuous derivative a.
+        k_scale = max(float(numpy.max(numpy.abs(betay))), 1.0)
+        if abs(sl[n2 - 1]) * k_scale >= abs(al[n2 - 1]):
+            alfa = sr[n1 - 1] / sl[n2 - 1]
+        else:
+            alfa = ar[n1 - 1] / al[n2 - 1]
 
         sl[n2 - 1 :] *= alfa
         sr[n2 - 1 :] *= alfa
