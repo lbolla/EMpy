@@ -79,7 +79,6 @@ class IsotropicTransferMatrix(TransferMatrix):
 
         Dp = np.zeros((2, 2), dtype=complex)
         Ds = np.zeros((2, 2), dtype=complex)
-        P = np.zeros((2, 2), dtype=complex)
         Ms = np.zeros((2, 2), dtype=complex)
         Mp = np.zeros((2, 2), dtype=complex)
         k = np.zeros((nlayers, 2), dtype=complex)
@@ -102,23 +101,52 @@ class IsotropicTransferMatrix(TransferMatrix):
             qz[0] = n[0] * np.cos(theta_inc)
             cos_t = qz / n
 
-            k[:, 0] = 2 * np.pi / wl * qz
-            k[:, 1] = 2 * np.pi * n / wl * np.sin(theta)
+            k0 = 2 * np.pi / wl
+            k[:, 0] = k0 * qz
+            k[:, 1] = k0 * n * np.sin(theta)
 
             Ds = [[1.0, 1.0], [qz[0], -qz[0]]]
             Dp = [[cos_t[0], cos_t[0]], [n[0], -n[0]]]
             Ms = inv(Ds)
             Mp = inv(Dp)
+            log_scale = 0.0
 
-            for nn, dd, ct, qzz, kk in zip(
-                n[1:-1], d[1:-1], cos_t[1:-1], qz[1:-1], k[1:-1, 0]
-            ):
-                Ds = [[1.0, 1.0], [qzz, -qzz]]
-                Dp = [[ct, ct], [nn, -nn]]
+            # Use closed-form Abeles layer matrices (avoiding inv(Ds)/inv(Dp),
+            # which are singular at exact inner-layer cutoff qz == 0) scaled by
+            # exp(-|Im(phi)|) so thick metallic/evanescent layers never overflow.
+            for nn, dd, qzz, kk in zip(n[1:-1], d[1:-1], qz[1:-1], k[1:-1, 0]):
                 phi = kk * dd
-                P = [[np.exp(1j * phi), 0], [0, np.exp(-1j * phi)]]
-                Ms = np.dot(Ms, np.dot(Ds, np.dot(P, inv(Ds))))
-                Mp = np.dot(Mp, np.dot(Dp, np.dot(P, inv(Dp))))
+                re_phi = float(np.real(phi))
+                im_phi = float(np.imag(phi))
+                alpha = abs(im_phi)
+                decay = np.exp(-2.0 * alpha)
+                if im_phi <= 0.0:
+                    e_plus = np.exp(1j * re_phi)
+                    e_minus = np.exp(-1j * re_phi) * decay
+                else:
+                    e_plus = np.exp(1j * re_phi) * decay
+                    e_minus = np.exp(-1j * re_phi)
+                cos_s = 0.5 * (e_plus + e_minus)
+                sin_s = -0.5j * (e_plus - e_minus)
+                if abs(phi) < 1e-6:
+                    # Smooth sinc limit at qz -> 0: (sin(phi) / qz) * exp(-alpha) = k0 * d * sinc(phi / pi) * exp(-alpha)
+                    sin_over_qz = k0 * dd * np.sinc(phi / np.pi) * np.exp(-alpha)
+                else:
+                    sin_over_qz = sin_s / qzz
+                Ls = np.array(
+                    [[cos_s, 1j * sin_over_qz], [1j * qzz * sin_s, cos_s]],
+                    dtype=complex,
+                )
+                Lp = np.array(
+                    [
+                        [cos_s, 1j * qzz * sin_s / (nn**2)],
+                        [1j * (nn**2) * sin_over_qz, cos_s],
+                    ],
+                    dtype=complex,
+                )
+                Ms = np.dot(Ms, Ls)
+                Mp = np.dot(Mp, Lp)
+                log_scale += alpha
 
             Ds = [[1.0, 1.0], [qz[-1], -qz[-1]]]
             Dp = [[cos_t[-1], cos_t[-1]], [n[-1], -n[-1]]]
@@ -126,10 +154,10 @@ class IsotropicTransferMatrix(TransferMatrix):
             Mp = np.dot(Mp, Dp)
 
             rs = Ms[1, 0] / Ms[0, 0]
-            ts = 1.0 / Ms[0, 0]
+            ts = np.exp(-log_scale) / Ms[0, 0]
 
             rp = Mp[1, 0] / Mp[0, 0]
-            tp = 1.0 / Mp[0, 0]
+            tp = np.exp(-log_scale) / Mp[0, 0]
 
             Rs[iwl] = np.absolute(rs) ** 2
             Ts[iwl] = np.real(qz[-1]) / np.real(qz[0]) * np.absolute(ts) ** 2

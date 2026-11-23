@@ -948,3 +948,72 @@ class TransferMatrixTest(TestCase):
         self.assertAlmostEqual(float(res_m.R[1, 1, 0]), r_fresnel, places=12)
         self.assertEqual(float(res_m.T[0, 0, 0]), 0.0)
         self.assertEqual(float(res_m.T[1, 1, 0]), 0.0)
+
+    def test_isotropic_inner_cutoff_sinc_and_thick_metal_stability(self):
+        """Verify IsotropicTransferMatrix at exact inner-layer cutoff qz == 0 and on thick metallic slabs."""
+        wl = 1.55e-6
+        k0 = 2.0 * np.pi / wl
+
+        # 1. Exact inner-layer cutoff (n_inner == n_0 * sin(theta)):
+        #    closed-form Abeles limit L_s = [[1, i*k0*d], [0, 1]], L_p = [[1, 0], [i*n_i^2*k0*d, 1]]
+        #    yields exact analytical rs = (i*k0*d*qz0) / (2 + i*k0*d*qz0)? Wait:
+        #    Ms = inv(D0) @ [[1, i*k0*d], [0, 1]] @ D0 =>
+        #      rs = -i*k0*d*qz0 / (2 + i*k0*d*qz0) (|rs|^2 = (k0*d*qz0)^2 / (4 + (k0*d*qz0)^2))
+        #      rp = (i*n_i^2*k0*d*cos0/n0) / (2 + i*n_i^2*k0*d*cos0/n0)
+        n0, ni, d_in = 1.8, 1.5, 0.3e-6
+        m0 = EMpy.materials.IsotropicMaterial(
+            "m0", n0=EMpy.materials.RefractiveIndex(n0_const=n0)
+        )
+        mi = EMpy.materials.IsotropicMaterial(
+            "mi", n0=EMpy.materials.RefractiveIndex(n0_const=ni)
+        )
+        ml_cut = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(m0, np.inf),
+                EMpy.utils.Layer(mi, d_in),
+                EMpy.utils.Layer(m0, np.inf),
+            ]
+        )
+        theta_cut = np.arcsin(ni / n0)
+        tmm_cut = EMpy.transfer_matrix.IsotropicTransferMatrix(ml_cut, theta_cut).solve(
+            [wl]
+        )
+        qz0 = n0 * np.cos(theta_cut)
+        cos0 = np.cos(theta_cut)
+        xs = k0 * d_in * qz0
+        xp = k0 * d_in * (ni**2) * cos0 / n0
+        Rs_exact = xs**2 / (4.0 + xs**2)
+        Rp_exact = xp**2 / (4.0 + xp**2)
+        self.assertAlmostEqual(float(tmm_cut.Rs[0]), Rs_exact, places=12)
+        self.assertAlmostEqual(float(tmm_cut.Ts[0]), 1.0 - Rs_exact, places=12)
+        self.assertAlmostEqual(float(tmm_cut.Rp[0]), Rp_exact, places=12)
+        self.assertAlmostEqual(float(tmm_cut.Tp[0]), 1.0 - Rp_exact, places=12)
+
+        # Continuity as theta -> theta_cut+
+        tmm_near = EMpy.transfer_matrix.IsotropicTransferMatrix(
+            ml_cut, theta_cut + 1e-8
+        ).solve([wl])
+        self.assertAlmostEqual(float(tmm_cut.Rs[0]), float(tmm_near.Rs[0]), places=6)
+        self.assertAlmostEqual(float(tmm_cut.Rp[0]), float(tmm_near.Rp[0]), places=6)
+
+        # 2. Thick metallic slab (n = 0.5 - 10j, d = 100 um): exact single-interface Fresnel, no NaN
+        n_g, n_m = 1.5, 0.5 - 10.0j
+        mg = EMpy.materials.IsotropicMaterial(
+            "glass", n0=EMpy.materials.RefractiveIndex(n0_const=n_g)
+        )
+        mm = EMpy.materials.IsotropicMaterial(
+            "metal", n0=EMpy.materials.RefractiveIndex(n0_const=n_m)
+        )
+        ml_met = EMpy.utils.Multilayer(
+            [
+                EMpy.utils.Layer(mg, np.inf),
+                EMpy.utils.Layer(mm, 100.0e-6),
+                EMpy.utils.Layer(mg, np.inf),
+            ]
+        )
+        tmm_met = EMpy.transfer_matrix.IsotropicTransferMatrix(ml_met, 0.0).solve([wl])
+        R_fresnel = abs((n_g - n_m) / (n_g + n_m)) ** 2
+        self.assertAlmostEqual(float(tmm_met.Rs[0]), R_fresnel, places=12)
+        self.assertAlmostEqual(float(tmm_met.Rp[0]), R_fresnel, places=12)
+        self.assertEqual(float(tmm_met.Ts[0]), 0.0)
+        self.assertEqual(float(tmm_met.Tp[0]), 0.0)
