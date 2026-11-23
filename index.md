@@ -18,7 +18,7 @@ title: Home
 - **Unified Passive Electrodynamic Conventions:** Consistent $$\exp(+i\omega t - i\mathbf{k}\cdot\mathbf{r})$$ harmonic convention, passive complex refractive index $$n = n_r - i\kappa$$ ($$\kappa \ge 0$$), passive branch selection ($$\operatorname{Re}(k_z) - \operatorname{Im}(k_z) \ge 0$$) across propagating, total-internal-reflection (TIR), and plasmonic media, and complex-symmetric linear algebra throughout.
 - **Overhauled Multilayer, Grating & Mode-Matching Solvers:** Rewritten 4 × 4 Yeh–Berreman `AnisotropicTransferMatrix` (SVD nullspace eigenmodes, biaxial binormals, cross-mode Poynting flux), ETM-stabilized `AnisotropicRCWA` with Li's inverse-rule factorization, scale-invariant `FMM1d`/`FMM2d` (SI meters & microns), and overflow-free Redheffer star-product waveguide cascades (`GenericDevice`, passive & reciprocal `SimpleJoint`).
 - **Out-of-the-Box Liquid-Crystal BVP Solver:** `LiquidCrystalCell` solves coupled 1D Oseen–Frank elastic and Laplace electrostatic BVPs natively via `scipy.integrate.solve_bvp`—no legacy `scikits.bvp1lg` dependency needed.
-- **22 Literature Benchmarks & 85 Physics Tests:** Explore the [Methodology & References]({{ '/methodology/' | relative_url }}), browse the [Examples Gallery]({{ '/examples/' | relative_url }}), or read the full [CHANGELOG.md](https://github.com/lbolla/EMpy/blob/master/CHANGELOG.md).
+- **22 Literature Benchmarks & 104 Physics Tests:** Explore the [Methodology & References]({{ '/methodology/' | relative_url }}), browse the [Examples Gallery]({{ '/examples/' | relative_url }}), or read the full [CHANGELOG.md](https://github.com/lbolla/EMpy/blob/master/CHANGELOG.md).
 </div>
 
 ---

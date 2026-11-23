@@ -64,7 +64,7 @@ All solvers and helper utilities in `EMpy 3.0` enforce a unified set of electrod
 
 ## Testing & Verification Strategy {#verification}
 
-`EMpy`'s test suite (`tests/`, 85 tests) continuously verifies physical invariants and analytical limits across Python 3.10–3.14 and `lowest-direct` dependency bounds:
+`EMpy`'s test suite (`tests/`, 104 tests) continuously verifies physical invariants and analytical limits across Python 3.10–3.14 and `lowest-direct` dependency bounds:
 
 1. **Conservation Laws, Passivity & Reciprocity:**
    - *Lossless structures ($$\kappa = 0$$):* Energy conservation and unitarity ($$R + T = 1$$, $$\sum (\mathrm{DE}_1 + \mathrm{DE}_3) = 1$$, $$S^H S = I$$, $$\lvert \mathrm{THRU} \rvert^2 + \lvert \mathrm{DROP} \rvert^2 = 1$$).
