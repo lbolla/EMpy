@@ -1323,8 +1323,17 @@ def findzerosnew(x, y, searchinterval):
     if searchinterval < minsi:
         searchinterval = minsi
 
-    dy = numpy.r_[0, numpy.diff(numpy.diff(numpy.emath.log(y))), 0]
-    idy = numpy.where(dy > 0.005)[0]
+    # Detect sharp lossless dips (dy > 0.005) as well as broad local minima
+    # produced by off-axis complex roots in lossy waveguides, where discrete
+    # log-curvature scales as (dx / Im(kz))^2 and can fall below 0.005.
+    y_safe = numpy.maximum(numpy.real(y), 1e-300)
+    dy = numpy.r_[0.0, numpy.diff(numpy.diff(numpy.log(y_safe))), 0.0]
+    is_local_min = numpy.r_[
+        False,
+        (y_safe[1:-1] < y_safe[:-2]) & (y_safe[1:-1] <= y_safe[2:]),
+        False,
+    ]
+    idy = numpy.where((dy > 0.005) | (is_local_min & (dy > 1e-12)))[0]
 
     if len(idy) == 0:
         zeri = numpy.array([])
@@ -1338,8 +1347,8 @@ def findzerosnew(x, y, searchinterval):
 
         dz = numpy.abs(numpy.diff(zeri))
         if len(dz) == 0:
-            z1[0] = zeri - searchinterval / 2
-            z2[0] = zeri + searchinterval / 2
+            z1[0] = zeri[0] - searchinterval / 2
+            z2[0] = zeri[0] + searchinterval / 2
         else:
             delta = numpy.min([dz[0], searchinterval])
             z1[0] = zeri[0] - delta / 2

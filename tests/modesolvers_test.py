@@ -1440,6 +1440,36 @@ class FMMModeSolverTest(TestCase):
         self.assertTrue(numpy.all(keff_2.imag <= 1e-12))
         self.assertTrue(numpy.all(keff_2.real - keff_2.imag >= -1e-12))
 
+    def test_fmm_findzerosnew_single_zero_and_lossy_guided_mode(self):
+        """Verify findzerosnew handles single-zero scan windows and broad lossy guided-mode minima."""
+        wl = 1.55
+        k0 = 2.0 * numpy.pi / wl
+
+        def _abeles_te_res(kz, Uy, ny):
+            M = numpy.eye(2, dtype=complex)
+            for dj, nj in zip(numpy.diff(Uy), ny, strict=True):
+                kj = numpy.emath.sqrt((k0 * nj) ** 2 - kz**2)
+                c = numpy.cos(kj * dj)
+                s_over_k = numpy.sinc(kj * dj / numpy.pi) * dj
+                s_times_k = numpy.sin(kj * dj) * kj
+                M = numpy.array([[c, s_over_k], [-s_times_k, c]], dtype=complex) @ M
+            return abs(M[0, 1]) / numpy.linalg.norm(M)
+
+        # 1. Single-mode 2-layer slab (len(zeri) == 1 in findzerosnew, previously ValueError)
+        Uy1 = numpy.array([0.0, 0.3, 0.6])
+        ny1 = numpy.array([1.444, 2.5])
+        m1 = EMpy.modesolvers.FMM.FMM1d_y(Uy1, ny1, wl, 2, "AA", "TE")
+        self.assertLess(_abeles_te_res(m1[0].keff[0], Uy1, ny1), 1e-12)
+
+        # 2. Moderately lossy 1D slab (kappa = 0.01, previously missed fundamental guided mode)
+        Uy2 = numpy.array([0.0, 0.75, 1.5])
+        ny2 = numpy.array([1.5 - 0.01j, 2.0 - 0.01j])
+        m2 = EMpy.modesolvers.FMM.FMM1d_y(Uy2, ny2, wl, 2, "AA", "TE")
+        kz0 = m2[0].keff[0]
+        self.assertGreater(kz0.real / k0, 1.8)
+        self.assertLess(kz0.imag, 0.0)
+        self.assertLess(_abeles_te_res(kz0, Uy2, ny2), 1e-12)
+
 
 class GeometriesTest(TestCase):
 
