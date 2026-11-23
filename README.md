@@ -12,9 +12,9 @@
 ## What's New in 3.0
 
 - **Unified Passive Electrodynamic Conventions:** Consistent `exp(+iωt - ik·r)` harmonic phase, passive complex refractive index `n = n_r - iκ` (`κ ≥ 0`), passive branch-cut selection (`Re(k_z) - Im(k_z) ≥ 0`) across TIR, plasmonic, and lossy media, and complex-symmetric linear algebra throughout.
-- **Stabilized Full-Wave & Multilayer Solvers:** Rewritten 4 × 4 Yeh–Berreman `AnisotropicTransferMatrix`, ETM-stabilized `AnisotropicRCWA` with Li's inverse-rule factorization, scale-invariant `FMM1d`/`FMM2d` (SI meters & microns), and Redheffer star-product S-matrix cascades (`GenericDevice`, passive & reciprocal `SimpleJoint`).
+- **Stabilized Full-Wave & Multilayer Solvers:** ETM-stabilized 4 × 4 Yeh–Berreman `AnisotropicTransferMatrix` and closed-form Abeles `IsotropicTransferMatrix`, ETM-stabilized `AnisotropicRCWA` with Li's inverse-rule factorization, scale-invariant multi-slice `FMM1d`/`FMM2d` (SI meters & microns), and Redheffer star-product S-matrix cascades (`GenericDevice`, passive & reciprocal `SimpleJoint`).
 - **Out-of-the-Box Liquid Crystals & Modern Stack:** `LiquidCrystalCell` solves coupled 1D Oseen–Frank elastic + electrostatic BVPs natively via `scipy.integrate.solve_bvp` (no `scikits.bvp1lg` required), targeting Python 3.10–3.14, NumPy 2.x, and SciPy 1.13+.
-- **Rigorous Verification:** 85-test physics/invariant suite validating conservation laws (`R + T = 1`, `Sᴴ S = I`), passivity (`‖S‖₂ ≤ 1`), Lorentz reciprocity (`S = Sᵀ`), and continuous `Δn → 0` and `κ → 0⁺` degenerate limits.
+- **Rigorous Verification:** 104-test physics/invariant suite validating closed-form analytical benchmarks (Fresnel/Lekner, Airy/Abeles, CROW Möbius, Yariv critical coupling, Hertzian dipoles, uniaxial slabs), conservation laws (`R + T = 1`, `Sᴴ S = I`), passivity (`‖S‖₂ ≤ 1`), Lorentz reciprocity (`S = Sᵀ`), and continuous `Δn → 0` and `κ → 0⁺` degenerate limits.
 
 ## Implemented Modules
 

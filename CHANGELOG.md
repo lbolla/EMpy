@@ -4,6 +4,37 @@ All notable changes to `EMpy - ElectroMagnetic Python` are documented in this fi
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-11-23
+
+`EMpy 3.0.1` is a physics and numerical bug-fix release resolving 17 issues uncovered by a systematic electrodynamic audit across all modules, and expanding the test suite to 104 tests with closed-form analytical benchmarks covering every solver.
+
+### Fixed
+
+- **Photonic Devices & Materials (`EMpy.devices`, `EMpy.materials`):**
+  - Fixed `NRR.CM` for `N ≥ 2` rings to compose each ring section `(L1 · K · L2)` as a `ChainMatrix` via `composeCMlist` instead of cascading with `composeTMlist` (previously modeled a single ring coupled `N` times to the input bus rather than `N` serially coupled CROW rings).
+  - Fixed `T_CTCRR.DROP` relative phase sign (`-1j` instead of `+1j`, matching `j³ = -j` across three cross-couplings under `Coupler`'s `[[t, jK], [jK, t]]` convention).
+  - Fixed `EMpy.materials.SiO2` thermo-optic coefficient `dn/dT` from `1.1e-4` to `1.0e-5 K⁻¹` (fused silica near 1.55 µm).
+- **Transfer Matrix (`EMpy.transfer_matrix`):**
+  - Replaced `AnisotropicTransferMatrix.solve`'s raw 4 × 4 `D P D⁻¹` cascade with a bounded passive Enhanced Transmittance Matrix (ETM) backward sweep (`|exp(-i k_z d)| ≤ 1`), eliminating catastrophic cancellation on thick coupled anisotropic layers and `NaN` overflow on thick metals.
+  - Replaced `IsotropicTransferMatrix.solve`'s raw cascade with closed-form Abeles layer matrices using `sinc` at `q_z → 0` (eliminating `LinAlgError` at exact inner-layer grazing/cutoff `n_i = n_0 sin θ`) and per-layer `exp(-|Im φ|)` scaling (eliminating thick-metal overflow).
+- **Rigorous Coupled-Wave Analysis (`EMpy.RCWA`):**
+  - Unified the `zero_kt` threshold (`|kt| ≤ 1e-13 * k`) in `IsotropicRCWA` and `AnisotropicRCWA` so `fc² + fs² = 1` holds identically near normal incidence and for near-normal exiting diffraction orders.
+  - Fixed internal-layer mode branch selection in `IsotropicRCWA` (`Re(q) + Im(q) ≥ 0`) and `AnisotropicRCWA` (`-(Re(q) + Im(q)) ≥ 0`) under oblique incidence from a lossy superstrate, eliminating singular/exploding `MTp1`.
+  - Fixed `AnisotropicRCWA`'s custom-grating fallback to avoid using `(ε⁻¹)_xx` as `1/ε_xx` when off-diagonal `x`-coupling is present, and updated `get_pitch()` to recognize custom grating classes with a `.pitch` attribute.
+- **Waveguide Mode Solvers (`EMpy.modesolvers.FD`, `EMpy.modesolvers.FMM`):**
+  - Fixed swapped `n`/`s` mesh weights in `VFDModeSolver.build_matrix` (`ayxn` off-diagonal `ε_xy` terms), restoring exact `x ↔ y` rotational symmetry and second-order consistency on non-uniform anisotropic meshes.
+  - Fixed `stretchmesh` geometric method `'G'` for mesh compression (`0 < f < 1`) via exact convex `brentq` bracketing on `(-1/f, ln f)`, preventing convergence to the trivial root `b = 0`.
+  - Fixed `FDMode.norm()` to return strictly real `sqrt(|P|)` so `normalize()` yields unit norm without injecting a spurious global phase on lossy/PML modes.
+  - Fixed off-by-one right-branch continuity guards (`idx1 > n2 - 1`) in `FMMshooting` and `FMMshootingTM` for slices with `≥ 2` layers to the right of the peak-index layer, and added scale-invariant derivative/flux matching fallback when a mode has a node at the matching interface.
+  - Fixed `FMM2d` interior-slice indexing (`i = idx - 1`) in `Mvec` and generalized `check_matching` for `Nslices ≥ 4`.
+  - Replaced single-endpoint evanescent evaluation in `FMMMode1dy.eval`, `FMMMode2d.eval`, `_slice_mode1dx`, and `_refine_mode1d` with symmetric two-endpoint decaying exponentials (`_eval_segment`) for `|Im(k·d)| > 1`, and made `FMMMode2d.norm()` strictly real.
+  - Enforced the passive cutoff branch `Re(k_eff) - Im(k_eff) ≥ 0` continuously as `κ → 0⁺` in `analyticalsolution` and `FMM1d_y`.
+  - Fixed `findzerosnew` scalar indexing on single-zero scan windows (`len(zeri) == 1`) and added local-minimum detection so broad off-axis minima in lossy waveguides are not missed.
+
+### Tests
+
+- Expanded the verification suite from 85 to 104 tests with closed-form analytical benchmarks across every solver: Lekner/Yeh uniaxial oblique Fresnel (`AnisotropicTransferMatrix`), lossless CROW Möbius recursion (`NRR`), Yariv critical coupling and resonant group delay (`APRR`, `SRR`), balanced 3 dB `MZ`, homogeneous PEC waveguide & uniaxial anisotropic slab dispersion (`VFDModeSolver`, `SVFDModeSolver`), finite-box slab & multi-layer/multi-slice Abeles dispersion (`FMM1d`, `FMM2d`), Hertzian electric & magnetic dipole near/mid/far fields (`currentsScatteringKottler`), and Stefan–Boltzmann / Wien blackbody laws.
+
 ## [3.0.0] - 2026-11-20
 
 `EMpy 3.0.0` is a major numerical, electrodynamic, and architectural overhaul across every module of the library, resolving dozens of long-standing physical and numerical bugs, stabilizing ill-conditioned multilayer/grating/waveguide cascades, removing legacy broken dependencies, and expanding both the verification test suite and literature-benchmarked examples.
