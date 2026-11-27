@@ -828,7 +828,7 @@ class VFDModeSolver(ModeSolver):
 
         return A
 
-    def compute_other_fields(self, neffs, Hxs, Hys):
+    def _compute_other_fields(self, neffs, Hxs, Hys):
         from scipy.sparse import coo_matrix
 
         wl = self.wl
@@ -2132,7 +2132,7 @@ class VFDModeSolver(ModeSolver):
         Hxs = tmpx
         Hys = tmpy
 
-        [Hzs, Exs, Eys, Ezs] = self.compute_other_fields(neffs, Hxs, Hys)
+        [Hzs, Exs, Eys, Ezs] = self._compute_other_fields(neffs, Hxs, Hys)
 
         self.modes = []
         for neff, Hx, Hy, Hz, Ex, Ey, Ez in zip(neffs, Hxs, Hys, Hzs, Exs, Eys, Ezs):
@@ -2143,10 +2143,6 @@ class VFDModeSolver(ModeSolver):
             )
 
         return self
-
-    def save_modes_for_FDTD(self, x=None, y=None):
-        for im, m in enumerate(self.modes):
-            m.save_for_FDTD(str(im), x, y)
 
     def __str__(self):
         descr = "Vectorial Finite Difference Modesolver\n"

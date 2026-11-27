@@ -1794,69 +1794,6 @@ def genera_rotazione(slices):
     return R
 
 
-def ortonormalita(slices):
-    nmodi = len(slices[0].modih)
-    k0 = 2 * numpy.pi / slices[0].wl
-    Nslices = len(slices)
-
-    neesueps = numpy.zeros(Nslices, dtype=complex)
-    nhh = numpy.zeros_like(neesueps)
-    nRhe = numpy.zeros_like(neesueps)
-    nRee = numpy.zeros_like(neesueps)
-    nRhh = numpy.zeros_like(neesueps)
-    nAC = numpy.zeros_like(neesueps)
-
-    M = Struct()
-    M.ee = numpy.zeros((nmodi, nmodi, Nslices), dtype=complex)
-    M.eesueps = numpy.zeros_like(M.ee)
-    M.hh = numpy.zeros_like(M.ee)
-    M.Rhe = numpy.zeros_like(M.ee)
-
-    for idx, slice in enumerate(slices):
-        for n in range(nmodi):
-            Fhn = slice.modih[n]
-            Fen = slice.modie[n]
-            khidx = slice.modih[n].keff
-
-            for m in range(nmodi):
-                Fem = slice.modie[m]
-                Fhm = slice.modih[m]
-                keidxp1 = slice.modie[m].keff
-
-                M.ee[n, m, idx] = scalarprod(Fen, Fem)
-                M.eesueps[n, m, idx] = scalarprod(Fen, sueps(Fem))
-                M.hh[n, m, idx] = scalarprod(Fhn, Fhm)
-
-                Fp1em = slice.modie[m]
-                s1 = k0 * scalarprod(dot(Fhn), sueps(Fp1em)) / khidx**2
-                s2 = k0 * scalarprod(Fhn, sueps(dot(Fp1em))) / keidxp1**2
-                M.Rhe[n, m, idx] = (s1 + s2).item()
-
-    R = genera_rotazione(slices)
-    Ident = numpy.eye(nmodi)
-    for idx in range(Nslices):
-        neesueps[idx] = numpy.linalg.norm(M.eesueps[:, :, idx] - Ident)
-        nhh[idx] = numpy.linalg.norm(M.hh[:, :, idx] - Ident)
-        nRhe[idx] = numpy.linalg.norm(M.Rhe[:, :, idx])
-
-    for idx in range(Nslices - 1):
-        nRee[idx] = numpy.linalg.norm(
-            numpy.dot(R.Ree[:, :, idx], R.Reem[:, :, idx]) - Ident
-        )
-        nRhh[idx] = numpy.linalg.norm(
-            numpy.dot(R.Rhh[:, :, idx], R.Rhhm[:, :, idx]) - Ident
-        )
-        nAC[idx] = numpy.linalg.norm(
-            numpy.dot(R.Rhe[:, :, idx], R.Reem[:, :, idx])
-            + numpy.dot(R.Rhh[:, :, idx], R.Rhem[:, :, idx])
-        )
-
-    ns1 = numpy.linalg.norm(numpy.r_[neesueps, nhh, nRhe])
-    ns2 = numpy.linalg.norm(numpy.r_[nRee, nRhh, nAC])
-    errore = numpy.linalg.norm(numpy.r_[ns1, ns2]) / numpy.emath.sqrt(8 * nmodi)
-    return errore
-
-
 def method_of_component(kz_, slices, Rot, uscelto=None, icomp=None):
     kz = numpy.atleast_1d(kz_)
     k0 = 2.0 * numpy.pi / slices[0].wl

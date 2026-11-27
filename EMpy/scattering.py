@@ -79,7 +79,7 @@ def stack(X, Y, Z):
     return numpy.vstack((XX, YY, ZZ))
 
 
-def matlab_dot(a, b):
+def _matlab_dot(a, b):
     """
     "classical" dot product (as defined in octave or matlab)
 
@@ -90,7 +90,7 @@ def matlab_dot(a, b):
         [[1 1 1 1 1 1]
          [2 2 2 2 2 2]
          [3 3 3 3 3 3]]
-        >>> field.matlab_dot(a,a)
+        >>> field._matlab_dot(a,a)
         array([14, 14, 14, 14, 14, 14])
 
     where M{14=1*1+2*2+3*3}
@@ -211,8 +211,8 @@ def currentsScatteringKottler(P, J, M, Q, dS, f, epsr=1):
         bb = -1 + 3 * 1j * kmr_1 + 3 * kmr_2
         cc = 1 - 1j * kmr_1
         # scalar product
-        r1dotJ = matlab_dot(r1, J_nz)
-        r1dotM = matlab_dot(r1, -M_nz)
+        r1dotJ = _matlab_dot(r1, J_nz)
+        r1dotM = _matlab_dot(r1, -M_nz)
         # Kottler EM fields
         EMF_P.E[:, ind] = (
             km

@@ -54,16 +54,16 @@ class DeviceMatrix:
     """
 
     def __init__(self, data):
+        self.__data = None
         self.data = data
 
-    def getdata(self):
+    @property
+    def data(self):
         return self.__data
 
-    def setdata(self, value):
+    @data.setter
+    def data(self, value):
         self.__data = numpy.array(value)
-
-    __data = None
-    data = property(fget=getdata, fset=setdata, doc="data")
 
     def compose(self, A):
         """Compose two device matrices.
@@ -295,7 +295,7 @@ class Device:
 
     """
 
-    def sanity_check(self):
+    def _sanity_check(self):
         raise NotImplementedError()
 
     def solve(self, *args, **kwargs):
@@ -337,9 +337,9 @@ class Coupler(Device):
         # make K,q of the same shape as wl (scalar or ndarray)
         self.K = K * one
         self.q = q * one
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input.
 
         @raise ValueError: if input numpy.ndarrays have wrong shape.
@@ -476,9 +476,9 @@ class Line(Device):
         self.l1 = l1
         self.neff2 = neff2 * one
         self.l2 = l2
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input.
 
         @raise ValueError: if l1 and l2 are not scalar.
@@ -599,18 +599,18 @@ class MZ(Device):
         self.coupler1 = coupler1
         self.coupler2 = coupler2
         self.line = line
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input.
 
         @raise ValueError: if coupler1 or coupler2 or line have incompatible wl.
 
         """
 
-        self.coupler1.sanity_check()
-        self.coupler2.sanity_check()
-        self.line.sanity_check()
+        self.coupler1._sanity_check()
+        self.coupler2._sanity_check()
+        self.line._sanity_check()
         if not (
             numpy.all(self.coupler1.wl == self.line.wl)
             and numpy.all(self.coupler1.wl == self.coupler2.wl)
@@ -705,9 +705,9 @@ class APRR(Device):
         self.coupler = coupler
         self.neff = neff
         self.l = l
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input.
 
         @raise ValueError: if l is not a scalar or wl and neff have
@@ -715,7 +715,7 @@ class APRR(Device):
 
         """
 
-        self.coupler.sanity_check()
+        self.coupler._sanity_check()
         if not numpy.isscalar(self.wl):
             if not numpy.isscalar(self.neff):
                 if self.wl.shape != self.neff.shape:
@@ -783,19 +783,19 @@ class SRR(Device):
         self.l2 = l2
         self.line1 = Line(self.wl, neff, 0.0, neff, l1)
         self.line2 = Line(self.wl, neff, 0.0, neff, l2)
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input.
 
         @raise ValueError: if wl are incompatible.
 
         """
 
-        self.coupler1.sanity_check()
-        self.coupler2.sanity_check()
-        self.line1.sanity_check()
-        self.line2.sanity_check()
+        self.coupler1._sanity_check()
+        self.coupler2._sanity_check()
+        self.line1._sanity_check()
+        self.line2._sanity_check()
         if not (
             numpy.all(self.coupler1.wl == self.coupler2.wl)
             and numpy.all(self.coupler1.wl == self.line1.wl)
@@ -903,9 +903,9 @@ class NRR(Device):
         self.neffs = neffs
         self.l1s = l1s
         self.l2s = l2s
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input.
 
         @raise ValueError: if wl or the number of couplers are incompatible.
@@ -913,7 +913,7 @@ class NRR(Device):
         """
 
         for K in self.Ks:
-            K.sanity_check()
+            K._sanity_check()
             if not (numpy.all(self.wl == K.wl)):
                 raise ValueError("incompatible wl")
         if not (len(self.Ks) - 1 == len(self.neffs) == len(self.l1s) == len(self.l2s)):
@@ -1017,9 +1017,9 @@ class T_TCRR(Device):
         self.q = q
         self.l = numpy.asarray(l)
         self.coupling = coupling
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input."""
         if self.K.shape != (3,):
             raise ValueError("K must be a 1D-array with 3 elements.")
@@ -1096,9 +1096,9 @@ class T_CRTCRR(Device):
         self.q = q
         self.l = numpy.asarray(l)
         self.coupling = coupling
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input."""
         if not (self.K.shape == self.l.shape == (3,)):
             raise ValueError("K and l must be 1D-arrays with 3 elements.")
@@ -1174,9 +1174,9 @@ class T_CTCRR(Device):
         self.q = q
         self.l = numpy.asarray(l)
         self.coupling = coupling
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         """Check for good input."""
         if self.K.shape != (3,):
             raise ValueError("K must be a 1D-array with 3 elements.")
@@ -1305,7 +1305,7 @@ class SWG(Device):
         self.h = h  # not used!
         self.T = T
 
-    def sanity_check(self):
+    def _sanity_check(self):
         pass
 
     def solve(self, wls):
@@ -1378,9 +1378,9 @@ class Etalon(Device):
         self.layer = layer
         self.R = R
         self.theta = theta
-        self.sanity_check()
+        self._sanity_check()
 
-    def sanity_check(self):
+    def _sanity_check(self):
         pass
 
     def solve(self, wls):
