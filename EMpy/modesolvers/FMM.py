@@ -495,51 +495,17 @@ class FMMMode2d(Mode):
         cSz = 0.5 * (Ex * numpy.conj(cBy) - Ey * numpy.conj(cBx))
         return cSz
 
-    def TEfrac_old(self, x_=None, y_=None):
-        if x_ is None:
-            x = self.get_x()
-        else:
-            x = numpy.atleast_1d(x_)
-        if y_ is None:
-            y = self.get_y()
-        else:
-            y = numpy.atleast_1d(y_)
+    def TEfrac(self, x_=None, y_=None):
+        if x_ is None and y_ is None:
+            Sx, Sy = self.__overlap(self)
+            return float(numpy.abs(Sx) / (numpy.abs(Sx) + numpy.abs(Sy)))
 
-        Ex, Ey, Ez, cBx, cBy, cBz = self.fields(x, y)
+        x = self.get_x() if x_ is None else numpy.atleast_1d(x_)
+        y = self.get_y() if y_ is None else numpy.atleast_1d(y_)
+        Ex, Ey, _, cBx, cBy, _ = self.fields(x, y)
         cSTE = 0.5 * EMpy.utils.trapz2(Ex * numpy.conj(cBy), y, x)
         cSTM = 0.5 * EMpy.utils.trapz2(-Ey * numpy.conj(cBx), y, x)
         return numpy.abs(cSTE) / (numpy.abs(cSTE) + numpy.abs(cSTM))
-
-    def TEfrac(self, x_=None, y_=None):
-        if x_ is not None or y_ is not None:
-            return self.TEfrac_old(x_, y_)
-        Sx, Sy = self.__overlap(self)
-        return float(numpy.abs(Sx) / (numpy.abs(Sx) + numpy.abs(Sy)))
-
-    def overlap_old(self, m, x_=None, y_=None):
-        if x_ is None:
-            x = self.get_x()
-        else:
-            x = numpy.atleast_1d(x_)
-        if y_ is None:
-            y = self.get_y()
-        else:
-            y = numpy.atleast_1d(y_)
-
-        Ex, Ey, Ez, cBx, cBy, cBz = self.fields(x, y)
-        cSz = self.intensity(x, y)
-        norm = numpy.emath.sqrt(numpy.real(EMpy.utils.trapz2(cSz, y, x)))
-        Ex1, Ey1, Ez1, cBx1, cBy1, cBz1 = m.fields(x, y)
-        cSz1 = m.intensity(x, y)
-        norm1 = numpy.emath.sqrt(numpy.real(EMpy.utils.trapz2(cSz1, y, x)))
-        return 0.5 * EMpy.utils.trapz2(
-            Ex / norm * numpy.conj(cBy1 / norm1) - Ey / norm * numpy.conj(cBx1 / norm1),
-            y,
-            x,
-        )
-
-    def __overlap_old(self, mode):
-        return self.__overlap(mode)
 
     def __overlap(self, mode):
         """Analytical z-Poynting components (Sx, Sy) of 0.5 * int (E_1 x cB_2^*)_z dx dy.

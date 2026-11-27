@@ -732,13 +732,13 @@ class FMMModeSolverTest(TestCase):
         self.assertLess(abs(numpy.imag(ov_m0)), 1e-4)
         O11, _, _, _ = EMpy.modesolvers.interface.interface_matrix(simul, simul)
         self.assertEqual(O11.shape, (2, 2))
-        te_frac_old = m0.TEfrac_old(
+        te_frac_quad = m0.TEfrac(
             numpy.linspace(Ux[0], Ux[-1], 51), numpy.linspace(Uy[0], Uy[-1], 51)
         )
         te_frac = m0.TEfrac()
         self.assertTrue(0.0 <= te_frac <= 1.0)
-        self.assertTrue(0.0 <= te_frac_old <= 1.0)
-        self.assertAlmostEqual(te_frac, te_frac_old, delta=5e-2)
+        self.assertTrue(0.0 <= te_frac_quad <= 1.0)
+        self.assertAlmostEqual(te_frac, te_frac_quad, delta=5e-2)
         m0.plot(numpy.linspace(Ux[0], Ux[-1], 11), numpy.linspace(Uy[0], Uy[-1], 11))
         plt.close("all")
 
@@ -834,10 +834,10 @@ class FMMModeSolverTest(TestCase):
         self.assertGreater(s0.modes[0].TEfrac(), 0.9)
         self.assertLess(s0.modes[1].TEfrac(), 0.1)
         self.assertAlmostEqual(
-            s0.modes[0].TEfrac(), s0.modes[0].TEfrac_old(xg, yg), delta=5e-3
+            s0.modes[0].TEfrac(), s0.modes[0].TEfrac(xg, yg), delta=5e-3
         )
         self.assertAlmostEqual(
-            s0.modes[1].TEfrac(), s0.modes[1].TEfrac_old(xg, yg), delta=5e-3
+            s0.modes[1].TEfrac(), s0.modes[1].TEfrac(xg, yg), delta=5e-3
         )
 
         # Orthonormality on lossless waveguide: O11 == I_2
@@ -854,7 +854,7 @@ class FMMModeSolverTest(TestCase):
         ov_ana = s0.modes[0].overlap(s2.modes[0])
         xg_both = numpy.unique(numpy.r_[xg, Ux2])
         yg_both = numpy.unique(numpy.r_[yg, Uy2])
-        ov_quad = s0.modes[0].overlap_old(s2.modes[0], xg_both, yg_both)
+        ov_quad = s0.modes[0].overlap(s2.modes[0], xg_both, yg_both)
         self.assertLess(abs(ov_ana), 1.0)
         self.assertGreater(ov_ana.real, 0.5)
         numpy.testing.assert_allclose(ov_ana, ov_quad, atol=5e-3)
